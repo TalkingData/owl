@@ -1,6 +1,11 @@
 ﻿#  Hbase 基础与集群部署
 ------
-
+    环境描述：
+| System| Ipaddress|  Hostname  |Service|Version|
+| --------   | -----:| :----:|
+| Centos 7.1 x64|10.10.3.179|hadoop0|Hmaster+zookeeper|hbase-1.1.2，zookeeper-3.4.6|
+| Centos 7.1 x64|10.10.3.180|hadoop1|HRegionServer|hbase-1.1.2，zookeeper-3.4.6|
+| Centos 7.1 x64|10.10.3.181|hadoop2|HRegionServer|hbase-1.1.2，zookeeper-3.4.6|
 ## 1.ZooKeeper
 
 ### 1. zookeeper作用
@@ -88,7 +93,7 @@
     ******启动hbase之前，确保hadoop是运行正常的，并且可以写入文件*******
 #### 4.5 验证
     (1)执行jps，发现新增加了3个java进程，分别是HMaster、HRegionServer、HQuorumPeer 
-    (2)使用浏览器访问http://hadoop0:60010
+    (2)使用浏览器访问http://hadoop0:16010
 
 
 

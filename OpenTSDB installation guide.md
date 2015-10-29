@@ -1,5 +1,25 @@
-﻿#OpenTSDB
+﻿#OpenTSDB 2.0.1 安装
 ----
+
+    环境描述：
+| System| Ipaddress|  Hostname  |Service|Version|
+| --------   | -----:| :----:|
+| Centos 7.1 x64|10.10.3.179|hadoop0|OpenTSDB|OpenTSDB-2.0.1|
+| Centos 7.1 x64|10.10.3.180|hadoop1|HRegionServer|hbase-1.1.2|
+| Centos 7.1 x64|10.10.3.181|hadoop2|HRegionServer|hbase-1.1.2|
+
+    lzo压缩依赖包安装：
+    
+```python
+yum -y install ant ant-nodeps lzo-devel
+git clone git://github.com/cloudera/hadoop-lzo.git 
+cd hadoop-lzo 
+CLASSPATH=path/to/hadoop-core-1.0.4.jar CFLAGS=-m64 CXXFLAGS=-m64 ant compile-native tar 
+hbasedir=path/to/hbase 
+mkdir -p $hbasedir/lib/native 
+cp build/hadoop-lzo-0.4.14/hadoop-lzo-0.4.14.jar $hbasedir/lib
+cp -a build/hadoop-lzo-0.4.14/lib/native/* $hbasedir/lib/native
+```
 
 ## HBase 安装
     OpenTSDB依赖于HBase作为底层存储，所以需要先安装HBase。
