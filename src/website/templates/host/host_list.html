@@ -1,0 +1,100 @@
+{% extends "base.html"%}
+{% block title%}主机列表{%endblock%}
+
+{% block breadcrumb%}
+    <li><a href="#">首页</a></li>
+    <li class="active">主机</li>
+{% endblock %}
+
+{% block content%}
+<div class="panel panel-default">
+    <div class="table-responsive">
+        <table id="host_table" class="table table-hover table-bordered">
+        <thead>
+            <tr>
+                <th><input type="checkbox" id="select_all"></th>
+                <th>资产</th>
+                <th>位置</th>
+                <th>IP地址</th>
+                <th>服务</th>
+                <th>端口</th>
+                <th>主机组 <a href=""><span class="caret"></span></a></th>
+                <th>关联模版</th>
+                <th>状态</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if not hosts %}<tr class="warning"><td colspan="10">没有记录</td></tr>{%endif%}
+            {% for host in hosts %}
+                <tr>
+                    <td><input type="checkbox" name="delete" value="{{host.id}}"></td>
+                    <td>{% if host.server%}<a href="/host/server/{{host.server.id}}/?host_id={{host.id}}">{{ host.server }}</a>{%else%}没有记录{%endif%}</td>
+                    <td>{%if host.server %}{{host.server.cabinet.name | default:"未知"}}/{{host.server.location|default:"未知"}}U {%endif%}</td>
+                    <td> <a href="/host/host/{{host.id}}/" class="btn btn-link">{{ host.ip }}</a></td>
+                    <td><a href="/host/service/?host_id={{host.id}}"><u>服务</u></a> ({{host.service_set.count }})</td>
+                    <td><a href="/host/port/?host_id={{host.id}}"><u>端口</u></a> ({{ host.port_set.count }})</td>
+                    <td>
+                        {% if host.group.all%}
+                           {% for group in host.group.all%}
+                                {{group.name}}<br>
+                            {% endfor%}
+                        {%else%}
+                            未关联
+                        {%endif%}
+                    </td>
+                    <td>
+                        {% if host.template.all%}
+                           {% for template in host.template.all%}
+                                {{template.name}}<br>
+                            {% endfor%}
+                        {%else%}
+                            未关联
+                        {%endif%}
+                    </td>
+                    <td>
+                        {% if host.status == 0 %}
+                            <span style="color: green">正常</span>
+                        {%elif host.status == 3 %}
+                            <span style="color: blue">新增</span>
+                        {%else%}
+                         <span style="color: red">故障</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if host.alarm == 1 %}
+                            <a name="enable" href="javascript:void(0)" title="{{host.id}}" class="btn btn-link">启用</a>
+                        {% elif host.alarm == 0 %}
+                            <a name="disable" href="javascript:void(0)" title="{{host.id}}" class="btn btn-link">禁用</a>
+                        {% endif %}
+                        <a name="delete" href="javascript:void(0)" title="{{host.id}}" class="btn btn-link">删除</a>
+                    </td>
+                </tr>
+            {%endfor%}
+        </tbody>
+    </table>
+    </div>
+</div>
+<nav>
+    <ul class="pager">
+        {% if hosts.has_previous %}
+            <li><a id="p_page" href="?page={{ hosts.previous_page_number }}">上一页</a></li>
+        {%endif%}
+        当前页 {{ hosts.number }} 共 {{ hosts.paginator.num_pages }}页
+        {% if hosts.has_next %}
+        <li><a id="n_page" href="?page={{ hosts.next_page_number }}">下一页</a></li>
+        {%endif%}
+        <br/>总计 {{hosts.paginator.count}}条记录
+    </ul>
+</nav>
+{% endblock %}
+
+{%block js%}
+<script type="text/javascript">
+    var queryString = getUrlParam("q");
+    if(queryString != null){
+        $("#p_page").attr("href", $("#p_page").attr("href") + "&q=" + queryString)
+        $("#n_page").attr("href", $("#n_page").attr("href") + "&q=" + queryString)
+    }
+</script>
+{%endblock%}

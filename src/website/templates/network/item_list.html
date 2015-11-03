@@ -1,0 +1,104 @@
+{% extends "base.html"%}
+
+{% block breadcrumb%}
+    <li><a href="#">首页</a></li>
+    <li><a href="/network/device/">设备列表</a></li>
+    <li><a href="/network/device/{{device.id}}/">{{device.ip}}</a></li>
+    {% if interface %}
+        <li><a href="/network/interface/?device_id={{device.id}}">接口列表</a></li>
+        <li><a href="/network/interface/?device_id={{device.id}}&interface_id={{interface.id}}">{{interface.name}}</a></li>
+    {% else %}
+        <li><a href="/network/oid/?device_id={{device.id}}">自定义oid</a></li>
+    {% endif %}
+    <li class="active">报警规则</li>
+{%endblock%}
+
+{% block content%}
+
+<div class="panel panel-default">
+    <div class="table-responsive">
+        <table id="host_table" class="table table-hover table-bordered">
+        <thead>
+            <tr>
+                <th><input type="checkbox" id="select_all"></th>
+                <th>Key</th>
+                <th>统计周期</th>
+                <th>统计方法</th>
+                <th>比较方法</th>
+                <th>报警阈值</th>
+                <th>报警次数</th>
+                <th>报警状态</th>
+                <th>当前数据</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if not items %}<tr><td class="warning" colspan="10">没有记录</td></tr>{%endif%}
+            {% for item in items %}
+                <tr>
+                    <td><input type="checkbox" name="delete" value="{{item.id}}"></td>
+                    <td>{{ item.key }}</td>
+                    <td>{{item.cycle}}</td>
+                    <td>
+                        {% for k,v in methods.items%}
+                            {%ifequal k item.method %}
+                                {{v}}
+                            {%endifequal%}
+                        {%endfor%}
+                    </td>
+                    <td>
+                        {% for k,v in symbols.items%}
+                            {%ifequal k item.symbol %}
+                                {{v}}
+                            {%endifequal%}
+                        {%endfor%}
+                    </td>
+                    <td>{{item.threshold}}</td>
+                    <td>
+                        {% if item.attempt == 0%}
+                            一直持续
+                        {%else%}
+                            {{item.attempt}}
+                        {%endif%}
+                    </td>
+                    <td>
+                        {% if item.alarm == 0 %}
+                            <span style="color: green">已开启</span>
+                        {%else%}
+                            <span style="color: red">已关闭</span>
+                        {% endif %}
+                    </td>
+                    <td>{{item.current}}</td>
+                    <td>
+                        {% if interface %}
+                            <a href="/network/item/{{item.id}}/?interface_id={{interface.id}}&device_id={{device.id}}" class="btn btn-link">修改</a>
+                        {%else%}
+                            <a href="/network/item/{{item.id}}/?oid_id={{oid.id}}&device_id={{device.id}}" class="btn btn-link">修改</a>
+                        {%endif%}
+                    </td>
+                </tr>
+            {%endfor%}
+        </tbody>
+    </table>
+    </div>
+    <nav class="pull-right">
+      <ul class="pagination">
+        <li>
+          <a href="" aria-label="Previous">
+            <span aria-hidden="true">&laquo;</span>
+          </a>
+        </li>
+        <li><a href="#">1</a></li>
+        <li><a href="#">2</a></li>
+        <li><a href="#">3</a></li>
+        <li><a href="#">4</a></li>
+        <li><a href="#">5</a></li>
+        <li>
+          <a href="#" aria-label="Next">
+            <span aria-hidden="true">&raquo;</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+</div>
+{% endblock %}

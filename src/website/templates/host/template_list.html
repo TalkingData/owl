@@ -1,0 +1,62 @@
+{% extends "base.html"%}
+
+{% block breadcrumb%}
+    <li><a href="#">首页</a></li>
+    <li class="active">模版</li>
+{%endblock%}
+
+{% block content%}
+<div class="panel panel-default">
+    <div class="table-responsive">
+        <table id="host_table" class="table table-hover table-bordered">
+        <thead>
+            <tr>
+                <th><input type="checkbox" id="select_all"></th>
+                <th>模版名</th>
+                <th>服务</th>
+                <th>关联主机</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if not templates %}<tr><td class="warning" colspan="8">没有记录</td></tr>{%endif%}
+            {% for t in templates %}
+                <tr>
+                    <td width="5%"><input type="checkbox" name="delete" value="{{t.id}}"></td>
+                    <td width="15%">{{ t.name }}</td>
+                    <td><a href="/host/service/?template_id={{t.id}}"><u>服务</u></a> ({{t.service_set.count}})</td>
+                    <td>
+                        {% for host in t.host_set.all %}
+                            <a href="/host/host/?host_id={{host.id}}">{{host.ip}}</a>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        <a href="/host/template/{{t.id}}/" class="btn btn-link ">修改</a>
+                        <a name="delete" href="javascript:void(0)" title="{{t.id}}" class="btn btn-link">删除</a>
+                    </td>
+                </tr>
+            {%endfor%}
+        </tbody>
+    </table>
+    </div>
+    <nav class="pull-right">
+      <ul class="pagination">
+        <li>
+          <a href="" aria-label="Previous">
+            <span aria-hidden="true">&laquo;</span>
+          </a>
+        </li>
+        <li><a href="#">1</a></li>
+        <li><a href="#">2</a></li>
+        <li><a href="#">3</a></li>
+        <li><a href="#">4</a></li>
+        <li><a href="#">5</a></li>
+        <li>
+          <a href="#" aria-label="Next">
+            <span aria-hidden="true">&raquo;</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+</div>
+{% endblock %}

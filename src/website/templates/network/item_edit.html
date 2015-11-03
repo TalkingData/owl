@@ -1,0 +1,115 @@
+{% extends "base.html"%}
+
+{% block breadcrumb%}
+    <li><a href="#">首页</a></li>
+    <li><a href="/network/device/">设备列表</a></li>
+    <li><a href="/host/device/{{device.id}}/">{{device.ip}}</a></li>
+    {% if interface %}
+        <li><a href="/network/interface/?device_id={{device.id}}">接口列表</a></li>
+        <li><a href="/network/interface/?device_id={{device.id}}&interface_id={{interface.id}}">{{interface.name}}</a></li>
+        <li><a href="/network/item/?device_id={{device.id}}&interface_id={{interface.id}}">报警规则</a></li>
+    {% else %}
+        <li><a href="/network/oid/?device_id={{device.id}}">自定义oid</a></li>
+        <li><a href="/network/item/?device_id={{device.id}}&oid_id={{oid.id}}">报警规则</a></li>
+    {% endif %}
+    {%if item%}
+        <li class="active">{{item.key}}</li>
+    {%else%}
+        <li class="active">新增</li>
+    {%endif%}
+{%endblock%}
+
+{% block buttonHead%}
+{%endblock%}
+{% block content%}
+<div class="container-fluid">
+    {%if message %}
+        <div class="alert alert-warning alert-dismissible" role="alert">
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <strong>Warning!</strong> {{message}}
+        </div>
+    {%endif%}
+    <div class="row">
+        <div class="col-sm-8">
+            <form action="" class="form-horizontal" method="post" id="item_form">
+                {% csrf_token %}
+                <input type="hidden" name="id" value="{{item.id}}" />
+                {%if interface%}
+                <div class="form-group">
+                    <label for="key" class="col-sm-2 control-label">key</label>
+                    <div class="col-sm-6">
+                        <select name="key" id="key" class="form-control">
+                            <option value="">--------</option>
+                            {% for key in keys %}
+                                <option value="{{key}}" {% ifequal item.key key %} selected {%endifequal%}>{{key}}</option>
+                            {%endfor%}
+                        </select>
+                    </div>
+                </div>
+                {%endif%}
+                <div class="form-group">
+                    <label for="cycle" class="col-sm-2 control-label">统计周期</label>
+                    <div class="col-sm-6">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="cycle" name="cycle" value="{{item.cycle}}">
+                            <div class="input-group-addon">分钟</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="method" class="col-sm-2 control-label">统计方法</label>
+                    <div class="col-sm-6">
+                        <select id="method" name="method" class="form-control">
+                            <option value="">--------</option>
+                            {% for k, v  in methods.items %}
+                                <option value="{{k}}" {% ifequal item.method k %} selected {%endifequal%}>{{v}}</option>
+                            {%endfor%}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="symbol" class="col-sm-2 control-label">比较方法</label>
+                    <div class="col-sm-6">
+                        <select name="symbol" id="symbol" class="form-control">
+                            <option value="">--------</option>
+                            {% for k, v  in symbols.items %}
+                                <option value="{{k}}" {% ifequal item.symbol k %} selected {%endifequal%}>{{v}}</option>
+                            {%endfor%}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="threshold" class="col-sm-2 control-label">报警阈值</label>
+                    <div class="col-sm-6">
+                        <input type="text" class="form-control" id="threshold" name="threshold" value="{{item.threshold}}">
+                        <p class="help-block">当计算结果超过设置阈值将触发报警</p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="attempt" class="col-sm-2 control-label">报警次数</label>
+                    <div class="col-sm-6">
+                        <input type="text" class="form-control" id="attempt" name="attempt" value="{{item.attempt}}">
+                        <p class="help-block">0代表无限制</p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="alarm" class="col-sm-2 control-label">报警开关</label>
+                    <div class="col-sm-6">
+                         <select name="alarm" id="alarm" class="form-control">
+                            <option value="0" {% if item.alarm == 0 %} selected {%endif%}>开启</option>
+                            <option value="1" {% if item.alarm == 1 %} selected {%endif%}>关闭</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-sm-1"></div>
+                    <div class="col-sm-7">
+                        <button type="submit" class="btn btn-success " id="submit"> 更新 </button>&nbsp;&nbsp;
+                        <button type="button" class="btn btn-default " id="return"> 取消 </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

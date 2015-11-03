@@ -1,0 +1,68 @@
+body,button, input, select, textarea,h1 ,h2, h3, h4, h5, h6 { font-family: Microsoft YaHei,'宋体' , Tahoma, Helvetica, Arial, "\5b8b\4f53", sans-serif;}
+.badge-danger {background-color: #d9534f;}
+.badge-success{background-color: #5cb85c;}
+.badge-warning{background-color: #f0ad4e;}
+.badge-info{background-color: #5bc0de;}
+@media (min-width: 992px) {
+    .navbar-nav>li:first-child{
+    padding-left: 80px;
+}
+}
+
+.navbar-nav>li>a{
+    //padding-left: 20px;
+   // padding-right:20px;
+}
+
+td{
+    vertical-align:middle !important;
+}
+
+
+.cabinet {
+    float: left;
+    text-align: center;
+    width:142px ;
+    height: 531px ;
+    background-image: url(/static/images/cabinet.gif);
+}
+
+label{
+
+}
+
+.unit{
+    margin-bottom: 0px;
+    margin-top: 0px;
+    margin-left: 10px;
+    margin-right: 10px;
+    height:10px;
+    width: 122px;
+}
+
+/*网络设备*/
+.network{
+    cursor:pointer;
+    background-image: url(/static/images/switch.gif)
+}
+
+/*1U服务器*/
+.s_1_0{
+    cursor:pointer;
+    background-image: url(/static/images/unit1_0.gif)
+}
+.s_1_1{
+    cursor:pointer;
+    background-image: url(/static/images/unit1_1.gif)
+}
+/*2U服务器*/
+.s_2_0{
+    height:20px;
+    cursor:pointer;
+    background-image: url(/static/images/unit2_0.gif)
+}
+.s_2_1{
+    height:20px;
+    cursor:pointer;
+    background-image: url(/static/images/unit2_1.gif)
+}

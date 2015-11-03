@@ -1,0 +1,88 @@
+{% extends "base.html"%}
+{% block content%}
+    <div style="height:34;"></div>
+{{assest.}}
+    <div class="row">
+        <div class="col-sm-10">
+            <form action="" class="form-horizontal" method="post" id="host_form">
+                {% csrf_token %}
+                <input type="hidden" name="id" value="{{host.id}}" />
+                <div class="form-group">
+                    <label for="sn" class="col-sm-1 control-label">SN</label>
+                    <div class="col-sm-7">
+                        <input type="text" class="form-control" name="sn" id="sn" value="{{assest.sn}}" disabled>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="cabinet" class="col-sm-1 control-label">机柜号</label>
+                    <div class="col-sm-7">
+                        <input type="text" class="form-control" id="cabinet" name="cabinet" value="{{assest.cabinet.name}}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="vender" class="col-sm-1 control-label">厂商</label>
+                    <div class="col-sm-7">
+                        <input type="text" class="form-control" id="vender" name="vender" value="{{assest.vender}}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="model" class="col-sm-1 control-label">型号</label>
+                    <div class="col-sm-7">
+                        <input type="text" class="form-control" id="model" name="model" value="{{assest.model}}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="group" class="col-sm-1 control-label">厂商</label>
+                    <div class="col-sm-7">
+                        <select class="form-control" name="group" id="group">
+                            <option value="">---------</option>
+                            {% for group in groups %}
+                                <option value="{{group.id}}" {% if group.id == host.group.id %} selected="selected" {%endif%}>{{group.name}}</option>
+                            {%endfor%}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="hostname" class="col-sm-1 control-label">主机名</label>
+                    <div class="col-sm-7">
+                        <input type="text" class="form-control" name="hostname" id="hostname" value="{{host.hostname}}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="os" class="col-sm-1 control-label">操作系统</label>
+                    <div class="col-sm-7">
+                        <input type="text" class="form-control" name="os" id="os" value="{{host.os}}" disabled>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="kernel" class="col-sm-1 control-label">内核版本</label>
+                    <div class="col-sm-7">
+                        <input type="text" class="form-control" host="kernel" id="kernel" value="{{host.kernel}}" disabled>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="status" class="col-sm-1 control-label" >主机状态</label>
+                    <div class="col-sm-7">
+                        <input type="text" class="form-control" name="status" id="status" disabled>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="monitor" class="col-sm-1 control-label">监控状态</label>
+                    <div class="col-sm-7">
+                        <select class="form-control" name="monitor" id="monitor">
+                            <option value="0" {% if host.monitor == 0%} selected {% endif %}>开启</option>
+                            <option value="1" {% if host.monitor == 1%} selected {% endif %}>关闭</option>
+                        </select>
+
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-sm-1"></div>
+                    <div class="col-sm-7">
+                        <button type="button" class="btn btn-success pull-right" id="submit">更新</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}

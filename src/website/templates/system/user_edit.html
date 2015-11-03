@@ -1,0 +1,109 @@
+{% extends "base.html"%}
+{% block title%}{% if device %}编辑{%else%}新增{%endif%}设备{%endblock%}
+
+{% block breadcrumb%}
+    <li><a href="#">首页</a></li>
+    <li><a href="/system/user/">用户列表</a></li>
+    {%if cuser %}
+    <li><a href="/system/user/?user_id={{cuser.id}}">{{cuser.username}}</a></li>
+    <li class="active">修改</li>
+    {%else%}
+    <li class="active">新增</li>
+    {%endif%}
+{% endblock %}
+{% block buttonHead%}
+{% endblock%}
+{% block content%}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-sm-10">
+            <form action="" class="form-horizontal" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="id" value="{{cuser.id}}" />
+                <div class="form-group form-group-sm">
+                    <label for="username" class="col-sm-1 control-label">用户名</label>
+                    <div class="col-sm-7">
+                        <input type="text" class="form-control" name="username" id="username" value="{{cuser.username}}">
+                    </div>
+                </div>
+                <div class="form-group form-group-sm">
+                    <label for="password" class="col-sm-1 control-label">密码</label>
+                    <div class="col-sm-7">
+                        <input type="password" class="form-control" name="password" id="password">
+                    </div>
+                </div>
+                <div class="form-group form-group-sm">
+                    <label for="realname" class="col-sm-1 control-label">真实姓名</label>
+                    <div class="col-sm-7">
+                        <input type="text" class="form-control" name="realname" id="realname" value="{{cuser.userprofile.realname}}">
+                    </div>
+                </div>
+                <div class="form-group form-group-sm">
+                    <label for="phone" class="col-sm-1 control-label">手机号</label>
+                    <div class="col-sm-7">
+                        <input type="text" class="form-control" name="phone" id="phone" value="{{cuser.userprofile.phone}}">
+                    </div>
+                </div>
+                <div class="form-group form-group-sm">
+                    <label for="email" class="col-sm-1 control-label">邮箱</label>
+                    <div class="col-sm-7">
+                        <input type="text" class="form-control" name="email" id="email" value="{{cuser.email}}">
+                    </div>
+                </div>
+                <div class="form-group form-group-sm">
+                    <label for="weixin" class="col-sm-1 control-label">微信号</label>
+                    <div class="col-sm-7">
+                        <input type="text" class="form-control" name="weixin" id="weixin" value="{{cuser.userprofile.weixin}}">
+                    </div>
+                </div>
+                <div class="form-group form-group-sm">
+                    <label for="groups" class="col-sm-1 control-label">主机组</label>
+                    <div class="col-sm-6">
+                        <select multiple  class="form-control" name="groups" id="groups">
+                            {% for group in groups %}
+                                <option value="{{group.id}}" {%if group in cuser.groups.all %} selected {%endif%}>{{group.name}}</option>
+                            {%endfor%}
+                        </select>
+                    </div>
+                </div>
+                {%if user.is_superuser%}
+                <div class="form-group form-group-sm">
+                    <label for="is_superuser" class="col-sm-1 control-label">管理员</label>
+                    <div class="col-sm-7">
+                        <select id="is_superuser" name="is_superuser" class="form-control">
+                            <option value="0" {%if cuser.is_superuser == 0 %} selected {%endif%}>否</option>
+                            <option value="1" {%if cuser.is_superuser == 1 %} selected {%endif%}>是</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group form-group-sm">
+                    <label for="is_active" class="col-sm-1 control-label">用户状态</label>
+                    <div class="col-sm-7">
+                        <select id="is_active" name="is_active" class="form-control">
+                            <option value="0" {%if cuser.is_active == 0 %} selected {%endif%}>禁用</option>
+                            <option value="1" {%if cuser.is_active == 1 %} selected {%endif%}>启用</option>
+                        </select>
+                    </div>
+                </div>
+                {%endif%}
+                <div class="form-group">
+                    <div class="col-sm-1"></div>
+                    <div class="col-sm-7">
+                        <br/>
+                        <button type="submit" class="btn btn-success" style="margin-right: 10px;" id="submit">提交</button>
+                        <button type="button" class="btn btn-default "  id="return">返回</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{%block js%}
+    <script src="/static/js/jquery.bootstrap-duallistbox.js"></script>
+    <script>
+        demo1 = $("select[name='groups']").bootstrapDualListbox({
+            moveOnSelect: false
+        });
+    </script>
+{%endblock%}

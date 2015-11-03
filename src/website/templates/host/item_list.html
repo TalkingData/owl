@@ -1,0 +1,256 @@
+{% extends "base.html"%}
+
+{% block breadcrumb%}
+    <li><a href="#">首页</a></li>
+    {% if host %}
+    <li><a href="/host/host/">主机</a></li>
+    <li><a href="/host/host/{{host.id}}/">{{host.ip}}</a></li>
+    <li><a href="/host/service/?host_id={{host.id}}">服务</a></li>
+    <li><a href="/host/service/?host_id={{host.id}}&service_id={{service.id}}">{{service.name}}</a></li>
+    {% else %}
+        <li><a href="/host/template/">模版</a></li>
+        <li><a href="/host/template/?template_id={{template.id}}">{{template.name}}</a></li>
+        <li><a href="/host/service/?template_id={{template.id}}">服务</a></li>
+        <li><a href="/host/service/?template_id={{template.id}}&service_id={{service.id}}">{{service.name}}</a></li>
+    {% endif %}
+    <li class="active">指标</li>
+{%endblock%}
+{% block buttonOther%}
+    <button id="mchange" type="button" class="btn btn-danger btn-sm" >批量修改</button>
+{% endblock %}
+{% block content%}
+{% block serach%}
+    {%if host %}
+         <input type="hidden"  name="host_id" value="{{host.id}}" class="form-control ">
+    {%endif%}
+    {%if template %}
+         <input type="hidden"  name="template_id" value="{{template.id}}" class="form-control ">
+    {%endif%}
+<input type="hidden"  name="service_id" value="{{service.id}}" class="form-control ">
+{%endblock%}
+<div class="panel panel-default">
+    <div class="table-responsive">
+        <table id="host_table" class="table table-hover table-bordered">
+        <thead>
+            <tr>
+                <th><input type="checkbox" id="select_all"></th>
+                <th>Key</th>
+                <th>统计周期</th>
+                <th>统计方法</th>
+                <th>比较方法</th>
+                <th>报警阈值</th>
+                <th>浮动值</th>
+                <th>浮动阈值</th>
+                <th>当前值</th>
+                <th>报警次数</th>
+                <th>数据类型</th>
+                <th>是否绘图</th>
+                <th>是否报警</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if not items %}<tr><td class="warning" colspan="10">没有记录</td></tr>{%endif%}
+            {% for item in items %}
+                <tr>
+                    <td><input type="checkbox" name="delete" value="{{item.id}}"></td>
+                    <td>{{ item.key }}</td>
+                    <td>{{item.cycle}}</td>
+                    <td>
+                        {% for k,v in methods.items%}
+                            {%ifequal k item.method %}
+                                {{v}}
+                            {%endifequal%}
+                        {%endfor%}
+                    </td>
+                    <td>
+                        {% for k,v in symbols.items%}
+                            {%ifequal k item.symbol %}
+                                {{v}}
+                            {%endifequal%}
+                        {%endfor%}
+                    </td>
+                    <td>{{item.threshold}}</td>
+                    <td>{{item.floatingvalue}}</td>
+                    <td>{{item.floatingthreshold}}</td>
+                    <td>{{item.current}}</td>
+                    <td>{{item.attempt}}</td>
+                    <td>{{item.dt}}</td>
+                    <td>
+                        {% ifequal item.drawing 1 %}
+                            <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+                        {%else%}
+                            <span class="glyphicon glyphicon-ok" aria-hidden="true"></span>
+                        {%endifequal%}
+                    </td>
+                    <td>
+                        {% ifequal item.alarm 1 %}
+                            <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+                        {%else%}
+                            <span class="glyphicon glyphicon-ok" aria-hidden="true"></span>
+                        {%endifequal%}
+                    </td>
+                    <td>
+                        {% if host %}
+                            <a href="/host/item/{{item.id}}/?host_id={{host.id}}&service_id={{service.id}}" class="btn btn-link">修改</a>
+                        {%else%}
+                            <a href="/host/item/{{item.id}}/?template_id={{template.id}}&service_id={{service.id}}" class="btn btn-link">修改</a>
+                        {%endif%}
+                    </td>
+                </tr>
+            {%endfor%}
+        </tbody>
+    </table>
+    </div>
+</div>
+
+<div class="modal fade bs-example-modal-lg" tabindex="-1" role="dialog" id="mchange_model" aria-labelledby="myLargeModalLabel">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+    <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+        <h4 class="modal-title" id="exampleModalLabel">批量修改报警</h4>
+      </div>
+        <div id="message"></div>
+      <form action="" class="form-horizontal" method="post" id="item_form">
+                {% csrf_token %}
+          <br>
+                <div class="form-group">
+                    <label for="cycle" class="col-sm-2 control-label">统计周期</label>
+                    <div class="col-sm-6">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="cycle" name="cycle" value="{{item.cycle}}">
+                            <div class="input-group-addon">分钟</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="method" class="col-sm-2 control-label">统计方法</label>
+                    <div class="col-sm-6">
+                        <select id="method" name="method" class="form-control">
+                            <option value="">--------</option>
+                            {% for k, v  in methods.items %}
+                                <option value="{{k}}" {% ifequal item.method k %} selected {%endifequal%}>{{v}}</option>
+                            {%endfor%}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="symbol" class="col-sm-2 control-label">比较方法</label>
+                    <div class="col-sm-6">
+                        <select name="symbol" id="symbol" class="form-control">
+                            <option value="">--------</option>
+                            {% for k, v  in symbols.items %}
+                                <option value="{{k}}" {% ifequal item.symbol k %} selected {%endifequal%}>{{v}}</option>
+                            {%endfor%}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="threshold" class="col-sm-2 control-label">报警阈值</label>
+                    <div class="col-sm-6">
+                        <input type="text" class="form-control" id="threshold" name="threshold" value="{{item.threshold}}">
+                        <p class="help-block">当计算结果超过设置阈值将触发报警</p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="floatingthreshold" class="col-sm-2 control-label">浮动阈值</label>
+                    <div class="col-sm-6">
+                        <input type="text" class="form-control" id="floatingthreshold" name="floatingthreshold" value="{{item.floatingthreshold}}">
+                        <p class="help-block">当计算结果超过设置阈值将触发报警</p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="attempt" class="col-sm-2 control-label">报警次数</label>
+                    <div class="col-sm-6">
+                        <input type="text" class="form-control" id="attempt" name="attempt" value="{{item.attempt}}">
+
+                        <p class="help-block">0代表无限制</p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="dt" class="col-sm-2 control-label">数据类型</label>
+                    <div class="col-sm-6">
+                        <select name="dt" id="dt" class="form-control">
+                            <option value="">--------</option>
+                            {% for dt  in dts %}
+                                <option value="{{dt}}" {% ifequal item.dt dt %} selected {%endifequal%}>{{dt}}</option>
+                            {%endfor%}
+                        </select>
+                        <p class="help-block">GUAGE：  原始数据，不做运算<br/>COUNTER：  计算平均值 (当前值-上次值)/采集间隔<br/> DRIVE：  计算两次差值，当前值-上次值</p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="drawing" class="col-sm-2 control-label">是否绘图</label>
+                    <div class="col-sm-6">
+                        <select name="drawing" id="drawing" class="form-control">
+                            <option value="">--------</option>
+                            <option value="0">是</option>
+                            <option value="1">否</option>
+                        </select>
+                    </div>
+                </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="save">提交</button>
+            </div>
+            </form>
+    </div>
+  </div>
+</div>
+<nav>
+    <ul class="pager">
+        {% if items.has_previous %}
+            <li><a id="p_page" href="?page={{ items.previous_page_number }}{%if host%}&host_id={{host.id}}{%endif%}{%if template%}&template_id={{template.id}}{%endif%}&service_id={{service.id}}">上一页</a></li>
+        {%endif%}
+        当前页 {{ items.number }} 共 {{ items.paginator.num_pages }}页
+        {% if items.has_next %}
+        <li><a id="n_page" href="?page={{ items.next_page_number}}{%if host%}&host_id={{host.id}}{%endif%}{%if template%}&template_id={{template.id}}{%endif%}&service_id={{service.id}}">下一页</a></li>
+        {%endif%}
+        <br/>总计 {{items.paginator.count}}条记录
+    </ul>
+</nav>
+{% endblock %}
+
+{% block js%}
+<script type="text/javascript">
+    $("#mchange").click(function(){
+        var ids = getChecked();
+        if(ids.length == 0){
+            alert("至少选择一条记录");
+            return false;
+        }
+        $("#mchange_model").modal('show');
+    });
+
+    $("#save").click(function(){
+        params = {
+            "ids":getChecked(),
+            "csrfmiddlewaretoken":$("[name='csrfmiddlewaretoken']").val(),
+            "method":$("#method").val(),
+            "symbol":$("#symbol").val(),
+            "threshold":$("#threshold").val(),
+            "attempt":$("#attempt").val(),
+            "dt":$("#dt").val(),
+            "cycle":$("#cycle").val(),
+            "drawing":$("#drawing").val(),
+            "alarm":$("#alarm").val(),
+            "floatingthreshold":$("#floatingthreshold").val(),
+        }
+        console.log(params);
+        $.ajax({
+            type:"post",
+            url:"/api/items/mchange/",
+            data:params,
+            success:function(result){
+                if(result.status == 0){
+                    alert(result.message);
+                }else{
+                    $("#mchange_model").modal('hide');
+                    setTimeout("window.location.reload()",1000);
+                }
+            }
+        });
+    });
+</script>
+{% endblock%}

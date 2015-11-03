@@ -1,0 +1,172 @@
+{% extends "base.html"%}
+ {% block buttonHead %}
+    <div class="row" style="margin-bottom: 20px">
+        <div class="col-md-8">
+        </div>
+        <div class="col-md-4">
+            <form class="form-inline" style="text-align: right" method="get">
+                <div class="form-group">
+                    <label for="q" class="sr-only"></label>
+                    <input type="text" id="q" name="q" class="form-control ">
+                </div>
+                <button type="submit" class="btn"><span class="glyphicon glyphicon-search"></span></button>
+            </form>
+        </div>
+    </div>
+    {% endblock %}
+{%block bread%}{%endblock%}
+</style>
+{% block content%}
+    {% for graph in graphs%}
+        <div id="g_{{graph.id}}" style="height:600px;"></div>
+    {%endfor%}
+<nav>
+    <ul class="pager">
+        {% if graphs.has_previous %}
+            <li><a id="p_page" href="?page={{ graphs.previous_page_number }}">上一页</a></li>
+        {%endif%}
+        当前页 {{ graphs.number }} 共 {{ graphs.paginator.num_pages }}页
+        {% if graphs.has_next %}
+        <li><a id="n_page" href="?page={{ graphs.next_page_number }}">下一页</a></li>
+        {%endif%}
+        <br/>总计 {{graphs.paginator.count}}条记录
+    </ul>
+</nav>
+{% endblock %}
+
+{% block js%}
+
+<script src="/static/js/highcharts/highstock.js"></script>
+<script type="text/javascript">
+    $( document ).ready(function() {
+        Highcharts.setOptions({
+            global: {
+                useUTC: false
+            },
+            lang:{
+                rangeSelectorZoom:""
+            }
+        });
+            {% for graph in graphs%}
+                $('#g_{{graph.id}}').highcharts('StockChart', {
+                    credits:{
+                        enabled:false
+                    },
+                    title : {
+                        text : "{{graph.title}}"
+                    },
+                    yAxis: {
+                        min:0,
+                        opposite: false,
+                        labels: {
+                            formatter: function () {
+                            if (this.value > 1099511627776 ){
+                                return (this.value/1099511627776).toFixed(2) + "TB"
+                            }
+                            if (this.value > 1073741824){
+                                return (this.value/1073741824).toFixed(2) + "GB"
+                            }
+                            if (this.value>1048576){
+                                return (this.value/1048576).toFixed(2) + "MB"
+                            }
+                            if(this.value>1024){
+                                return (this.value/1024).toFixed(2) + "KB"
+                            }
+                            return this.value;
+                            //return (this.value > 0 ? ' + ' : '') + this.value + '%';
+                            }
+                        },
+                        plotLines: [{
+                            value: 0,
+                            width: 2,
+                            color: 'silver'
+                        }]
+                    },
+                    tooltip: {
+                        formatter: function(){
+                            var s = '<b>' + Highcharts.dateFormat('%Y-%m-%d %H:%M:%S', this.x) + '</b><br>';
+                            var data = "";
+                            $.each(this.points, function(){
+                                s += '<span style="color:' + this.series.color + '">' + this.series.name + ':';
+                                if (this.y > 1099511627776 ){
+                                    data  = (this.y/1099511627776).toFixed(2) + "TB"
+                                }else if (this.y > 1073741824){
+                                    data = (this.y/1073741824).toFixed(2) + "GB"
+                                }else if (this.y>1048576){
+                                    data = (this.y/1048576).toFixed(2) + "MB"
+                                }else if(this.y>1024){
+                                    data =  (this.y/1024).toFixed(2) + "KB"
+                                }else{
+                                    data = this.y.toFixed(2);
+                                }
+                                s += '<b>' + data + '</b><br/>';
+                            });
+                            return s;
+                        }
+                    },
+                    legend: {
+                        enabled:true,
+                        layout: 'horizontal'
+                    },
+                    scrollbar:{
+                        barBackgroundColor:'white',
+                        buttonBackgroundColor:'white'
+                    },
+                    rangeSelector: {
+                        enable:false,
+                        inputEnabled:false,
+                        buttons: [{
+                            type: 'minute',
+                            count: 30,
+                            text: '30分钟'
+                        }, {
+                            type: 'minute',
+                            count: 60,
+                            text: '一个小时'
+                        }, {
+                            type: 'minute',
+                            count:60 * 12,
+                            text: '12小时'
+                        }, {
+                            type: 'day',
+                            count: 1,
+                            text: '一天'
+                        }, {
+                            type: 'all',
+                            text: '所有'
+                        }],
+                        buttonTheme: {
+                            width: 60
+                        },
+                        selected:1
+                    },
+                    series:[
+                    ]
+                });
+
+            {%for m in graph.metric_set.all%}
+                $.ajax({
+                    type:"GET",
+                    url:"/get_data/?uuid={{m.uuid}}&metric={{m.metric}}",
+                    dataType:"json",
+                    success:function(result){
+                        $('#g_{{graph.id}}').highcharts().addSeries({
+                            name:"{{m.ip}}.{{m.metric}}",
+                            data: result
+                    }   );
+                    }
+                })
+            {%endfor%}
+            {%endfor%}
+    });
+
+</script>
+
+<script type="text/javascript">
+    var queryString = getUrlParam("q");
+    if(queryString != null){
+        $("#p_page").attr("href", $("#p_page").attr("href") + "&q=" + queryString)
+        $("#n_page").attr("href", $("#n_page").attr("href") + "&q=" + queryString)
+    }
+</script>
+{% endblock %}

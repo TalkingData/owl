@@ -1,0 +1,59 @@
+{% extends "base.html"%}
+{% block title%}{% if device %}编辑{%else%}新增{%endif%}设备{%endblock%}
+{% block breadcrumb%}
+    <li><a href="#">首页</a></li>
+    <li><a href="/network/device/">设备列表</a></li>
+    <li><a href="/network/device/?device_id={{device.id}}">{{device.ip}}</a></li>
+    <li><a href="/network/oid/?device_id={{device.id}}">自定义OID</a></li>
+    {%if oid %}
+        <li class="active">{{oid.name}}</li>
+    {%else%}
+        <li class="active">新增</li>
+    {%endif%}
+{% endblock %}
+{% block buttonHead%}
+{% endblock%}
+{% block content%}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-sm-10">
+            <form action="" class="form-horizontal" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="id" value="{{oid.id}}" />
+                <div class="form-group form-group-sm">
+                    <label for="name" class="col-sm-1 control-label">名称</label>
+                    <div class="col-sm-7">
+                        <input type="text" class="form-control" name="name" id="name" value="{{oid.name}}">
+                        <p class="help-block">自定义oid的可识别名称，如: sys.cpu.1min  sys.memory.precent</p>
+                    </div>
+                </div>
+                <div class="form-group form-group-sm">
+                    <label for="oid" class="col-sm-1 control-label">oid</label>
+                    <div class="col-sm-7">
+                        <input type="text" class="form-control" name="oid" id="oid" value="{{oid.oid}}">
+                        <p class="help-block">OID字符串</p>
+                    </div>
+                </div>
+
+
+                <div class="form-group">
+                    <div class="col-sm-1"></div>
+                    <div class="col-sm-7">
+                        <br/>
+                        <button type="submit" class="btn btn-success" style="margin-right: 10px;" id="submit">提交</button>
+                        <button type="button" class="btn btn-default "  id="return">返回</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{%block js%}
+    <script src="/static/js/jquery.bootstrap-duallistbox.js"></script>
+    <script>
+        demo1 = $("select[name='group']").bootstrapDualListbox({
+            moveOnSelect: false
+        });
+    </script>
+{%endblock%}

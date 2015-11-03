@@ -1,0 +1,128 @@
+{% extends "base.html"%}
+{%block css%}
+<link href="/static/css/bootstrap-select.css" rel="stylesheet">
+{%endblock%}
+{% block breadcrumb%}
+    <li><a href="/">首页</a></li>
+    <li><a href="/graph/graph/">自定义绘图</a></li>
+    <li>{{graph.title}}</li>
+{% endblock %}
+
+{% block buttonHead%}
+{%endblock%}
+{% block content%}
+<div class="container-fluid">
+    <div></div>
+    <div class="row">
+        <div class="col-sm-8">
+            <form action="" class="form-horizontal" method="post" id="item_form" >
+                {% csrf_token %}
+                <input type="hidden" name="id" value="{{metric.id}}" />
+                <input type="hidden" id="uuid" name="uuid" value="{{metric.uuid}}" />
+                {%if not metric%}
+                <div class="form-group">
+                    <label for="type" class="col-sm-2 control-label">类别</label>
+                    <div class="col-sm-6">
+                        <select class="form-control" name="type" id="type">
+                            <option value="host" >主机</option>
+                            <option value="network">网络设备</option>
+                        </select>
+                    </div>
+                </div>
+                {%endif%}
+                <div class="form-group">
+                    <label for="ip" class="col-sm-2 control-label">IP</label>
+                    <div class="col-sm-6">
+                        <select class="form-control selectpicker" data-max-options="1" multiple data-hide-disabled="true"  data-live-search="true" name="ip" id="ip">
+                            {%for host in hosts%}
+                                <option text="{{host.id}}" value="{{host.ip}}" >{{host.ip}}</option>
+                            {%endfor%}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="ip" class="col-sm-2 control-label">metric</label>
+                    <div class="col-sm-6">
+                        <select class="form-control selectpicker" data-max-options="50" multiple data-hide-disabled="true"  data-live-search="true" name="metric" id="metric">
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-sm-1"></div>
+                    <div class="col-sm-7">
+                        <button type="submit" class="btn btn-success " id="submit"> 更新 </button>&nbsp;&nbsp;
+                        <button type="button" class="btn btn-default " id="return"> 取消 </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{%block js%}
+<script src="/static/js/bootstrap-select.js"></script>
+<script type="text/javascript">
+jQuery(document).ready(function() {
+    var m_type = $("#type").val();
+    var url = "";
+    if(m_type == "host"){
+        url = "/api/GetAllHostIp/";
+    }
+    if (m_type == "network"){
+        url = "/api/GetAllDeviceIp/"
+    }
+    $.get(url, function(data){
+        $('#ip option').remove();
+        $.each(data.ips, function(key, value){
+            option = '<option text="'+ value.id +'" value="'+ value.ip +'" >'+ value.ip +'</option>'
+            $("#ip").append(option);
+        })
+        $('.selectpicker').selectpicker('refresh');
+    })
+
+
+    $("#type").change(function(){
+        var m_type = $("#type").val();
+        var url = "";
+        if(m_type == "host"){
+            url = "/api/GetAllHostIp/";
+        }
+        if (m_type == "network"){
+            url = "/api/GetAllDeviceIp/"
+        }
+        $.get(url, function(data){
+            $('#ip option').remove();
+            $.each(data.ips, function(key, value){
+                option = '<option text="'+ value.id +'" value="'+ value.ip +'" >'+ value.ip +'</option>'
+                $("#ip").append(option);
+            })
+            $('.selectpicker').selectpicker('refresh');
+        })
+    });
+
+    $("#ip").change(function(){
+        var ip = $("#ip").val(),
+            id = $('#ip').find('option:selected').attr('text');
+            var url = "";
+            var m_type = $("#type").val();
+            if(m_type == "host"){
+                url = "/api/GetHostMetric/"+id;
+            }
+            if (m_type == "network"){
+                url = "/api/GetDeviceMetric/"+id;
+            }
+            $.get(url, function(data){
+                $('#metric option').remove();
+                $.each(data.metrics, function(key, value){
+                    console.log(value);
+                    option = '<option value='+ value +' >'+ value +'</option>'
+                    $("#metric").append(option);
+                })
+                $('.selectpicker').selectpicker('refresh');
+            })
+    })
+})
+
+</script>
+{%endblock%}

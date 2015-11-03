@@ -1,0 +1,69 @@
+{% extends "base.html"%}
+{% block title%}设备列表{%endblock%}
+
+{% block breadcrumb%}
+    <li><a href="#">首页</a></li>
+    <li><a href="/network/device/">设备列表</a></li>
+    <li><a href="/network/device/{{device.id}}/">{{device.ip}}</a></li>
+    <li class="active">接口列表</li>
+{% endblock %}
+{% block serach%}
+    <input type="hidden"  name="device_id" value="{{device.id}}" class="form-control ">
+{%endblock%}
+{% block content%}
+<div class="panel panel-default">
+    <div class="table-responsive">
+        <table id="host_table" class="table table-hover table-bordered">
+        <thead>
+            <tr>
+                <th><input type="checkbox" id="select_all"></th>
+                <th>Index</th>
+                <th>名称</th>
+                <th>Mac</th>
+                <th>速率</th>
+                <th>状态</th>
+                <th>图形</th>
+                <th>报警规则</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if not interfaces %}<tr class="warning"><td colspan="9">没有记录</td></tr>{%endif%}
+            {% for interface in interfaces %}
+                <tr>
+                    <td><input type="checkbox" name="delete" value="{{interface.id}}"></td>
+                    <td>{{ interface.index }}</td>
+                    <td>{{ interface.name }}</td>
+                    <td>{{ interface.mac }}</td>
+                    <td>{{ interface.speed }}</td>
+                    <td>{% if 'up' in interface.status %}
+                            <span class="label label-success">Up</span>
+                        {%else%}
+                            <span class="label label-default">Down</span>
+                        {%endif%}
+                    </td>
+                    <td> <a href="/graph/draw/?uuid={{device.uuid}}&interface_id={{interface.id}}"><span class="glyphicon glyphicon glyphicon-picture" aria-hidden="true"></span></a></td>
+                    <td><a href="/network/item/?device_id={{device.id}}&interface_id={{interface.id}}">{{interface.item_set.count}}</a></td>
+                    <td>
+                        <a name="delete" href="javascript:void(0)" title="{{interface.id}}" class="btn btn-link">删除</a>
+                    </td>
+                </tr>
+            {%endfor%}
+        </tbody>
+    </table>
+    </div>
+</div>
+<nav>
+    <ul class="pager">
+        {% if interfaces.has_previous %}
+            <li><a id="p_page" href="?page={{ interfaces.previous_page_number }}{%if device%}&device_id={{device.id}}{%endif%}">上一页</a></li>
+        {%endif%}
+        当前页 {{ interfaces.number }} 共 {{ interfaces.paginator.num_pages }}页
+        {% if interfaces.has_next %}
+        <li><a id="n_page" href="?page={{ interfaces.next_page_number}}{%if device%}&device_id={{device.id}}{%endif%}">下一页</a></li>
+        {%endif%}
+        <br/>总计 {{interfaces.paginator.count}}条记录
+    </ul>
+</nav>
+{% endblock %}
+

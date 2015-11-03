@@ -1,0 +1,92 @@
+{% extends "base.html"%}
+
+{% block breadcrumb%}
+    <li><a href="#">首页</a></li>
+    {% if host%}
+        <li><a href="/host/host/">主机</a></li>
+        <li><a href="/host/host/{{host.id}}/">{{host.ip}}</a></li>
+        <li><a href="/host/service/?host_id={{host.id}}">服务</a></li>
+    {%else%}
+        <li><a href="/host/template/">模版</a></li>
+        <li><a href="/host/template/?template_id={{template.id}}">{{template.name}}</a></li>
+        <li><a href="/host/service/?template_id={{template.id}}">服务</a></li>
+    {%endif%}
+    {%if service%}
+        <li class="active">{{service.name}}</li>
+    {%else%}
+        <li class="active">新建</li>
+    {%endif%}
+{%endblock%}
+{%block buttonHead%}{%endblock%}
+{% block content%}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-sm-10">
+            <form action="" class="form-horizontal" method="post" id="service_form">
+                {% csrf_token %}
+                <input type="hidden" name="id" value="{{service.id}}" />
+                <div class="form-group">
+                    <label for="name" class="col-sm-1 control-label">服务名</label>
+                    <div class="col-sm-7">
+                        <input type="text" class="form-control" name="name" id="name" value="{{service.name}}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="plugin" class="col-sm-1 control-label">插件名</label>
+                    <div class="col-sm-7">
+                        <input type="text" class="form-control" id="plugin" name="plugin" value="{{service.plugin}}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="args" class="col-sm-1 control-label">参数</label>
+                    <div class="col-sm-7">
+                        <input type="text" class="form-control" id="args" name="args" value="{{service.args}}">
+                        <span id="helpBlock" class="help-block">A block of help text that breaks onto a new line and may extend beyond one line.</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="exec_interval" class="col-sm-1 control-label">执行间隔</label>
+                    <div class="col-sm-7">
+                        <input type="text" class="form-control" id="exec_interval" name="exec_interval" value="{{service.exec_interval}}">
+                    </div>
+                </div>
+                <div class="form-group form-group-sm">
+                    <label for="groups" class="col-sm-1 control-label">报警联系人组</label>
+                    <div class="col-sm-7">
+                        <select multiple  class="form-control" name="groups" id="groups">
+                            {% for group in groups %}
+                                <option value="{{group.id}}" {%if group in service.group.all %} selected {%endif%}>{{group.name}}</option>
+                            {%endfor%}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="alarm" class="col-sm-1 control-label">报警状态</label>
+                    <div class="col-sm-7">
+                        <select class="form-control" name="alarm" id="alarm">
+                            <option value="0" {% if service.alarm == 0%} selected {% endif %}>开启</option>
+                            <option value="1" {% if service.alarm == 1%} selected {% endif %}>关闭</option>
+                        </select>
+
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-sm-1"></div>
+                    <div class="col-sm-7">
+                        <button type="submit" class="btn btn-success" id="submit">更新</button>
+                        <button type="button" class="btn btn-default"  id="return">返回</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{%block js%}
+    <script src="/static/js/jquery.bootstrap-duallistbox.js"></script>
+    <script>
+        demo1 = $("select[name='groups']").bootstrapDualListbox({
+            moveOnSelect: false
+        });
+    </script>
+{%endblock%}

@@ -1,0 +1,59 @@
+{% extends "base.html"%}
+{% block title%}主机列表{%endblock%}
+
+{% block breadcrumb%}
+    <li><a href="#">首页</a></li>
+    <li><a href="/assest/assest/">机柜图</a></li>
+    <li><a href="/assest/idc/">机房管理</a></li>
+    <li class="active">机柜管理</li>
+{% endblock %}
+{%block buttonHead%}
+    <div class="row" style="margin-bottom: 20px">
+        <div class="col-md-8">
+            <input onclick="window.location.replace(window.location.pathname + 'add/' + window.location.search)" type="button" class="btn btn-primary btn-sm" value="新建">
+            <input id="mDelete" type="button" class="btn btn-danger btn-sm" value="批量删除">
+        </div>
+        <div class="col-md-4">
+            <form class="form-inline" style="text-align: right" method="get">
+                <div class="form-group">
+                    <label for="query" class="sr-only"></label>
+                    <input type="text" id="query" name="query" class="form-control ">
+                </div>
+                <button type="button" class="btn"><span class="glyphicon glyphicon-search"></span></button>
+            </form>
+        </div>
+    </div>
+{%endblock%}
+
+{% block content%}
+<div class="panel panel-default">
+    <div class="table-responsive">
+        <table id="host_table" class="table table-hover table-bordered">
+        <thead>
+            <tr>
+                <th><input type="checkbox" id="select_all"></th>
+                <th>机柜名称</th>
+                <th>规格</th>
+                <th>所在机房</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if not cabinets %}<tr class="warning"><td colspan="9">没有记录</td></tr>{%endif%}
+            {% for cabinet in cabinets %}
+                <tr>
+                    <td><input type="checkbox" name="delete" value="{{cabinet.id}}"></td>
+                    <td><a href="/assest/cabinet/{{cabinet.id}}/">{{cabinet.name}}</a></td>
+                    <td>{{cabinet.capacity}}U</td>
+                    <td><a href="/assest/idc/{{cabinet.idc.id}}/">{{cabinet.idc}}</a></td>
+                    <td>
+                        <a name="delete" href="javascript:void(0)" title="{{cabinet.id}}" class="btn btn-link">删除</a>
+                    </td>
+                </tr>
+            {%endfor%}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endblock %}
+

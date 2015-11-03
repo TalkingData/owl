@@ -1,0 +1,41 @@
+{% extends "base.html"%}
+{% block title%}主机列表{%endblock%}
+{% block breadcrumb%}
+    <li><a href="#">首页</a></li>
+    <li><a href="/assest/idc/">机房管理</a></li>
+    <li><a href="/assest/cabinet/">机柜管理</a></li>
+    <li class="active">机柜图</li>
+{% endblock %}
+{%block buttonHead%}
+    <div class="row" style="margin-bottom: 20px">
+        <div class="col-md-8">
+        </div>
+        <div class="col-md-4">
+            <form class="form-inline" style="text-align: right" method="get">
+                <div class="form-group">
+                    <label for="query" class="sr-only"></label>
+                    <input type="text" id="query" name="query" class="form-control ">
+                </div>
+                <button type="button" class="btn"><span class="glyphicon glyphicon-search"></span></button>
+            </form>
+        </div>
+    </div>
+{%endblock%}
+{% block content%}
+<div>
+    {% for cabinet in cabinets%}
+        <div class="cabinet">
+            <label style="height:20px;margin-bottom:0px;color:red">{{cabinet.name}}</label>
+            {% for k,v in cabinet.obj.items reversed %}
+                {%if v%}
+                    <div class="unit s_{{v.unit}}_0" onclick="alert('{{v}}')"></div>
+                {%else%}
+                    <div class="unit"></div>
+                {%endif%}
+            {%endfor%}
+        </div>
+    {%endfor%}
+</div>
+{% endblock %}
+
+

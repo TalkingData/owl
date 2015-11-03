@@ -1,0 +1,67 @@
+{% extends "base.html"%}
+
+{% block breadcrumb%}
+    <li><a href="#">首页</a></li>
+    <li><a href="/assest/assest/">机柜图</a></li>
+    <li><a href="/assest/cabinet/">机柜管理</a></li>
+    <li><a href="/assest/idc/">机房管理</a></li>
+    {%if idc%}
+        <li class="active">{{idc.name}}</li>
+    {%else%}
+        <li class="active">新建</li>
+    {%endif%}
+{% endblock %}
+{% block buttonHead%}
+{% endblock%}
+{% block content%}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-sm-10">
+            <form action="" class="form-horizontal" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="id" value="{{idc.id}}" />
+                <div class="form-group">
+                    <label for="name" class="col-sm-1 control-label">机房名称</label>
+                    <div class="col-sm-7">
+                        <input type="text" class="form-control" name="name" id="name" value="{{idc.name}}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="address" class="col-sm-1 control-label">机房地址</label>
+                    <div class="col-sm-7">
+                        <input type="text" class="form-control" id="address" name="address" value="{{idc.address}}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="tel" class="col-sm-1 control-label">联系方式</label>
+                    <div class="col-sm-7">
+                        <input type="text" class="form-control" id="tel" name="tel" value="{{idc.tel}}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="remark" class="col-sm-1 control-label">备注信息</label>
+                    <div class="col-sm-7">
+                        <input type="text" class="form-control" id="remark" name="remark" value="{{idc.remark}}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-sm-1"></div>
+                    <div class="col-sm-7">
+                        <br/>
+                        <button type="submit" class="btn btn-success" style="margin-right: 10px;" id="submit">提交</button>
+                        <button type="button" class="btn btn-default "  id="return">返回</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{%block js%}
+    <script src="/static/js/jquery.bootstrap-duallistbox.js"></script>
+<script>
+    demo1 = $("select[name='group']").bootstrapDualListbox({
+        moveOnSelect: false
+    });
+</script>
+{%endblock%}
