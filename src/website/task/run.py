@@ -11,8 +11,6 @@ from curlmulti import curlmulti_tsdb
 from celery import task
 from djcelery.models import *
 from datetime import datetime
-from gevent import monkey
-monkey.patch_all()
 
 @task(bind=True)
 def add_task(self):

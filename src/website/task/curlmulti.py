@@ -12,10 +12,8 @@ from celery import task
 from datetime import *
 from urllib import quote
 from django.shortcuts import get_object_or_404
-from gevent import monkey
-monkey.patch_all()
 
-tsdb_host = ("10.10.32.251:4248", "10.10.32.251:4243", "10.10.32.251:4244")
+tsdb_host = ("172.0.0.1:4248", "172.0.0.1:4243", "172.0.0.1:4244")
 
 def Unit(cycle, number):
 	start_time = (datetime.now()-timedelta(days=number)-timedelta(minutes=cycle)).strftime("%Y/%m/%d %H:%M:%S")

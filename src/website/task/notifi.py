@@ -29,4 +29,4 @@ def alarm(content, groups):
 	if phones:
 		urlopen(quote(url, ':/=&()?,>.')).read().strip()
 	else:
-		print "%s no phones" % (content)
+		pass
