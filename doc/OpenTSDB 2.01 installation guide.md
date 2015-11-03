@@ -2,11 +2,11 @@
 ----
 
     环境描述：
-    System  : Centos 7.1 x64
-    Hbase   : hbase-1.1.2
-    OpenTSDB  : OpenTSDB-2.0.1
-    
 
+    System    :   Centos 7.1 x64
+    Hbase     :   hbase-1.1.2
+    OpenTSDB  :   OpenTSDB-2.0.1
+    
     lzo压缩依赖包安装：
     
 ```python
@@ -64,22 +64,23 @@ Hbase::Table - tsdb-meta
 ```
 
     OK，现在我们可以准备启动TSD了。不过在这之前，我们需要配置一下OpenTSDB先 configuration ：
-
+```python
 > 将 src/opentsdb.conf 拷贝到如下目录之一： 
 •	./opentsdb.conf 
 •	/etc/opentsdb.conf 
 •	/etc/opentsdb/opentsdb.conf 
 •	/opt/opentsdb/opentsdb.conf 
-
+```
 
 ---
 >然后配置如下四个必须配置项： 
+```python
 •	tsd.network.port=4242 
 •	tsd.http.cachedir=/tmp/tsd - Path to write temporary files to 
 •	tsd.http.staticroot=build/staticroot - Path to the static GUI files found in ./build/staticroot 
 •	tsd.storage.hbase.zk_quorum=localhost - A comma separated list of Zookeeper hosts to connect to, default is "localhost". If HBase and Zookeeper are not running on the same machine, specify the host and port here. 
 •	tsd.core.auto_create_metrics=True - Whether or not to automatically create UIDs for new metric types, default is False. 建议打开。 
-
+```
 ```python
 mkdir –p /tmp/tsd 
 ```
@@ -123,26 +124,4 @@ Content-Length: 36
 
 {"errors":[],"failed":0,"success":1}[root@master opentsdb]#
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 然后就可以通过 http://127.0.0.1:4242 访问TSD的web界面了
- 
-
-查询验证数据
-
- 
-
-
