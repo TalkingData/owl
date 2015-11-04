@@ -55,7 +55,7 @@ func GetIDRACAddr() string {
 	if err != nil {
 		return ""
 	}
-	return strings.Trim(string(res), "\n")
+	return strings.Trim(strings.Trim(string(res), "\n"), " ")
 }
 
 func DownloadFile(url string) error {
