@@ -6,6 +6,16 @@ from notifi import alarm
 from datetime import datetime
 from views import item_update, item_network_update
 
+symbols = {
+	'>' : 'gt',
+	'>=' : 'ge',
+	'<' : 'lt',
+	'<=' : 'le',
+	'=' : 'eq',
+	'!=' : 'ne',
+	'<>' : 'ne'
+}
+
 def ratio(data1, data2):
     r = 0
     if data1 != 0:
@@ -14,13 +24,13 @@ def ratio(data1, data2):
     return 0
 
 def bytes2human(n):
-    symbols = ('K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')
+    symbol = ('K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')
     prefix = {}
 
-    for i, s in enumerate(symbols):
+    for i, s in enumerate(symbol):
         prefix[s] = 1 << (i + 1) * 10
 
-    for s in reversed(symbols):
+    for s in reversed(symbol):
         if n >= prefix[s]:
             value = float(n) / prefix[s]
             return "%.1f%s" % (value, s)    
@@ -53,18 +63,9 @@ def tsdb_ratio_data(data, method):
 
 	return val
 
-def tsdb_data(data, url, h, service, item, method, symbol, threshold, floatingthreshold, floatingvalue, counter, attempt, groups):
+def tsdb_data(data, url, h, service, item, method, symbol, threshold, floatingthreshold, floatingvalue, counter, attempt, groups, alert):
 	dt = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 	_data = json.loads(data)
-	symbols = {
-		'>' : 'gt',
-		'>=' : 'ge',
-		'<' : 'lt',
-		'<=' : 'le',
-		'=' : 'eq',
-		'!=' : 'ne',
-		'<>' : 'ne'
-	}
 	if len(_data) and type(_data) == list:
 		data_dict = _data[0]
 		metric = "%s.%s" % (service, item)
@@ -95,13 +96,14 @@ def tsdb_data(data, url, h, service, item, method, symbol, threshold, floatingth
 
 		if rv == 0:
 			floatingvalue = 0
+			alert = 0
 			if counter > 0:
 				counter = 0
 				content = "状态:ok %s 主机:%s metric:%s 阀值:%s 方法:%s %s 结果:%s" % (dt, h.ip, metric, bytes2human(threshold), method, symbol, bytes2human(val))
 				alarm(content, groups)	
-				item_update(h, service, item, val, counter, floatingvalue)
+				item_update(h, service, item, val, counter, floatingvalue, alert)
 			else:
-				item_update(h, service, item, val, counter, floatingvalue)
+				item_update(h, service, item, val, counter, floatingvalue, alert)
 
 		elif rv == 1:
 			if floatingthreshold == 0:
@@ -109,24 +111,24 @@ def tsdb_data(data, url, h, service, item, method, symbol, threshold, floatingth
 				content = "状态:critical %s 主机:%s metric:%s 结果:%s 方法:%s %s 阀值:%s" % (dt, h.ip, metric, bytes2human(val), method, symbol, bytes2human(threshold))
 				counter += 1
 
-				if attempt == 0:
+				if attempt == 0 and alert == 0:
 					alarm(content, groups)
-				elif counter < attempt:
+				elif counter < attempt and alert == 0:
 					alarm(content, groups)
 
-				item_update(h, service, item, val, counter, floatingvalue)
+				item_update(h, service, item, val, counter, floatingvalue, alert)
 
 			else:
 				if counter == 0:
 					floatingvalue = val + floatingthreshold
 					content = "状态:critical %s 主机:%s metric:%s 结果:%s 方法:%s %s 阀值:%s" % (dt, h.ip, metric, bytes2human(val), method, symbol, bytes2human(threshold))
 					counter += 1
-					if attempt == 0:
+					if attempt == 0 and alert == 0:
 						alarm(content, groups)
-					elif counter < attempt:
+					elif counter < attempt and alert == 0:
 						alarm(content, groups)
 
-					item_update(h, service, item, val, counter, floatingvalue)
+					item_update(h, service, item, val, counter, floatingvalue, alert)
 
 				elif counter > 0:
 					fv = 0
@@ -138,31 +140,22 @@ def tsdb_data(data, url, h, service, item, method, symbol, threshold, floatingth
 							floatingvalue -= floatingthreshold			
 
 						floatingvalue += floatingthreshold
-						item_update(h, service, item, val, counter, floatingvalue)
+						item_update(h, service, item, val, counter, floatingvalue, alert)
 
 					elif fv == 1:
 						content = "状态:critical %s 主机:%s metric:%s 结果:%s 方法:%s %s 浮动值:%s" % (dt, h.ip, metric, bytes2human(val), method, symbol, bytes2human(floatingvalue))
-						if attempt == 0:
+						if attempt == 0 and alert == 0:
 							alarm(content, groups)
-						elif counter < attempt:
+						elif counter < attempt and alert == 0:
 							alarm(content, groups)
 
 						floatingvalue = val + floatingthreshold
 						counter += 1
-						item_update(h, service, item, val, counter, floatingvalue)
+						item_update(h, service, item, val, counter, floatingvalue, alert)
 
 def tsdb_network_data(data, url, n, interface, item, method, symbol, threshold, floatingthreshold, floatingvalue, counter, attempt, groups):
 	dt = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 	_data = json.loads(data)
-	symbols = {
-		'>' : 'gt',
-		'>=' : 'ge',
-		'<' : 'lt',
-		'<=' : 'le',
-		'=' : 'eq',
-		'!=' : 'ne',
-		'<>' : 'ne'
-	}
 	if len(_data) and type(_data) == list:
 		data_dict = _data[0]
 		metric = "%s.%s" % (interface, item)

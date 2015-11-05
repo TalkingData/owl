@@ -12,8 +12,14 @@ from celery import task
 from datetime import *
 from urllib import quote
 from django.shortcuts import get_object_or_404
+try:
+    import signal
+    signal.signal(signal.SIGPIPE, signal.SIG_IGN)
+except ImportError:
+    pass
 
-tsdb_host = ("172.0.0.1:4248", "172.0.0.1:4243", "172.0.0.1:4244")
+tsdb_host = ("10.10.32.251:4248", "10.10.32.251:4243", "10.10.32.251:4244")
+num_conn = 12
 
 def Unit(cycle, number):
 	start_time = (datetime.now()-timedelta(days=number)-timedelta(minutes=cycle)).strftime("%Y/%m/%d %H:%M:%S")
@@ -26,8 +32,8 @@ def pycurl_data(filename, url):
 	curl.setopt(pycurl.URL, url)
 	curl.setopt(pycurl.FOLLOWLOCATION, 1)
 	curl.setopt(pycurl.MAXREDIRS, 5)
-	curl.setopt(pycurl.CONNECTTIMEOUT, 30)
-	curl.setopt(pycurl.TIMEOUT, 300)
+	curl.setopt(pycurl.CONNECTTIMEOUT, 5)
+	curl.setopt(pycurl.TIMEOUT, 10)
 	curl.setopt(pycurl.NOSIGNAL, 1)
 	curl.setopt(pycurl.WRITEDATA, fp)
 	curl.perform()
@@ -35,7 +41,7 @@ def pycurl_data(filename, url):
 	fp.close()
 	return 0
 
-def tsdb_ratio(h, url, url_ago, name, key, method, symbol, threshold, floatingthreshold, floatingvalue, counter, attempt, groups):
+def tsdb_ratio(h, url, url_ago, name, key, method, symbol, threshold, floatingthreshold, floatingvalue, counter, attempt, groups, alert):
 	filename = "/tmp/%s_ratio_url_%s.%s" % (h.uuid, name, key)
 	filename_ago = "/tmp/%s_ratio_url_ago_%s.%s" % (h.uuid, name, key)
 	data = pycurl_data(filename, quote(url, ':/=&()?,>.'))
@@ -68,14 +74,15 @@ def tsdb_ratio(h, url, url_ago, name, key, method, symbol, threshold, floatingth
 
 		if rv == 0:
 			floatingvalue = 0
-			if counter > 0:
+			alert = 0
+			if counter > 0 and alert == 0:
 				counter = 0
 				content = "状态:ok %s 主机:%s metric:%s 阀值百分比:%s 方法:环比 %s 结果百分比:|%s|" % (dt, h.ip, metric, bytes2human(threshold), symbol, bytes2human(val))
 				print content
 				alarm(content, groups)	
-				item_update(h, name, key, val, counter, floatingvalue)
+				item_update(h, name, key, val, counter, floatingvalue, alert)
 			else:
-				item_update(h, name, key, val, counter, floatingvalue)
+				item_update(h, name, key, val, counter, floatingvalue, alert)
 
 		elif rv == 1:
 			if floatingthreshold == 0:
@@ -83,12 +90,12 @@ def tsdb_ratio(h, url, url_ago, name, key, method, symbol, threshold, floatingth
 				content = "状态:critical %s 主机:%s metric:%s 结果百分比:|%s| 方法:环比 %s 阀值百分比:%s" % (dt, h.ip, metric, bytes2human(val), symbol, bytes2human(threshold))
 				counter += 1
 
-				if attempt == 0:
+				if attempt == 0 and alert== 0:
 					alarm(content, groups)
-				elif counter < attempt:
+				elif counter < attempt and alert == 0:
 					alarm(content, groups)
 
-				item_update(h, name, key, val, counter, floatingvalue)
+				item_update(h, name, key, val, counter, floatingvalue, alert)
 
 			else:
 				if counter == 0:
@@ -96,12 +103,12 @@ def tsdb_ratio(h, url, url_ago, name, key, method, symbol, threshold, floatingth
 					content = "状态:critical %s 主机:%s metric:%s 结果百分比:|%s| 方法:环比 %s 阀值百分比:%s" % (dt, h.ip, metric, bytes2human(val), symbol, bytes2human(threshold))
 					print content
 					counter += 1
-					if attempt == 0:
+					if attempt == 0 and alert == 0:
 						alarm(content, groups)
-					elif counter < attempt:
+					elif counter < attempt and alert == 0:
 						alarm(content, groups)
 
-					item_update(h, name, key, val, counter, floatingvalue)
+					item_update(h, name, key, val, counter, floatingvalue, alert)
 
 				elif counter > 0:
 					fv = 0
@@ -115,19 +122,19 @@ def tsdb_ratio(h, url, url_ago, name, key, method, symbol, threshold, floatingth
 						print "floatingvalue:%s" % (floatingvalue)
 
 						floatingvalue += floatingthreshold
-						item_update(h, name, key, val, counter, floatingvalue)
+						item_update(h, name, key, val, counter, floatingvalue, alert)
 
 					elif fv == 1:
 						content = "状态:critical %s 主机:%s metric:%s 结果百分比:|%s| 方法:环比 %s 浮动值百分比:%s" % (dt, h.ip, metric, bytes2human(val), symbol, bytes2human(floatingvalue))
 						print content
-						if attempt == 0:
+						if attempt == 0 and alert == 0:
 							alarm(content, groups)
-						elif counter < attempt:
+						elif counter < attempt and alert == 0:
 							alarm(content, groups)
 
 						floatingvalue = val + floatingthreshold
 						counter += 1
-						item_update(h, name, key, val, counter, floatingvalue)
+						item_update(h, name, key, val, counter, floatingvalue, alert)
 
 @task(bind=True)
 def curlmulti_tsdb(self, uuid):
@@ -135,12 +142,11 @@ def curlmulti_tsdb(self, uuid):
 	urls = []
 	rr_obj = Round_Robin(tsdb_host)
 
-	#h = host.objects.get(uuid=uuid)		
 	h = get_object_or_404(host, uuid=uuid)
 	services = h.service_set.filter(alarm=0)
 	for s in services:
 		groups = s.group.all()
-		items = s.item_set.filter(alarm=0)
+		items = s.item_set.filter(alarm=0) | s.item_set.filter(alarm=2)
 		for i in items:
 			if not i.symbol:
 				continue
@@ -151,19 +157,17 @@ def curlmulti_tsdb(self, uuid):
 				start_time, stop_time = Unit(i.cycle+1, i.number)
 				url = 'http://{0}/api/query?start={1}m-ago&m=sum:{2}{3}'.format(rr_obj.get_next()[1], i.cycle+1, metric, tags)
 				url_ago = 'http://{0}/api/query?start={1}&end={2}&m=sum:{3}{4}'.format(rr_obj.get_next()[1], start_time, stop_time, metric, tags)
-				tsdb_ratio(h, url, url_ago, s.name, i.key, i.method, i.symbol, i.threshold, i.floatingthreshold, i.floatingvalue, i.counter, i.attempt, groups)
+				tsdb_ratio(h, url, url_ago, s.name, i.key, i.method, i.symbol, i.threshold, i.floatingthreshold, i.floatingvalue, i.counter, i.attempt, groups, i.alarm)
 			else:
 				url = 'http://{0}/api/query?start={1}m-ago&m=sum:{2}{3}'.format(rr_obj.get_next()[1], i.cycle+1, metric, tags)
-				urls.append((url, s.name, i.key, i.method, i.symbol, i.threshold, i.floatingthreshold, i.floatingvalue, i.counter, i.attempt, groups))
+				urls.append((url, s.name, i.key, i.method, i.symbol, i.threshold, i.floatingthreshold, i.floatingvalue, i.counter, i.attempt, groups, i.alarm))
 	queue = []
 	for _url in urls:
-		url, service, item, method, symbol, threshold, floatingthreshold, floatingvalue, counter, attempt, groups = _url
+		url, service, item, method, symbol, threshold, floatingthreshold, floatingvalue, counter, attempt, groups, alert = _url
 		filename = "/tmp/%s_url_%04d" % (uuid, len(queue)+1)
-		queue.append((url, filename, service, item, method, symbol, threshold, floatingthreshold, floatingvalue, counter, attempt, groups))
+		queue.append((url, filename, service, item, method, symbol, threshold, floatingthreshold, floatingvalue, counter, attempt, groups, alert))
 
-	num_conn = 50
 	num_urls = len(urls)
-	num_conn = min(num_conn, num_urls)
 
 	m = pycurl.CurlMulti()
 	m.handles = []
@@ -184,7 +188,7 @@ def curlmulti_tsdb(self, uuid):
 
 	while num_processed < num_urls:
 		while queue and freelist:
-			url, filename, service, item, method, symbol, threshold, floatingthreshold, floatingvalue, counter, attempt, groups = queue.pop()
+			url, filename, service, item, method, symbol, threshold, floatingthreshold, floatingvalue, counter, attempt, groups, alert = queue.pop()
 			c = freelist.pop()
 			c.fp = open(filename, "wb")
 			c.setopt(pycurl.URL, url)
@@ -202,6 +206,7 @@ def curlmulti_tsdb(self, uuid):
 			c.counter = counter
 			c.attempt = attempt
 			c.groups = groups
+			c.alert = alert
 
 		while 1:
 			ret, num_handles = m.perform()
@@ -214,7 +219,7 @@ def curlmulti_tsdb(self, uuid):
 				c.fp.close()
 				c.fp = None
 				with open(c.filename, "rb") as f:
-					tsdb_data(f.readline(), c.url, h, c.service, c.item, c.method, c.symbol, c.threshold, c.floatingthreshold, c.floatingvalue, c.counter, c.attempt, c.groups)
+					tsdb_data(f.readline(), c.url, h, c.service, c.item, c.method, c.symbol, c.threshold, c.floatingthreshold, c.floatingvalue, c.counter, c.attempt, c.groups, c.alert)
 
 				m.remove_handle(c)
 				freelist.append(c)
@@ -247,7 +252,6 @@ def network_curlmulti_tsdb(self, uuid):
 	urls = []
 	rr_obj = Round_Robin(tsdb_host)
 
-	#n = device.objects.get(uuid=uuid)		
 	n = get_object_or_404(device, uuid=uuid)		
 	groups = n.group.all()
 	interfaces = n.interface_set.filter(alarm=0)
@@ -268,9 +272,7 @@ def network_curlmulti_tsdb(self, uuid):
 		filename = "/tmp/%s_url_%04d" % (uuid, len(queue)+1)
 		queue.append((url, filename, interface, item,  method, symbol, threshold, floatingthreshold, floatingvalue, counter, attempt, groups))
 
-	num_conn = 50
 	num_urls = len(urls)
-	num_conn = min(num_conn, num_urls)
 
 	m = pycurl.CurlMulti()
 	m.handles = []

@@ -6,14 +6,16 @@ from django.http import HttpResponse
 from host.models import *
 from network.models import *
 import re
+import json
 
-def item_update(h, service, item, val, counter, floatingvalue):
+def item_update(h, service, item, val, counter, floatingvalue, alert):
 	s = h.service_set.get(name=service)
 	i = s.item_set.get(key=item)
 	i.current = val
 	i.counter = counter
 	i.floatingvalue = floatingvalue
-	i.save(update_fields=['current', 'counter', 'floatingvalue'])
+	i.alarm = alert
+	i.save(update_fields=['current', 'counter', 'floatingvalue', 'alarm'])
 
 def item_network_update(n, interface, item, val, counter, floatingvalue):
 	i = n.interface_set.get(name=interface)
@@ -146,3 +148,57 @@ def auto_add_metric(url, content, task_interval, groups, keys, cycles, methods, 
             return "the json data type is wrong"
     except:
             return "the json data type is wrong"
+
+def alert_data(request):
+	if request.method == 'POST':
+		g = request.POST.get('group', '')
+		h = request.POST.get('host', '')
+		datas = []
+		if g and h:
+			_g = group.objects.get(name=g)
+			for _h in _g.host_set.all():
+				if _h.ip == h:
+					for _s in _h.service_set.all():
+						for _i in _s.item_set.all():
+							metric = "%s.%s" % (_s.name, _i.key)
+							if abs(_i.threshold) > abs(_i.val) or abs(_i.floatingvalue) > abs(_i.val):
+								datas.append({'id': _i.id, 'ip': _h.ip, 'metric': metric, 'val': val, 'threshold': _i.threshold, 'floatvalue': _i.floatingvalue})
+		elif g and not h:
+			_g = group.objects.get(name=g)
+			for _h in _g.host_set.all():
+				for _s in _h.service_set.all():
+					for _i in _s.item_set.all():
+						metric = "%s.%s" % (_s.name, _i.key)
+						if abs(_i.threshold > _i.val) or abs(_i.floatingvalue) > abs(_i.val):
+							datas.append({'id':_i.id, 'ip': _h.ip, 'metric': metric, 'val': val, 'threshold': _i.threshold, 'floatvalue': _i.floatingvalue})
+		elif not g and h:
+			_h = host.objects.get(ip=h)
+			for _s in _h.service_set.all():
+				for _i in _s.item_set.all():
+					metric = "%s.%s" % (_s.name, _i.key)
+					if abs(_i.threshold) > abs(_i.val) or abs(_i.floatingvalue) > abs(_i.val):
+						datas.append({'id':_i.id, 'ip': _h.ip, 'metric': metric, 'val': val, 'threshold': _i.threshold, 'floatvalue': _i.floatingvalue})
+		else:
+			for _h in host.objects.all():
+				for _s in _h.service_set.all():
+					for _i in _s.item_set.all():
+						metric = "%s.%s" % (_s.name, _i.key)
+						if abs(_i.threshold) > abs(_i.val) or abs(_i.floatingvalue) > abs(_i.val):
+							datas.append({'id':_i.id, 'ip': _h.ip, 'metric': metric, 'val': val, 'threshold': _i.threshold, 'floatvalue': _i.floatingvalue})
+
+        	return HttpResponse(json.dumps(datas, indent=4))
+	else:
+		return HttpResponse(json.dumps({'status':1}, indent=4))
+
+def acknowledged(request):
+	if request.method == 'POST':
+		ids = request.POST.getlist('id', '')
+		if ids:
+			for _id in ids:
+				i = item.objects.get(id=_id)
+				i.alarm = 2
+				i.save()
+
+		return HttpResponse(json.dumps({'status':0}, indent=4))
+	else:
+		return HttpResponse(json.dumps({'status':1}, indent=4))

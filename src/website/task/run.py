@@ -50,7 +50,7 @@ def add_task(self):
 				if h.uuid in t_uuid:
 					PeriodicTask.objects.get(name=h.uuid).delete()
 				content = "critical: %s 主机:%s down" % (dt, h.ip)
-				print content
+				#print content
 				for g in h.group.all():
 					alarm(content, Group.objects.filter(name=g.name))
 				

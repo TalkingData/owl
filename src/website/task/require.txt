@@ -1,0 +1,5 @@
+celery
+gevent
+pycurl
+django-celery
+redis

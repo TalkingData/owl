@@ -8,7 +8,7 @@ import sys
 reload(sys)
 sys.setdefaultencoding('utf8')
 
-addrs = ['192.168.1.1']
+addrs = ['10.10.32.10:9000', '10.10.32.35:9000']
 rr_obj = Round_Robin(addrs)
 
 def alarm(content, groups):
@@ -27,6 +27,7 @@ def alarm(content, groups):
 			
 	url = "http://{0}/sendalart?severity=1&msg={1}&phones={2}&subject=报警".format(rr_obj.get_next()[1], content, ','.join(phones))
 	if phones:
+		print url
 		urlopen(quote(url, ':/=&()?,>.')).read().strip()
 	else:
 		pass
