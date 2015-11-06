@@ -18,7 +18,7 @@ try:
 except ImportError:
     pass
 
-tsdb_host = ("10.10.32.251:4248", "10.10.32.251:4243", "10.10.32.251:4244")
+tsdb_host = ("172.0.0.1:4248", "127.0.0.1:4243", "127.0.0.1:4244")
 num_conn = 12
 
 def Unit(cycle, number):

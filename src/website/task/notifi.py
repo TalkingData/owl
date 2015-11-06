@@ -8,7 +8,7 @@ import sys
 reload(sys)
 sys.setdefaultencoding('utf8')
 
-addrs = ['10.10.32.10:9000', '10.10.32.35:9000']
+addrs = ['127.0.0.1:9000', '127.0.0.1:9000']
 rr_obj = Round_Robin(addrs)
 
 def alarm(content, groups):
