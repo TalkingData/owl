@@ -1,0 +1,68 @@
+{% extends "base.html"%}
+{% block title%}报警知悉{%endblock%}
+
+{% block breadcrumb%}
+    <li><a href="#">首页</a></li>
+    <li class="active">知悉</li>
+{% endblock %}
+{% block buttonHead %}
+	<div class="row" style="margin-bottom: 20px">
+		<div class="col-md-8">
+		    <input id="acknowledged" type="button" class="btn btn-danger btn-sm" value="批量知悉">
+		</div>
+		<div class="col-md-4">
+		    <form class="form-inline" style="text-align: right" method="get" action="/task/acknowledged">
+			{% block serach%}
+			{%endblock%}
+			<div class="form-group">
+			    <label for="q" class="sr-only"></label>
+			    <input type="text" id="q" name="q" class="form-control ">
+			</div>
+			<button type="submit" class="btn"><span class="glyphicon glyphicon-search"></span></button>
+		    </form>
+        	</div>
+	</div>
+{% endblock %}
+
+{% block content%}
+<div class="panel panel-default">
+    <div class="table-responsive">
+        <table id="host_table" class="table table-hover table-bordered">
+        <thead>
+            <tr>
+                <th><input type="checkbox" id="select_all"></th>
+                <th>主机</th>
+                <th>metric</th>
+                <th>阀值</th>
+                <th>浮动值</th>
+                <th>当前值</th>
+                <th>状态</th>
+		<th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for i in datas %}
+                <tr>
+		    <td><input type="checkbox" name="delete" value="{{i.id}}"></td>
+                    <td>{{i.ip}}</td>
+                    <td>{{i.metric}}</td>
+                    <td>{{i.threshold}}</td>
+                    <td>{{i.floatingvalue}}</td>
+                    <td>{{i.current}}</td>
+		    <td>
+                        {% if i.alarm == 2 %}
+                            	<span style="color: green">已知悉</span>
+                        {%else%}
+                        	<span style="color: red">故障</span>
+                        {% endif %}
+                    </td>
+		    <td>
+			<a href="/task/acknowledged/disable?id={{i.id}}" class="btn btn-link" style="font-size:12px" style="font-size:12px" style="font-size:12px">知悉</a>
+		    </td>
+                </tr>
+            {%endfor%}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endblock %}
