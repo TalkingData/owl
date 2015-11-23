@@ -1,7 +1,7 @@
 #!/bin/bash
 OLD_GOPATH=${GOPATH}
 export GOPATH=${PWD}
-which go1
+which go
 if [ $? -ne 0 ];then
     echo "go command not found" 
     exit 1
