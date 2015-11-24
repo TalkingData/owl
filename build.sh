@@ -22,7 +22,8 @@ mkdir -p {td-client,td-server,td-proxy}/conf
 mkdir -p packages
 mv bin/td-client td-client/
 mv bin/td-guard td-client/
-cp src/etc/client.conf td-client/conf/
+\cp -r src/plugins td-client/
+\cp src/etc/client.conf td-client/conf/
 tar zcf packages/td-client.tar.gz td-client
 mv bin/td-server td-server/
 cp src/etc/server.conf td-server/conf/
