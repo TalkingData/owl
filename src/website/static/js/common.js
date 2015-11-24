@@ -188,3 +188,31 @@ function getUrlParam(name){
     var r = window.location.search.substr(1).match(reg);
     if (r!=null) return r[2]; return null;
 }
+
+$("#acknowledged").click(function(){
+            var ids = getChecked();
+            if(ids.length == 0){
+                alert("至少选择一条记录");
+                return false;
+            }
+            if(confirm("确定要启用" + ids.split(",").length + "条记录吗?")){
+                all_acknowledged(ids);
+            }
+        });
+
+function all_acknowledged(ids){
+    var url = window.location.pathname + "/all_acknowledged/";
+    $.ajax({
+		type:"post",
+		url:url,
+		data:{"ids":ids, "csrfmiddlewaretoken":$("[name='csrfmiddlewaretoken']").val()},
+		success:function(result){
+		//alert(result);
+		    if(result.status ==0) {
+			location.reload();
+		    }else{
+			alert(result.message);
+		    }
+		}
+	});
+}
