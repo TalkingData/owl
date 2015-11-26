@@ -26,4 +26,30 @@ OWL-V3目前用到的技术主要以下几种：
 3.环比报警，OWL目前可以设置一个历史的周期，在算法报警上自动计算当前的数值和之前指定的历史周期的数值的差异，触发报警，这样有效的降低报警设置的合理性。
 
 
-Docker Image Address: http://pan.baidu.com/s/1eQlXNjk
+
+
+###Docker Image Address: 
+http://pan.baidu.com/s/1eQlXNjk
+下载完成解压: 
+```Bash
+tar zxf  owl-docker.tar.gz
+```
+导入镜像：
+```Bash
+cat owl.tar | docker import - owl
+```
+查看镜像：
+```Bash
+docker images
+REPOSITORY          TAG                 IMAGE ID            CREATED             VIRTUAL SIZE
+owl                 latest              d4608c52263f        29 seconds ago      2.02 GB
+```
+启动一个容器：
+```Bash
+docker run -d -p 8080:80 owl /etc/init.d/start-all
+```
+打开浏览器访问即可
+默认用户名密码为：root/123456
+
+###QQ交流群
+492850035
