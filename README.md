@@ -30,23 +30,24 @@ OWL-V3目前用到的技术主要以下几种：
 
 ###Docker Image Address: 
 http://pan.baidu.com/s/1eQlXNjk
+
 下载完成解压: 
 ```Bash
 tar zxf  owl-docker.tar.gz
 ```
 导入镜像：
 ```Bash
-cat owl.tar | docker import - owl
+docker load < owl.tar 
 ```
 查看镜像：
 ```Bash
 docker images
 REPOSITORY          TAG                 IMAGE ID            CREATED             VIRTUAL SIZE
-owl                 latest              d4608c52263f        29 seconds ago      2.02 GB
+<none>              <none>              6353ef07ffe1        2 weeks ago         1.994 GB
 ```
 启动一个容器：
 ```Bash
-docker run -d -p 8080:80 owl /etc/init.d/start-all
+docker run -d -p 8080:80 6353ef07ffe1 /etc/init.d/start-all
 ```
 打开浏览器访问即可
 默认用户名密码为：root/123456
