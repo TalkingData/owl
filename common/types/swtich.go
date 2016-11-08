@@ -1,0 +1,405 @@
+package types
+
+import (
+	"bytes"
+	"fmt"
+	"io"
+	"owl/common/utils"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+)
+
+var oids []string = []string{"ifHCOutOctets", "ifHCInOctets", "inErrors", "outErrors", "inDiscards", "outDiscards"}
+
+type Switch struct {
+	ID              string   `json:"id"`
+	IP              string   `json:"ip"`
+	Hostname        string   `json:"hostname"`
+	AgentVersion    string   `json:"agent_version"`
+	CollectInterval int      `json:"collect_interval"`
+	LegalPrefix     []string `json:"legal_prefix"`
+
+	//采集数据成功更新
+	LastUpdate time.Time             `json:"last_update"`
+	Snmp       SnmpConfig            `json:"snmp"`
+	Interfaces map[string]*Interface `json:"interfaces"`
+	Err        error                 `json:"-"`
+}
+
+type SnmpConfig struct {
+	Port      int    `json:"port"`
+	Version   string `json:"version"`
+	Community string `json:"community"`
+}
+
+type Interface struct {
+	Index       string    `json:"index"`
+	Name        string    `json:"name"`
+	OperStatus  string    `json:"oper_starus"`
+	InBytes     [2]uint64 `json:"in_bytes"`
+	OutBytes    [2]uint64 `json:"out_bytes"`
+	InDiscards  [2]uint64 `json:"in_discards"`
+	OutDiscards [2]uint64 `json:"out_discards"`
+	InErrors    [2]uint64 `json:"in_errors"`
+	OutErrors   [2]uint64 `json:"out_errors"`
+	Speed       uint64    `json:"speed"`
+}
+
+func (this *Switch) walk(oid string) ([]byte, error) {
+	return utils.RunCmdWithTimeout("snmpwalk", []string{"-v", this.Snmp.Version, "-c", this.Snmp.Community, this.IP, oid}, 5)
+}
+
+func (this *Switch) Do(buf1 chan<- *TimeSeriesData, buf2 chan<- *MetricConfig) {
+retry:
+	if err := this.BuildInterfaceIndex(); err != nil {
+		if err == utils.ErrRunTimeout {
+			fmt.Println(this.IP, "timeouts")
+		}
+		time.Sleep(time.Minute * 5)
+		goto retry
+	}
+	this.CollectInterfaceName()
+	this.getHostname()
+	this.CollectIfaceSpeed()
+	go this.loop(buf1)
+	go this.postMetric(buf2)
+}
+func (this *Switch) postMetric(buffer chan<- *MetricConfig) {
+	for {
+		for _, i := range this.Interfaces {
+			if !this.IsLegalPrefix(i.Name) {
+				continue
+			}
+			buffer <- &MetricConfig{
+				this.ID,
+				TimeSeriesData{
+					Metric:   "sw.if.InBytes",
+					DataType: "COUNTER",
+					Cycle:    this.CollectInterval,
+					Tags:     map[string]string{"ifName": i.Name},
+				},
+			}
+			buffer <- &MetricConfig{
+				this.ID,
+				TimeSeriesData{
+					Metric:   "sw.if.OutBytes",
+					DataType: "COUNTER",
+					Cycle:    this.CollectInterval,
+					Tags:     map[string]string{"ifName": i.Name},
+				},
+			}
+			buffer <- &MetricConfig{
+				this.ID,
+				TimeSeriesData{
+					Metric:   "sw.if.InErrors",
+					DataType: "COUNTER",
+					Cycle:    this.CollectInterval,
+					Tags:     map[string]string{"ifName": i.Name},
+				},
+			}
+			buffer <- &MetricConfig{
+				this.ID,
+				TimeSeriesData{
+					Metric:   "sw.if.OutErrors",
+					DataType: "COUNTER",
+					Cycle:    this.CollectInterval,
+					Tags:     map[string]string{"ifName": i.Name},
+				},
+			}
+			buffer <- &MetricConfig{
+				this.ID,
+				TimeSeriesData{
+					Metric:   "sw.if.InDiscards",
+					DataType: "COUNTER",
+					Cycle:    this.CollectInterval,
+					Tags:     map[string]string{"ifName": i.Name},
+				},
+			}
+			buffer <- &MetricConfig{
+				this.ID,
+				TimeSeriesData{
+					Metric:   "sw.if.OutDiscards",
+					DataType: "COUNTER",
+					Cycle:    this.CollectInterval,
+					Tags:     map[string]string{"ifName": i.Name},
+				},
+			}
+			buffer <- &MetricConfig{
+				this.ID,
+				TimeSeriesData{
+					Metric:   "sw.if.OutUsed.Percent",
+					DataType: "GAUGE",
+					Cycle:    this.CollectInterval,
+					Tags:     map[string]string{"ifName": i.Name},
+				},
+			}
+			buffer <- &MetricConfig{
+				this.ID,
+				TimeSeriesData{
+					Metric:   "sw.if.InUsed.Percent",
+					DataType: "GAUGE",
+					Cycle:    this.CollectInterval,
+					Tags:     map[string]string{"ifName": i.Name},
+				},
+			}
+			buffer <- &MetricConfig{
+				this.ID,
+				TimeSeriesData{
+					Metric:   "agent.alive",
+					DataType: "GAUGE",
+					Cycle:    this.CollectInterval,
+				},
+			}
+		}
+		time.Sleep(time.Minute * 5)
+	}
+}
+
+func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
+	for {
+		this.CollectTraffic()
+		ts := time.Now().Unix()
+		interval := uint64(this.CollectInterval)
+		for _, i := range this.Interfaces {
+			if i.InBytes[0] == 0 || !this.IsLegalPrefix(i.Name) {
+				continue
+			}
+			buffer <- &TimeSeriesData{
+				Metric:    "sw.if.InBytes",
+				DataType:  "COUNTER",
+				Value:     float64((i.InBytes[1] - i.InBytes[0]) / interval),
+				Timestamp: ts,
+				Cycle:     this.CollectInterval,
+				Tags:      map[string]string{"ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
+			}
+			buffer <- &TimeSeriesData{
+				Metric:    "sw.if.OutBytes",
+				DataType:  "COUNTER",
+				Value:     float64((i.OutBytes[1] - i.OutBytes[0]) / interval),
+				Timestamp: ts,
+				Cycle:     this.CollectInterval,
+				Tags:      map[string]string{"ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
+			}
+			buffer <- &TimeSeriesData{
+				Metric:    "sw.if.InErrors",
+				DataType:  "COUNTER",
+				Value:     float64((i.InErrors[1] - i.InErrors[0]) / interval),
+				Timestamp: ts,
+				Cycle:     this.CollectInterval,
+				Tags:      map[string]string{"ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
+			}
+			buffer <- &TimeSeriesData{
+				Metric:    "sw.if.OutErrors",
+				DataType:  "COUNTER",
+				Value:     float64((i.OutErrors[1] - i.OutErrors[0]) / interval),
+				Timestamp: ts,
+				Cycle:     this.CollectInterval,
+				Tags:      map[string]string{"ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
+			}
+			buffer <- &TimeSeriesData{
+				Metric:    "sw.if.InDiscards",
+				DataType:  "COUNTER",
+				Value:     float64((i.InDiscards[1] - i.InDiscards[0]) / interval),
+				Timestamp: ts,
+				Cycle:     this.CollectInterval,
+				Tags:      map[string]string{"ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
+			}
+			buffer <- &TimeSeriesData{
+				Metric:    "sw.if.OutDiscards",
+				DataType:  "COUNTER",
+				Value:     float64((i.OutDiscards[1] - i.OutDiscards[0]) / interval),
+				Timestamp: ts,
+				Cycle:     this.CollectInterval,
+				Tags:      map[string]string{"ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
+			}
+			buffer <- &TimeSeriesData{
+				Metric:    "sw.if.InUsed.Percent",
+				DataType:  "COUNTER",
+				Value:     float64(((i.InBytes[1] - i.InBytes[0]) / interval) / i.Speed * 100),
+				Timestamp: ts,
+				Cycle:     this.CollectInterval,
+				Tags:      map[string]string{"ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
+			}
+			buffer <- &TimeSeriesData{
+				Metric:    "sw.if.OutUsed.Percent",
+				DataType:  "COUNTER",
+				Value:     float64(((i.OutBytes[1] - i.OutBytes[0]) / interval) / i.Speed * 100),
+				Timestamp: ts,
+				Cycle:     this.CollectInterval,
+				Tags:      map[string]string{"ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
+			}
+		}
+		if this.Err == nil {
+			buffer <- &TimeSeriesData{
+				Metric:    "host.alive",
+				DataType:  "GAUGE",
+				Value:     1,
+				Timestamp: ts,
+				Cycle:     this.CollectInterval,
+				Tags:      map[string]string{"ip": this.IP, "hostname": this.Hostname, "id": this.ID},
+			}
+		}
+		time.Sleep(time.Second * time.Duration(this.CollectInterval))
+	}
+}
+
+func (this *Switch) BuildInterfaceIndex() error {
+	output, err := this.walk("ifIndex")
+	if err != nil {
+		return err
+	}
+	this.Interfaces = make(map[string]*Interface)
+	buf := bytes.NewBuffer(output)
+	for {
+		line, err := buf.ReadString('\n')
+		if err == io.EOF {
+			break
+		}
+		fields := parseLine(line, " ")
+		index := fields[len(fields)-1]
+		this.Interfaces[index] = &Interface{
+			Index: index,
+		}
+	}
+	return nil
+}
+
+func (this *Switch) CollectInterfaceName() error {
+	output, err := this.walk("ifName")
+	if err != nil {
+		return err
+	}
+	buf := bytes.NewBuffer(output)
+	for {
+		line, err := buf.ReadString('\n')
+		if err == io.EOF {
+			break
+		}
+		fields := parseLine(line, " ")
+		indexField := parseLine(fields[0], ".")
+		index := indexField[len(indexField)-1]
+		name := fields[len(fields)-1]
+		if iface, ok := this.Interfaces[index]; ok {
+			iface.Name = name
+		}
+	}
+	return nil
+}
+
+func (this *Switch) CollectIfaceSpeed() error {
+	output, err := this.walk("ifSpeed")
+	if err != nil {
+		return err
+	}
+	buf := bytes.NewBuffer(output)
+	for {
+		line, err := buf.ReadString('\n')
+		if err == io.EOF {
+			break
+		}
+		fields := parseLine(line, " ")
+		indexField := parseLine(fields[0], ".")
+		index := indexField[len(indexField)-1]
+		val := fields[len(fields)-1]
+		speed, err := strconv.ParseUint(val, 10, 64)
+		if err != nil {
+			continue
+		}
+		if iface, ok := this.Interfaces[index]; ok {
+			iface.Speed = speed
+		}
+	}
+	return nil
+}
+
+func (this *Switch) CollectTraffic() {
+	var wg sync.WaitGroup
+	for _, oid := range oids {
+		wg.Add(1)
+		go func(oid string) {
+			this.CollectPerformanceData(oid)
+			wg.Done()
+		}(oid)
+	}
+	wg.Wait()
+}
+func parseLine(s string, sep string) []string {
+	return strings.Split(strings.TrimSpace(s), sep)
+}
+
+func (this *Switch) CollectPerformanceData(oid string) {
+	output, err := this.walk(oid)
+	if err != nil {
+		this.Err = err
+		this.cleanAllInterfaceData()
+		return
+	}
+	this.Err = nil
+	buf := bytes.NewBuffer(output)
+	for {
+		line, err := buf.ReadString('\n')
+		if err == io.EOF {
+			break
+		}
+		fields := parseLine(line, " ")
+		indexField := parseLine(fields[0], ".")
+		index := indexField[len(indexField)-1]
+		valField := fields[len(fields)-1]
+		val, err := strconv.ParseUint(valField, 10, 64)
+		if err != nil {
+			continue
+		}
+		switch oid {
+		case "ifHCInOctets":
+			this.Interfaces[index].InBytes[0] = this.Interfaces[index].InBytes[1]
+			this.Interfaces[index].InBytes[1] = val
+		case "ifHCOutOctets":
+			this.Interfaces[index].OutBytes[0] = this.Interfaces[index].OutBytes[1]
+			this.Interfaces[index].OutBytes[1] = val
+		case "inDiscards":
+			this.Interfaces[index].InDiscards[0] = this.Interfaces[index].InDiscards[1]
+			this.Interfaces[index].InDiscards[1] = val
+		case "outDiscards":
+			this.Interfaces[index].OutDiscards[0] = this.Interfaces[index].OutDiscards[1]
+			this.Interfaces[index].OutDiscards[1] = val
+		case "inErrors":
+			this.Interfaces[index].InErrors[0] = this.Interfaces[index].InErrors[1]
+			this.Interfaces[index].InErrors[1] = val
+		case "outErrors":
+			this.Interfaces[index].OutErrors[0] = this.Interfaces[index].OutErrors[1]
+			this.Interfaces[index].OutErrors[1] = val
+		default:
+		}
+	}
+}
+
+func (this *Switch) IsLegalPrefix(name string) bool {
+	for _, v := range this.LegalPrefix {
+		if strings.HasPrefix(name, v) {
+			return true
+		}
+	}
+	return false
+}
+
+func (this *Switch) getHostname() {
+	output, err := this.walk("1.3.6.1.2.1.1.5.0")
+	if err != nil {
+		this.Hostname = "Unknown"
+	}
+	fields := parseLine(string(output), " ")
+	this.Hostname = fields[len(fields)-1]
+}
+
+func (this *Switch) cleanAllInterfaceData() {
+	for _, i := range this.Interfaces {
+		i.InBytes = [2]uint64{}
+		i.OutBytes = [2]uint64{}
+		i.InErrors = [2]uint64{}
+		i.OutErrors = [2]uint64{}
+		i.InDiscards = [2]uint64{}
+		i.OutDiscards = [2]uint64{}
+	}
+}
