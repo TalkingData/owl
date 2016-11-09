@@ -63,10 +63,10 @@ start(){
         # Changes the owner of the lock, and the pid files to allow
         touch $LOCK_FILE && chown $USER: $LOCK_FILE
         touch $PID_FILE && chown $USER: $PID_FILE
-        daemon --user $USER --pidfile $PID_FILE "$PROG 1>/dev/null 2>> ${LOG_DIR}${NAME}.err &"
+        daemon --user $USER --pidfile $PID_FILE "$PROG 1>/dev/null 2>> ${LOG_DIR}/${NAME}.err &"
     else
         # Don't have to change user.
-        daemon --pidfile $PID_FILE "$PROG $PROG_OPTS 1>/dev/null 2>> ${LOG_DIR}${NAME}.err &"
+        daemon --pidfile $PID_FILE "$PROG $PROG_OPTS 1>/dev/null 2>> ${LOG_DIR}/${NAME}.err &"
     fi
 
     retval=$?
