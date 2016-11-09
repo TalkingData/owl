@@ -185,12 +185,14 @@ func topMethod(host_id string, cycle int, trigger *types.Trigger) (*types.Trigge
 		sort.Sort(sort.Reverse(sort.Float64Slice(values)))
 
 		trigger_result := true
-		count := 0
+		var count int
+		var sum float64
 		for _, value := range values {
 			count += 1
 			if count > trigger.Number {
 				break
 			}
+			sum += value
 			parameters := make(map[string]interface{}, 8)
 			parameters["current_threshold"] = value
 			parameters["threshold"] = trigger.Threshold
@@ -210,7 +212,7 @@ func topMethod(host_id string, cycle int, trigger *types.Trigger) (*types.Trigge
 			trigger_result_set.Triggered = trigger_result
 		}
 
-		trigger_result_set.TriggerResults = append(trigger_result_set.TriggerResults, types.NewTriggerResult(trigger.Index, result.Tags, result.AggregateTags, avg(result.Dps), trigger_result))
+		trigger_result_set.TriggerResults = append(trigger_result_set.TriggerResults, types.NewTriggerResult(trigger.Index, result.Tags, result.AggregateTags, sum/float64(trigger.Number), trigger_result))
 	}
 
 	return trigger_result_set, nil
@@ -243,12 +245,14 @@ func bottomMethod(host_id string, cycle int, trigger *types.Trigger) (*types.Tri
 		sort.Float64s(values)
 
 		trigger_result := true
-		count := 0
+		var count int
+		var sum float64
 		for _, value := range values {
 			count += 1
 			if count > trigger.Number {
 				break
 			}
+			sum += value
 			parameters := make(map[string]interface{}, 8)
 			parameters["current_threshold"] = value
 			parameters["threshold"] = trigger.Threshold
@@ -268,7 +272,7 @@ func bottomMethod(host_id string, cycle int, trigger *types.Trigger) (*types.Tri
 			trigger_result_set.Triggered = trigger_result
 		}
 
-		trigger_result_set.TriggerResults = append(trigger_result_set.TriggerResults, types.NewTriggerResult(trigger.Index, result.Tags, result.AggregateTags, avg(result.Dps), trigger_result))
+		trigger_result_set.TriggerResults = append(trigger_result_set.TriggerResults, types.NewTriggerResult(trigger.Index, result.Tags, result.AggregateTags, sum/float64(trigger.Number), trigger_result))
 	}
 
 	return trigger_result_set, nil
@@ -307,12 +311,14 @@ func lastMethod(host_id string, cycle int, trigger *types.Trigger) (*types.Trigg
 		}
 
 		trigger_result := true
-		count := 0
+		var count int
+		var sum float64
 		for _, value := range values {
 			count += 1
 			if count > trigger.Number {
 				break
 			}
+			sum += value
 			parameters := make(map[string]interface{}, 8)
 			parameters["current_threshold"] = value
 			parameters["threshold"] = trigger.Threshold
@@ -332,7 +338,7 @@ func lastMethod(host_id string, cycle int, trigger *types.Trigger) (*types.Trigg
 			trigger_result_set.Triggered = trigger_result
 		}
 
-		trigger_result_set.TriggerResults = append(trigger_result_set.TriggerResults, types.NewTriggerResult(trigger.Index, result.Tags, result.AggregateTags, avg(result.Dps), trigger_result))
+		trigger_result_set.TriggerResults = append(trigger_result_set.TriggerResults, types.NewTriggerResult(trigger.Index, result.Tags, result.AggregateTags, sum/float64(trigger.Number), trigger_result))
 	}
 
 	return trigger_result_set, nil
