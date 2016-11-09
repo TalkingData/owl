@@ -99,7 +99,7 @@ CREATE TABLE `chart` (
   `create_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `idx_name` (`name`),
+  UNIQUE KEY `idx_name_user_id` (`name`, `user_id`),
   KEY `fk_chart_user` (`user_id`),
   CONSTRAINT `fk_chart_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=98 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
@@ -235,7 +235,7 @@ CREATE TABLE `panel` (
   `favor` int(1) NOT NULL DEFAULT '0',
   `thumbnail` longtext COLLATE utf8_unicode_ci NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `idx_name` (`name`),
+  UNIQUE KEY `idx_name_user_id` (`name`, `user_id`),
   KEY `fk_panel_user` (`user_id`),
   CONSTRAINT `fk_panel_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=67 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
