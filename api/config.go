@@ -6,7 +6,7 @@ import (
 
 const (
 	CONFIG_FILE_PATH                    = "./conf/api.conf"
-	DEFAULT_HTTP_BIND                   = ":80"
+	DEFAULT_HTTP_BIND                   = ":10060"
 	DEFAULT_MYSQL_ADDR                  = "127.0.0.1:3306"
 	DEFAULT_MYSQL_USER                  = "root"
 	DEFAULT_MYSQL_DBNAME                = "owl"
