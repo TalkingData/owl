@@ -285,7 +285,7 @@ func hostDelete(c *gin.Context) {
 	id := c.Param("id")
 	host := types.Host{}
 	mydb.Table("host").Where("id = ?", id).First(&host)
-	if mydb.Error != nil {
+	if host.ID == "" {
 		c.JSON(http.StatusOK, gin.H{"code": http.StatusBadRequest, "message": "host not found"})
 		return
 	}
