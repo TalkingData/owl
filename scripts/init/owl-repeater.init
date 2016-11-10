@@ -1,16 +1,16 @@
 #!/bin/sh
 #
-# owl_cfc      This shell script takes care of starting and stopping owl_cfc.
+# owl_repeater      This shell script takes care of starting and stopping owl_repeater.
 #
 # chkconfig: 35 99 01
 # description: OWL is a distributed, scalable monitor system 
 #
 ### BEGIN INIT INFO
-# Provides: owl_cfc
+# Provides: owl_repeater
 # Required-Start: $network
 # Required-Stop: $network
-# Short-Description: start and stop owl_cfc
-# Description: owl_cfc is a daemon 
+# Short-Description: start and stop owl_repeater
+# Description: owl_repeater is a daemon 
 ### END INIT INFO
 # Source init functions
 . /etc/init.d/functions

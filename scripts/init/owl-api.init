@@ -1,21 +1,16 @@
 #!/bin/sh
 #
-# owl_agent      This shell script takes care of starting and stopping owl_agent.
+# owl_api      This shell script takes care of starting and stopping owl_api.
 #
 # chkconfig: 35 99 01
-# description: OWL is a distributed, scalable monitor system \
-# written on . OpenTSDB was written to address a common need: store, \
-# index and serve metrics collected from computer systems (network gear, operating \
-# systems, applications) at a large scale, and make this data easily accessible \
-# and graphable.
+# description: OWL is a distributed, scalable monitor system 
 #
 ### BEGIN INIT INFO
-# Provides: owl_agent
+# Provides: owl_api
 # Required-Start: $network
 # Required-Stop: $network
-# Short-Description: start and stop owl_agent
-# Description: owl_agent is a daemon which collects system 
-#               and application performance metrics periodically
+# Short-Description: start and stop owl_api
+# Description:
 ### END INIT INFO
 # Source init functions
 . /etc/init.d/functions
