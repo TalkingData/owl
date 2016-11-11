@@ -21,7 +21,7 @@ MAX_OPEN_FILES=65535
 # Default program options
 USER=root
 NAME=repeater
-BASE_DIR=/usr/local/owl
+BASE_DIR=/usr/local/owl-${NAME}
 PROG=$BASE_DIR/$NAME
 
 LOG_DIR=$BASE_DIR/logs
