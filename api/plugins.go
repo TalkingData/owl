@@ -46,7 +46,7 @@ func pluginCreate(c *gin.Context) {
 		return
 	}
 	cnt := 0
-	mydb.Table("plugin").Where("name=?", plugin.Name).Count(&cnt)
+	mydb.Table("plugin").Where("name=? and args =?", plugin.Name, plugin.Args).Count(&cnt)
 	if cnt > 0 {
 		response["code"] = http.StatusBadRequest
 		response["message"] = "plugin already exists"
