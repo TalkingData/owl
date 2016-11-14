@@ -85,7 +85,7 @@ func InitGlobalConfig() error {
 		LOG_FILE:                 cfg.MustValue(goconfig.DEFAULT_SECTION, "log_file", "./logs/controller.log", DEFAULT_LOG_FILE),
 		LOG_EXPIRE_DAYS:          cfg.MustInt(goconfig.DEFAULT_SECTION, "log_expire_days", DEFAULT_LOG_EXPIRE_DAYS),
 		LOG_LEVEL:                cfg.MustInt(goconfig.DEFAULT_SECTION, "log_level", DEFAULT_LOG_LEVEL),
-		MAX_PACKET_SIZE:          cfg.MustInt(goconfig.DEFAULT_SECTION, "max_packt_size", DEFAULT_MAX_PACKET_SIZE),
+		MAX_PACKET_SIZE:          cfg.MustInt(goconfig.DEFAULT_SECTION, "max_packet_size", DEFAULT_MAX_PACKET_SIZE),
 		LOAD_STRATEGIES_INTERVAL: cfg.MustInt(goconfig.DEFAULT_SECTION, "load_strategies_interval", DEFAULT_LOAD_STRATEGIES_INTERVAL),
 		INSPECTOR_INTERVAL:       cfg.MustInt(goconfig.DEFAULT_SECTION, "inspector_interval", DEFAULT_INSPECTOR_INTERVAL),
 		TASK_POOL_SIZE:           cfg.MustInt(goconfig.DEFAULT_SECTION, "task_pool_size", DEFAULT_TASK_POOL_SIZE),
