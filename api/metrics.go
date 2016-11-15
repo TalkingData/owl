@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"owl/common/types"
 	"strings"
 	"time"
 )
@@ -101,6 +102,19 @@ func buildMetricAndTagIndex() {
 					tagsMap[tagk][tagv] = struct{}{}
 				}
 			}
+		}
+	}
+	hosts := []types.Host{}
+	mydb.Table("host").Find(&hosts)
+	for _, h := range hosts {
+		tagk := "hostname"
+		tagv := h.Hostname
+
+		if _, ok := tagsMap[tagk]; !ok {
+			tagsMap[tagk] = make(map[string]struct{})
+		}
+		if _, ok := tagsMap[tagk][tagv]; !ok {
+			tagsMap[tagk][tagv] = struct{}{}
 		}
 	}
 	for metric, _ := range metricMap {
