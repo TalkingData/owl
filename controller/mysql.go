@@ -280,12 +280,12 @@ func (this *db) CreateStrategyEvent(strategy_event *StrategyEvent, trigger_event
 
 	for _, trigger_event_set := range trigger_event_sets {
 		for _, trigger_event := range trigger_event_set {
-			stmt, err = tx.Prepare("INSERT INTO `trigger_event` VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+			stmt_insert, err := tx.Prepare("INSERT INTO `trigger_event` VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
 			if err != nil {
 				lg.Error(err.Error())
 				return -1, err
 			}
-			_, err = stmt.Exec(
+			_, err = stmt_insert.Exec(
 				last_id,
 				trigger_event.Index,
 				trigger_event.Metric,
@@ -310,68 +310,58 @@ func (this *db) CreateStrategyEvent(strategy_event *StrategyEvent, trigger_event
 	return last_id, nil
 }
 
-func (this *db) UpdateStrategyEvent(strategy_event *StrategyEvent, trigger_event_sets map[string][]*TriggerEvent, restore bool) error {
+func (this *db) UpdateStrategyEvent(strategy_event *StrategyEvent, trigger_event_sets map[string][]*TriggerEvent) error {
 	tx, err := this.Begin()
 	if err != nil {
 		lg.Error(err.Error())
 		return err
 	}
 
-	var stmt *sql.Stmt
-	if restore == false {
-		stmt, err := tx.Prepare("UPDATE `strategy_event` SET `update_time` = ?, `count` = ? WHERE `strategy_id` = ? AND `host_id` = ?")
-		if err != nil {
-			lg.Error(err.Error())
-			return err
-		}
-
-		_, err = stmt.Exec(
-			strategy_event.UpdateTime,
-			strategy_event.Count,
-			strategy_event.StrategyID,
-			strategy_event.HostID)
-		if err != nil {
-			lg.Error(err.Error())
-			return err
-		}
-	} else {
-		stmt, err := tx.Prepare("UPDATE `strategy_event` SET `update_time` = ?, `status` = ?, `process_user` = ?, `process_comments` = ?, `process_time` = ? WHERE `strategy_id` = ? AND `host_id` = ?")
-		if err != nil {
-			lg.Error(err.Error())
-			return err
-		}
-
-		_, err = stmt.Exec(
-			strategy_event.UpdateTime,
-			strategy_event.Status,
-			strategy_event.ProcessUser,
-			strategy_event.ProcessComments,
-			strategy_event.ProcessTime,
-			strategy_event.StrategyID,
-			strategy_event.HostID)
-		if err != nil {
-			lg.Error(err.Error())
-			return err
-		}
+	stmt, err := tx.Prepare("UPDATE `strategy_event` SET `update_time` = ?, `count` = ?, `status` = ?, `process_user` = ?, `process_comments` = ?, `process_time` = ? WHERE `strategy_id` = ? AND `host_id` = ?")
+	if err != nil {
+		lg.Error(err.Error())
+		return err
 	}
 
+	_, err = stmt.Exec(
+		strategy_event.UpdateTime,
+		strategy_event.Count,
+		strategy_event.Status,
+		strategy_event.ProcessUser,
+		strategy_event.ProcessComments,
+		strategy_event.ProcessTime,
+		strategy_event.StrategyID,
+		strategy_event.HostID)
+	if err != nil {
+		lg.Error(err.Error())
+		return err
+	}
+
+	stmt_delete, err := tx.Prepare("DELETE FROM `trigger_event` WHERE `strategy_event_id` = ?")
+	_, err = stmt_delete.Exec(strategy_event.ID)
+	if err != nil {
+		lg.Error(err.Error())
+		return err
+	}
 	for _, trigger_event_set := range trigger_event_sets {
 		for _, trigger_event := range trigger_event_set {
-			stmt, err = tx.Prepare("UPDATE `trigger_event` SET `tags` = ?, `aggregate_tags` = ?, `threshold` = ?, `symbol` = ?, `current_threshold` = ?, `triggered` = ? WHERE `strategy_event_id` IN (SELECT `id` FROM `strategy_event` WHERE `strategy_id` = ? AND `host_id` = ? AND `index` = ?)")
+			stmt_insert, err := tx.Prepare("INSERT INTO `trigger_event` VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
 			if err != nil {
 				lg.Error(err.Error())
 				return err
 			}
-			_, err = stmt.Exec(
+			_, err = stmt_insert.Exec(
+				strategy_event.ID,
+				trigger_event.Index,
+				trigger_event.Metric,
 				trigger_event.Tags,
+				trigger_event.Number,
 				trigger_event.AggregateTags,
-				trigger_event.Threshold,
-				trigger_event.Symbol,
 				trigger_event.CurrentThreshold,
-				trigger_event.Triggered,
-				strategy_event.StrategyID,
-				strategy_event.HostID,
-				trigger_event.Index)
+				trigger_event.Method,
+				trigger_event.Symbol,
+				trigger_event.Threshold,
+				trigger_event.Triggered)
 			if err != nil {
 				lg.Error(err.Error())
 				return err

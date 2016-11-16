@@ -405,15 +405,15 @@ func (this *Controller) processResult(strategy_result *StrategyResult) {
 			this.doRestoreAction(task.Host, strategy_event, trigger_event_sets)
 			new_strategy_event.Status = EVENT_CLOSED
 			new_strategy_event.ProcessUser = "系统"
-			new_strategy_event.ProcessComments = "报警自行恢复"
+			new_strategy_event.ProcessComments = "报警恢复"
 			new_strategy_event.ProcessTime = time.Now()
-			if err := mydb.UpdateStrategyEvent(new_strategy_event, trigger_event_sets, true); err != nil {
+			if err := mydb.UpdateStrategyEvent(new_strategy_event, trigger_event_sets); err != nil {
 				return
 			}
 			return
 		}
 		new_strategy_event.Count += 1
-		if err := mydb.UpdateStrategyEvent(new_strategy_event, trigger_event_sets, false); err != nil {
+		if err := mydb.UpdateStrategyEvent(new_strategy_event, trigger_event_sets); err != nil {
 			return
 		}
 		if new_strategy_event.Count > task.Strategy.AlarmCount {
@@ -429,13 +429,13 @@ func (this *Controller) processResult(strategy_result *StrategyResult) {
 			awared_strategy_event.ProcessUser = "系统"
 			awared_strategy_event.ProcessComments = "报警恢复"
 			awared_strategy_event.ProcessTime = time.Now()
-			if err := mydb.UpdateStrategyEvent(awared_strategy_event, trigger_event_sets, true); err != nil {
+			if err := mydb.UpdateStrategyEvent(awared_strategy_event, trigger_event_sets); err != nil {
 				return
 			}
 			return
 		}
 		awared_strategy_event.Count += 1
-		if err := mydb.UpdateStrategyEvent(awared_strategy_event, trigger_event_sets, false); err != nil {
+		if err := mydb.UpdateStrategyEvent(awared_strategy_event, trigger_event_sets); err != nil {
 			return
 		}
 	}
@@ -475,6 +475,9 @@ func generateEvent(strategy_result *StrategyResult, task *AlarmTask) (*StrategyE
 	for index, trigger_result_set := range strategy_result.TriggerResultSets {
 		trigger := task.Triggers[index]
 		for _, trigger_result := range trigger_result_set.TriggerResults {
+			if trigger_result.Triggered == false && trigger_result_set.Triggered == true {
+				continue
+			}
 			trigger_event_sets[index] = append(trigger_event_sets[index], NewTriggerEvent(strategy_event.ID, index, trigger.Metric, trigger_result.Tags, trigger_result.AggregateTags, trigger.Symbol, trigger.Method, trigger.Number, trigger.Threshold, trigger_result.CurrentThreshold, trigger_result.Triggered))
 		}
 	}
