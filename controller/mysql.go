@@ -317,7 +317,7 @@ func (this *db) UpdateStrategyEvent(strategy_event *StrategyEvent, trigger_event
 		return err
 	}
 
-	stmt, err := tx.Prepare("UPDATE `strategy_event` SET `update_time` = ?, `count` = ?, `status` = ?, `process_user` = ?, `process_comments` = ?, `process_time` = ? WHERE `strategy_id` = ? AND `host_id` = ?")
+	stmt, err := tx.Prepare("UPDATE `strategy_event` SET `update_time` = ?, `count` = ?, `status` = ?, `process_user` = ?, `process_comments` = ?, `process_time` = ? WHERE `id` = ?")
 	if err != nil {
 		lg.Error(err.Error())
 		return err
@@ -330,8 +330,7 @@ func (this *db) UpdateStrategyEvent(strategy_event *StrategyEvent, trigger_event
 		strategy_event.ProcessUser,
 		strategy_event.ProcessComments,
 		strategy_event.ProcessTime,
-		strategy_event.StrategyID,
-		strategy_event.HostID)
+		strategy_event.ID)
 	if err != nil {
 		lg.Error(err.Error())
 		return err
