@@ -24,6 +24,7 @@ const (
 	DEFAULT_HTTP_SERVER              = ":10051"
 	DEFAULT_TASK_SIZE                = 10
 	DEFAULT_WORKER_COUNT             = 5
+	DEFAULT_ACTION_TIMEOUT           = 60
 	DEFAULT_SEND_MAIL_SCRIPT         = "./scripts/send_mail.py"
 	DEFAULT_SEND_SMS_SCRIPT          = "./scripts/send_sms.py"
 	DEFAULT_SEND_WECHAT_SCRIPT       = "./scripts/send_wechat.py"
@@ -62,6 +63,8 @@ type Config struct {
 
 	WORKER_COUNT int //处理结果池的协程数
 
+	ACTION_TIMEOUT int //报警动作超时时间
+
 	SEND_MAIL_SCRIPT string
 
 	SEND_SMS_SCRIPT string
@@ -93,6 +96,7 @@ func InitGlobalConfig() error {
 		HTTP_SERVER:              cfg.MustValue(goconfig.DEFAULT_SECTION, "http_server", DEFAULT_HTTP_SERVER),
 		TASK_SIZE:                cfg.MustInt(goconfig.DEFAULT_SECTION, "task_size", DEFAULT_TASK_SIZE),
 		WORKER_COUNT:             cfg.MustInt(goconfig.DEFAULT_SECTION, "worker_count", DEFAULT_WORKER_COUNT),
+		ACTION_TIMEOUT:           cfg.MustInt(goconfig.DEFAULT_SECTION, "action_timeout", DEFAULT_ACTION_TIMEOUT),
 		SEND_MAIL_SCRIPT:         cfg.MustValue(goconfig.DEFAULT_SECTION, "send_mail_script", DEFAULT_SEND_MAIL_SCRIPT),
 		SEND_SMS_SCRIPT:          cfg.MustValue(goconfig.DEFAULT_SECTION, "send_sms_script", DEFAULT_SEND_SMS_SCRIPT),
 		SEND_WECHAT_SCRIPT:       cfg.MustValue(goconfig.DEFAULT_SECTION, "send_wechat_script", DEFAULT_SEND_WECHAT_SCRIPT),

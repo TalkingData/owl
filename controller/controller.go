@@ -258,44 +258,46 @@ func broadcastMessage(strategy_event_id int64, subject, content string, action *
 	}
 
 	for _, user := range users {
-		params := make([]string, 0)
-		params = append(params, subject)
-		params = append(params, content)
-		var file_path string
-		switch action.SendType {
-		case SEND_MAIL:
-			file_path = GlobalConfig.SEND_MAIL_SCRIPT
-			params = append(params, user.Mail)
-		case SEND_SMS:
-			file_path = GlobalConfig.SEND_SMS_SCRIPT
-			params = append(params, user.Phone)
-		case SEND_WECHAT:
-			file_path = GlobalConfig.SEND_WECHAT_SCRIPT
-			params = append(params, user.Weixin)
-		default:
-			lg.Error("Unknown send type %v", action.SendType)
-			return
-		}
-		result, err := runScript(file_path, params, action.TimeOut)
-		action_result := &ActionResult{}
-		action_result.StrategyEventID = strategy_event_id
-		action_result.ActionID = action.ID
-		action_result.ActionType = action.Type
-		action_result.ActionSendType = action.SendType
-		action_result.UserID = user.ID
-		action_result.Username = user.Username
-		action_result.Phone = user.Phone
-		action_result.Mail = user.Mail
-		action_result.Weixin = user.Weixin
-		action_result.Subject = subject
-		action_result.Content = content
-		if err != nil {
-			action_result.Success = false
-		} else {
-			action_result.Success = true
-		}
-		action_result.Response = result
-		mydb.CreateActionResult(action_result)
+		go func(user *User) {
+			params := make([]string, 0)
+			params = append(params, subject)
+			params = append(params, content)
+			var file_path string
+			switch action.SendType {
+			case SEND_MAIL:
+				file_path = GlobalConfig.SEND_MAIL_SCRIPT
+				params = append(params, user.Mail)
+			case SEND_SMS:
+				file_path = GlobalConfig.SEND_SMS_SCRIPT
+				params = append(params, user.Phone)
+			case SEND_WECHAT:
+				file_path = GlobalConfig.SEND_WECHAT_SCRIPT
+				params = append(params, user.Weixin)
+			default:
+				lg.Error("Unknown send type %v", action.SendType)
+				return
+			}
+			result, err := runScript(file_path, params)
+			action_result := &ActionResult{}
+			action_result.StrategyEventID = strategy_event_id
+			action_result.ActionID = action.ID
+			action_result.ActionType = action.Type
+			action_result.ActionSendType = action.SendType
+			action_result.UserID = user.ID
+			action_result.Username = user.Username
+			action_result.Phone = user.Phone
+			action_result.Mail = user.Mail
+			action_result.Weixin = user.Weixin
+			action_result.Subject = subject
+			action_result.Content = content
+			if err != nil {
+				action_result.Success = false
+			} else {
+				action_result.Success = true
+			}
+			action_result.Response = result
+			mydb.CreateActionResult(action_result)
+		}(user)
 	}
 }
 
@@ -340,7 +342,7 @@ func generateTemplateObj(host *Host, strategy_event *StrategyEvent, trigger_even
 	return template
 }
 
-func runScript(file_path string, params []string, timeout int) (string, error) {
+func runScript(file_path string, params []string) (string, error) {
 	var (
 		stderr bytes.Buffer
 		stdout bytes.Buffer
@@ -360,13 +362,13 @@ func runScript(file_path string, params []string, timeout int) (string, error) {
 	}()
 
 	select {
-	case <-time.After(time.Second * time.Duration(timeout)):
+	case <-time.After(time.Second * time.Duration(GlobalConfig.ACTION_TIMEOUT)):
 		if err := cmd.Process.Kill(); err != nil {
 			lg.Error("Kill script process error ", err.Error())
 			return err.Error(), err
 		}
-		lg.Warn("Run script %v timeout in %v", file_path, timeout)
-		return fmt.Sprintf("Run script %v timeout in %v", file_path, timeout), errors.New(fmt.Sprintf("Run script %v timeout in %v", file_path, timeout))
+		lg.Warn("Run script %v timeout in %v", file_path, GlobalConfig.ACTION_TIMEOUT)
+		return fmt.Sprintf("Run script %v timeout in %v", file_path, GlobalConfig.ACTION_TIMEOUT), errors.New(fmt.Sprintf("Run script %v timeout in %v", file_path, GlobalConfig.ACTION_TIMEOUT))
 	case err := <-done:
 		if err != nil {
 			lg.Error("Run script %v params %v error %v output %v", file_path, params, err.Error(), stderr.String())

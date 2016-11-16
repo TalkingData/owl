@@ -21,7 +21,6 @@ type Action struct {
 	RestoreSubject  string `form:"restore_subject" json:"restore_subject"`
 	AlarmTemplate   string `form:"alarm_template" json:"alarm_template"`
 	RestoreTemplate string `form:"restore_template" json:"restore_template"`
-	TimeOut         int    `form:"time_out" json:"time_out"`
 	SendType        int    `form:"send_type" json:"send_type" binding:"require"`
 }
 

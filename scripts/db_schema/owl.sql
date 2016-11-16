@@ -26,7 +26,6 @@ CREATE TABLE `action` (
   `restore_subject` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `alarm_template` text COLLATE utf8_unicode_ci NOT NULL,
   `restore_template` text COLLATE utf8_unicode_ci NOT NULL,
-  `time_out` int(4) unsigned NOT NULL DEFAULT '30',
   `send_type` int(1) unsigned NOT NULL,
   PRIMARY KEY (`id`),
   KEY `fk_action_strategy_id` (`strategy_id`),

@@ -226,7 +226,7 @@ func (this *db) GetActions(strategy_id, action_type int) []*Action {
 	actions := []*Action{}
 	for rows.Next() {
 		action := Action{}
-		if err := rows.Scan(&action.ID, &action.StrategyID, &action.Type, &action.FilePath, &action.AlarmSubject, &action.RestoreSubject, &action.AlarmTemplate, &action.RestoreTemplate, &action.TimeOut, &action.SendType); err != nil {
+		if err := rows.Scan(&action.ID, &action.StrategyID, &action.Type, &action.FilePath, &action.AlarmSubject, &action.RestoreSubject, &action.AlarmTemplate, &action.RestoreTemplate, &action.SendType); err != nil {
 			lg.Error(err.Error())
 			continue
 		}
