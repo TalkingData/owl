@@ -23,14 +23,17 @@ func (this *InspectorHandle) Handle(sess *tcp.Session, data []byte) {
 		}
 	}()
 	mt := types.AlarmMessageType(data[0])
-	lg.Debug("Receive %v %v", types.AlarmMessageTypeText[mt], string(data[1:]))
 	switch mt {
-	case types.ALAR_MESS_GET_INSPECTOR_TASK_RESP:
+	case types.ALAR_MESS_INSPECTOR_TASKS:
 		get_task_resp := &types.GetTasksResp{}
 		if err := get_task_resp.Decode(data[1:]); err != nil {
 			lg.Error(err.Error())
 			return
 		}
+		if len(get_task_resp.AlarmTasks) == 0 {
+			return
+		}
+		lg.Info("Receive %v %v", types.AlarmMessageTypeText[mt], string(data[1:]))
 		inspector.taskPool.PutTasks(get_task_resp.AlarmTasks)
 	default:
 		lg.Error("Unknown option: %v", mt)

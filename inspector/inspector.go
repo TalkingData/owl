@@ -64,7 +64,7 @@ func (this *Inspector) DialForever() {
 func (this *Inspector) HeartBeatForever() {
 	for {
 		if this.session != nil {
-			this.session.Send(types.AlarmPack(types.ALAR_MESS_HEARTBEAT, types.NewHeartBeat(this.session.LocalAddr(), GetHostName())))
+			this.session.Send(types.AlarmPack(types.ALAR_MESS_INSPECTOR_HEARTBEAT, types.NewHeartBeat(this.session.LocalAddr(), GetHostName())))
 		}
 		time.Sleep(time.Second * 30)
 	}
@@ -73,7 +73,7 @@ func (this *Inspector) HeartBeatForever() {
 func (this *Inspector) GetInspectorTasksForever() {
 	for {
 		if len(this.taskPool.tasks) == 0 && this.session != nil {
-			this.session.Send(types.AlarmPack(types.ALAR_MESS_GET_INSPECTOR_TASK, types.NewHeartBeat(this.session.LocalAddr(), GetHostName())))
+			this.session.Send(types.AlarmPack(types.ALAR_MESS_INSPECTOR_TASK_REQUEST, types.NewHeartBeat(this.session.LocalAddr(), GetHostName())))
 		}
 		time.Sleep(time.Millisecond * 100)
 	}
@@ -83,7 +83,7 @@ func (this *Inspector) SendResultForever() {
 	for {
 		select {
 		case result := <-this.resultPool.results:
-			this.session.Send(types.AlarmPack(types.ALAR_MESS_SEND_RESULT, result))
+			this.session.Send(types.AlarmPack(types.ALAR_MESS_INSPECTOR_RESULT, result))
 		default:
 			time.Sleep(time.Millisecond * 100)
 		}
@@ -153,9 +153,13 @@ func (this *Inspector) processTask(task *types.AlarmTask) {
 		parameters[index] = trigger_result_set.Triggered
 	}
 
-	result, err := compute(parameters, task.Strategy.Expression)
-	if err != nil && error_message == "" {
-		error_message = err.Error()
+	result := false
+	if error_message == "" {
+		compute_result, err := compute(parameters, task.Strategy.Expression)
+		if err != nil {
+			error_message = err.Error()
+		}
+		result = compute_result
 	}
 
 	strategy_result := types.NewStrategyResult(task.ID, task.Strategy.Priority, triggers_results, error_message, result, time.Now())

@@ -23,19 +23,20 @@ func (this *ControllerHandle) Handle(sess *tcp.Session, data []byte) {
 		}
 	}()
 	mt := types.AlarmMessageType(data[0])
-	lg.Debug("Receive %v %v", types.AlarmMessageTypeText[mt], string(data[1:]))
 	switch mt {
-	case types.ALAR_MESS_HEARTBEAT:
+	case types.ALAR_MESS_INSPECTOR_HEARTBEAT:
+		lg.Info("Receive %v %v", types.AlarmMessageTypeText[mt], string(data[1:]))
 		heartbeat := &types.HeartBeat{}
 		if err := heartbeat.Decode(data[1:]); err != nil {
 			lg.Error(err.Error())
 			return
 		}
 		controller.refreshNode(heartbeat)
-	case types.ALAR_MESS_GET_INSPECTOR_TASK:
+	case types.ALAR_MESS_INSPECTOR_TASK_REQUEST:
 		tasks_resp := getInspectorTask()
-		sess.Send(types.AlarmPack(types.ALAR_MESS_GET_INSPECTOR_TASK_RESP, tasks_resp))
-	case types.ALAR_MESS_SEND_RESULT:
+		sess.Send(types.AlarmPack(types.ALAR_MESS_INSPECTOR_TASKS, tasks_resp))
+	case types.ALAR_MESS_INSPECTOR_RESULT:
+		lg.Info("Receive %v %v", types.AlarmMessageTypeText[mt], string(data[1:]))
 		result := &types.StrategyResult{}
 		if err := result.Decode(data[1:]); err != nil {
 			lg.Error(err.Error())

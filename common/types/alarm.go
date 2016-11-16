@@ -14,18 +14,18 @@ type AlarmMessageType byte
 
 //报警服务消息类型定义
 const (
-	ALAR_MESS_HEARTBEAT AlarmMessageType = iota + 1
-	ALAR_MESS_GET_INSPECTOR_TASK
-	ALAR_MESS_GET_INSPECTOR_TASK_RESP
-	ALAR_MESS_SEND_RESULT
+	ALAR_MESS_INSPECTOR_HEARTBEAT AlarmMessageType = iota + 1
+	ALAR_MESS_INSPECTOR_TASK_REQUEST
+	ALAR_MESS_INSPECTOR_TASKS
+	ALAR_MESS_INSPECTOR_RESULT
 )
 
 //报警服务消息类型可读映射
 var AlarmMessageTypeText map[AlarmMessageType]string = map[AlarmMessageType]string{
-	ALAR_MESS_HEARTBEAT:               "heartbeat",
-	ALAR_MESS_GET_INSPECTOR_TASK:      "get inspector task",
-	ALAR_MESS_GET_INSPECTOR_TASK_RESP: "inspector task response",
-	ALAR_MESS_SEND_RESULT:             "send result",
+	ALAR_MESS_INSPECTOR_HEARTBEAT:    "inspector heartbeat",
+	ALAR_MESS_INSPECTOR_TASK_REQUEST: "inspector task request",
+	ALAR_MESS_INSPECTOR_TASKS:        "inspector tasks",
+	ALAR_MESS_INSPECTOR_RESULT:       "inspector result",
 }
 
 //报警服务消息接口
