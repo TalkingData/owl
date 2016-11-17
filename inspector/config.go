@@ -6,7 +6,7 @@ const (
 	CONFIG_FILE_PATH          = "./conf/inspector.conf"
 	DEFAULT_LOG_PATH          = "./logs/inspector.log"
 	DEFAULT_CONTROLER_ADDR    = "127.0.0.1:10050"
-	DEFAULT_MAX_PACKET_SIZE   = 4096
+	DEFAULT_MAX_PACKET_SIZE   = 40960
 	DEFAULT_LOG_EXPIRE_DAYS   = 7
 	DEFAULT_LOG_LEVEL         = 3
 	DEFAULT_MAX_TASK_BUFFER   = 4096

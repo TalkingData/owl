@@ -16,7 +16,7 @@ const (
 	DEFAULT_LOG_FILE                 = "./logs/controller.log"
 	DEFAULT_LOG_EXPIRE_DAYS          = 7
 	DEFAULT_LOG_LEVEL                = 3
-	DEFAULT_MAX_PACKET_SIZE          = 4096
+	DEFAULT_MAX_PACKET_SIZE          = 40960
 	DEFAULT_LOAD_STRATEGIES_INTERVAL = 300 //seconds
 	DEFAULT_TASK_POOL_SIZE           = 4096
 	DEFAULT_RESULT_POOL_SIZE         = 4096
