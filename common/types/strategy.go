@@ -26,8 +26,8 @@ type Strategy struct {
 	Expression  string `form:"expression" json:"expression" binding:"required"`
 	GroupID     int    `form:"group_id" json:"group_id"`
 	HostID      string `form:"host_id" json:"host_id"`
-	Description string `form:"description" json:"-"`
-	Enable      bool   `form:"enable" json:"-"`
+	Description string `form:"description" json:"description"`
+	Enable      bool   `form:"enable" json:"enable"`
 }
 
 func (Strategy) TableName() string {
