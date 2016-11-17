@@ -11,7 +11,7 @@ type Trigger struct {
 	Method      string  `form:"method" json:"method" `
 	Symbol      string  `form:"symbol" json:"symbol" `
 	Threshold   float64 `form:"threshold" json:"threshold" `
-	Description string  `form:"description" json:"description"`
+	Description string  `form:"description" json:"-"`
 }
 
 func (Trigger) TableName() string {
