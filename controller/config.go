@@ -18,7 +18,6 @@ const (
 	DEFAULT_LOG_LEVEL                = 3
 	DEFAULT_MAX_PACKET_SIZE          = 4096
 	DEFAULT_LOAD_STRATEGIES_INTERVAL = 300 //seconds
-	DEFAULT_INSPECTOR_INTERVAL       = 6   //minutes
 	DEFAULT_TASK_POOL_SIZE           = 4096
 	DEFAULT_RESULT_POOL_SIZE         = 4096
 	DEFAULT_HTTP_SERVER              = ":10051"
@@ -50,8 +49,6 @@ type Config struct {
 	MAX_PACKET_SIZE int //tcp 消息报最大size
 
 	LOAD_STRATEGIES_INTERVAL int //获取策略时间间隔 单位秒
-
-	INSPECTOR_INTERVAL int //inspector 查询tsdb的时间间隔 单位分钟
 
 	TASK_POOL_SIZE int //任务池的缓冲大小
 
@@ -90,7 +87,6 @@ func InitGlobalConfig() error {
 		LOG_LEVEL:                cfg.MustInt(goconfig.DEFAULT_SECTION, "log_level", DEFAULT_LOG_LEVEL),
 		MAX_PACKET_SIZE:          cfg.MustInt(goconfig.DEFAULT_SECTION, "max_packet_size", DEFAULT_MAX_PACKET_SIZE),
 		LOAD_STRATEGIES_INTERVAL: cfg.MustInt(goconfig.DEFAULT_SECTION, "load_strategies_interval", DEFAULT_LOAD_STRATEGIES_INTERVAL),
-		INSPECTOR_INTERVAL:       cfg.MustInt(goconfig.DEFAULT_SECTION, "inspector_interval", DEFAULT_INSPECTOR_INTERVAL),
 		TASK_POOL_SIZE:           cfg.MustInt(goconfig.DEFAULT_SECTION, "task_pool_size", DEFAULT_TASK_POOL_SIZE),
 		RESULT_POOL_SIZE:         cfg.MustInt(goconfig.DEFAULT_SECTION, "result_pool_size", DEFAULT_RESULT_POOL_SIZE),
 		HTTP_SERVER:              cfg.MustValue(goconfig.DEFAULT_SECTION, "http_server", DEFAULT_HTTP_SERVER),
