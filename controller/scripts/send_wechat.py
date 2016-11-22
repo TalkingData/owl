@@ -4,6 +4,7 @@
 import os
 import json
 import urllib
+import argparse
 import urllib2
 
 import sys
@@ -61,20 +62,23 @@ def send(receiver, content, token):
     return True, result
 
 if __name__ == "__main__":
-    script_name, subject, content, receiver = sys.argv[:]
+    parser = argparse.ArgumentParser(description="script for sending alarm by wechat")
+    parser.add_argument("subject", help="the subject of the alarm")
+    parser.add_argument("content", help="the content of the alarm")
+    parser.add_argument("receiver", help="the alarm to send by wechat")
+    args = parser.parse_args()
 
-    token = ""
     token_status, token = get_access_token()
 
     retry = 3
     while retry:
-        status, result = send(receiver, content, token)
+        status, response = send(args.receiver, args.content, token)
         if status:
             break
         retry -= 1
         token_status, token = get_access_token(True)
     if not status:
-        sys.exit("{0} {1}".format(status, result))
+        sys.exit("{0} {1}".format(status, response))
 
-    print status, result
+    print status, response
         

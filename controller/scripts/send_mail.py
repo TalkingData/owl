@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
-import smtplib
+import argparse
 import sys
+import smtplib
 from email.mime.text import MIMEText
 
 mail_host=""
@@ -9,11 +10,11 @@ mail_user=""
 mail_pass=""
 
 def send(sub, content, receiver):
-    me="<"+mail_user+">"
-    msg = MIMEText(content,_subtype='plain',_charset='utf-8')
-    msg['Subject'] = sub
-    msg['From'] = me
-    msg['To'] = receiver
+    me = "<"+mail_user+">"
+    msg = MIMEText(content,_subtype="plain",_charset="utf-8")
+    msg["Subject"] = sub
+    msg["From"] = me
+    msg["To"] = receiver
     try:
         server = smtplib.SMTP()
         server.connect(mail_host)
@@ -24,9 +25,16 @@ def send(sub, content, receiver):
         return True, "200 OK" 
     except Exception, e:
         return False, str(e)
+
 if __name__ == '__main__':
-    script_name, subject, content, receiver = sys.argv[:]
-    result, response = send(subject, content, receiver)
-    if not result:
-        sys.exit("{0} {1}".format(result, response))
-    print result, response
+    parser = argparse.ArgumentParser(description="script for sending alarm by email")
+    parser.add_argument("subject", help="the subject of the alarm")
+    parser.add_argument("content", help="the content of the alarm")
+    parser.add_argument("receiver", help="the alarm to send by mail")
+    args = parser.parse_args()
+
+    status, response = send(args.subject, args.content, args.receiver)
+    if not status:
+        sys.exit("{0} {1}".format(status, response))
+
+    print status, response

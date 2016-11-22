@@ -5,6 +5,7 @@ import sys
 import httplib
 import json
 import urllib
+import argparse
 
 address = ""
 
@@ -17,8 +18,15 @@ def send(subject, content, phone):
     return response.status, response.reason, response.read()
 
 if __name__ == "__main__":
-    script_name, subject, content, receiver = sys.argv[:]
-    status, reason, response = send(subject, content, receiver)
+    parser = argparse.ArgumentParser(description="script for sending alarm by email")
+    parser.add_argument("subject", help="the subject of the alarm")
+    parser.add_argument("content", help="the content of the alarm")
+    parser.add_argument("receiver", help="the alarm send to by sms")
+    args = parser.parse_args()
+
+    status, reason, response = send(args.subject, args.content, args.receiver)
+
     if status != 200:
         sys.exit("{0} {1} {2}".format(status, reason, response))
+
     print status, reason, response
