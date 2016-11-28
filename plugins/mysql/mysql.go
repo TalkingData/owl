@@ -17,7 +17,7 @@ type db struct {
 	*sql.DB
 }
 
-//dsn_format: user:password@[protocal](address)/dbname
+//dsn_format: user:password@[protocol](address)/dbname
 
 func FetchData(c *cli.Context) error {
 	conn, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s:%d)/?charset=utf8",

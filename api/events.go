@@ -112,20 +112,20 @@ func eventsStatus(c *gin.Context) {
 	where := fmt.Sprintf("`update_time` BETWEEN '%s' AND '%s'", start, end)
 	mydb.Where(where).Find(&events)
 
-	var active, awared, closed int
+	var active, aware, closed int
 	if len(events) != 0 {
 		for _, event := range events {
 			switch event.Status {
 			case types.EVENT_NEW:
 				active += 1
-			case types.EVENT_AWARED:
-				awared += 1
+			case types.EVENT_AWARE:
+				aware += 1
 			case types.EVENT_CLOSED:
 				closed += 1
 			}
 		}
 	}
-	c.JSON(http.StatusOK, gin.H{"code": http.StatusOK, "active": active, "awared": awared, "closed": closed})
+	c.JSON(http.StatusOK, gin.H{"code": http.StatusOK, "active": active, "awared": aware, "closed": closed})
 }
 
 func eventInform(c *gin.Context) {
@@ -143,7 +143,7 @@ func eventInform(c *gin.Context) {
 	}
 
 	if event.Status == types.EVENT_NEW {
-		event.Status = types.EVENT_AWARED
+		event.Status = types.EVENT_AWARE
 		event.ProcessUser = user.Username
 		mydb.Save(&event)
 	}
@@ -189,7 +189,7 @@ func eventClose(c *gin.Context) {
 		return
 	}
 
-	if event.Status == types.EVENT_AWARED {
+	if event.Status == types.EVENT_AWARE {
 		event.Status = types.EVENT_CLOSED
 		event.ProcessUser = user.Username
 		event.ProcessComments = process.ProcessComments

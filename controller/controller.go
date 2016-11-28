@@ -396,13 +396,13 @@ func (this *Controller) processResult(strategy_result *StrategyResult) {
 		strategy_event.ID = new_strategy_event.ID
 		new_strategy_event.UpdateTime = strategy_result.CreateTime
 	}
-	awared_strategy_event := mydb.GetStrategyEvent(strategy_event.StrategyID, EVENT_AWARED, strategy_event.HostID)
-	if awared_strategy_event != nil {
-		strategy_event.ID = awared_strategy_event.ID
-		awared_strategy_event.UpdateTime = strategy_result.CreateTime
+	aware_strategy_event := mydb.GetStrategyEvent(strategy_event.StrategyID, EVENT_AWARE, strategy_event.HostID)
+	if aware_strategy_event != nil {
+		strategy_event.ID = aware_strategy_event.ID
+		aware_strategy_event.UpdateTime = strategy_result.CreateTime
 	}
 
-	if new_strategy_event != nil && awared_strategy_event == nil {
+	if new_strategy_event != nil && aware_strategy_event == nil {
 		if strategy_result.Triggered == false {
 			this.doRestoreAction(task.Host, strategy_event, trigger_event_sets)
 			new_strategy_event.Status = EVENT_CLOSED
@@ -424,25 +424,25 @@ func (this *Controller) processResult(strategy_result *StrategyResult) {
 		this.doAlarmAction(task.Host, strategy_event, trigger_event_sets)
 	}
 
-	if new_strategy_event == nil && awared_strategy_event != nil {
+	if new_strategy_event == nil && aware_strategy_event != nil {
 		if strategy_result.Triggered == false {
 			this.doRestoreAction(task.Host, strategy_event, trigger_event_sets)
-			awared_strategy_event.Status = EVENT_CLOSED
-			awared_strategy_event.ProcessUser = "系统"
-			awared_strategy_event.ProcessComments = "报警恢复"
-			awared_strategy_event.ProcessTime = time.Now()
-			if err := mydb.UpdateStrategyEvent(awared_strategy_event, trigger_event_sets); err != nil {
+			aware_strategy_event.Status = EVENT_CLOSED
+			aware_strategy_event.ProcessUser = "系统"
+			aware_strategy_event.ProcessComments = "报警恢复"
+			aware_strategy_event.ProcessTime = time.Now()
+			if err := mydb.UpdateStrategyEvent(aware_strategy_event, trigger_event_sets); err != nil {
 				return
 			}
 			return
 		}
-		awared_strategy_event.Count += 1
-		if err := mydb.UpdateStrategyEvent(awared_strategy_event, trigger_event_sets); err != nil {
+		aware_strategy_event.Count += 1
+		if err := mydb.UpdateStrategyEvent(aware_strategy_event, trigger_event_sets); err != nil {
 			return
 		}
 	}
 
-	if new_strategy_event == nil && awared_strategy_event == nil {
+	if new_strategy_event == nil && aware_strategy_event == nil {
 		if strategy_result.Triggered == true {
 			strategy_event.Status = EVENT_NEW
 			last_id, err := mydb.CreateStrategyEvent(strategy_event, trigger_event_sets)

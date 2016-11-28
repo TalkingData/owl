@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/google/cadvisor/client"
-	"github.com/google/cadvisor/info/v1"
 	"owl/common/types"
 	"time"
+
+	"github.com/google/cadvisor/client"
+	"github.com/google/cadvisor/info/v1"
 )
 
 func main() {
@@ -181,7 +182,7 @@ func DockerMetrics(cadvisor_addr string) []*types.TimeSeriesData {
 				Tags:      map[string]string{"name": cName, "id": id},
 			},
 			&types.TimeSeriesData{
-				Metric:    "docker.net.tcp.Closeing",
+				Metric:    "docker.net.tcp.Closing",
 				Value:     float64(c.Network.Tcp.Closing),
 				Timestamp: ts,
 				DataType:  "GAUGE",

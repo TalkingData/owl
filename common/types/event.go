@@ -11,7 +11,7 @@ import (
 
 const (
 	EVENT_NEW = iota + 1
-	EVENT_AWARED
+	EVENT_AWARE
 	EVENT_CLOSED
 )
 
