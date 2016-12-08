@@ -37,7 +37,7 @@ func InitServer() error {
 
 		authorized := v1.Group("/")
 		authorized.Use(authMiddleware.MiddlewareFunc())
-		authorized.Use(customMiddleware)
+		authorized.Use(globalMiddleware)
 		{
 			authorized.GET("/refresh_token", authMiddleware.RefreshHandler)
 

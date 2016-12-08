@@ -128,13 +128,13 @@ func groupHostList(c *gin.Context) {
 				mydb.Table("metric").Where("host_id = ?", h.ID).Count(&h.Metrics)
 
 				//获取主机应用的组策略数量
-				mydb.Table("strategy").Joins("JOIN strategy_group ON strategy_group.strategy_id = strategy.id").
-					Joins("JOIN host_group ON host_group.group_id = strategy_group.group_id").
-					Where("host_group.host_id = ?", h.ID).Count(&h.GroupStrategies)
+				//mydb.Table("strategy").Joins("JOIN strategy_group ON strategy_group.strategy_id = strategy.id").
+				//	Joins("JOIN host_group ON host_group.group_id = strategy_group.group_id").
+				//	Where("host_group.host_id = ?", h.ID).Count(&h.GroupStrategies)
 
 				//获取主机应用的主机策略数量
-				mydb.Table("strategy").Joins("JOIN strategy_host ON strategy_host.strategy_id = strategy.id").
-					Where("strategy_host.host_id = ?", h.ID).Count(&h.HostStrategies)
+				//mydb.Table("strategy").Joins("JOIN strategy_host ON strategy_host.strategy_id = strategy.id").
+				//	Where("strategy_host.host_id = ?", h.ID).Count(&h.HostStrategies)
 
 				metrics += h.Metrics
 

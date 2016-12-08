@@ -335,7 +335,7 @@ func parseLine(s string, sep string) []string {
 func (this *Switch) CollectPerformanceData(oid string) {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Fprintf(os.Stderr,"recover :%s", r)
+			fmt.Fprintf(os.Stderr, "recover :%s", r)
 		}
 	}()
 	output, err := this.walk(oid)
@@ -356,6 +356,9 @@ func (this *Switch) CollectPerformanceData(oid string) {
 		valField := fields[len(fields)-1]
 		val, err := strconv.ParseUint(valField, 10, 64)
 		if err != nil {
+			continue
+		}
+		if _, ok := this.Interfaces[index]; !ok {
 			continue
 		}
 		switch oid {

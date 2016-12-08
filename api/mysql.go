@@ -22,7 +22,7 @@ func InitMysqlConnPool() error {
 
 	db.DB().SetMaxIdleConns(GlobalConfig.MYSQL_MAX_IDLE_CONN)
 	db.DB().SetMaxOpenConns(GlobalConfig.MYSQL_MAX_CONN)
-	db.LogMode(false)
+	db.LogMode(true)
 
 	mydb = db
 	return nil

@@ -38,7 +38,7 @@ func eventsList(c *gin.Context) {
 	if key != "" {
 		key = strings.TrimSpace(key)
 		where += fmt.Sprintf(" AND (`strategy_name` LIKE '%%%s%%' OR"+
-			"`host_cname` LIKE '%%%s%%' OR"+
+			"`host_name` LIKE '%%%s%%' OR"+
 			"`ip` LIKE '%%%s%%' OR"+
 			"`process_user` LIKE '%%%s%%')", key, key, key, key)
 	}

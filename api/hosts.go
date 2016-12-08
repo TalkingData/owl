@@ -13,12 +13,10 @@ import (
 
 type Host struct {
 	types.Host
-	Groups           []types.Group `json:"groups"`
-	Metrics          int           `json:"metrics"`
-	Plugins          int           `json:"plugins"`
-	GlobalStrategies int           `json:"global_strategies"`
-	GroupStrategies  int           `json:"group_strategies"`
-	HostStrategies   int           `json:"host_strategies"`
+	Groups     []types.Group `json:"groups"`
+	Metrics    int           `json:"metrics"`
+	Plugins    int           `json:"plugins"`
+	Strategies int           `json:"strategies"`
 }
 type Metric struct {
 	ID       int       `json:"id"`
@@ -32,7 +30,7 @@ type Metric struct {
 func hostList(c *gin.Context) {
 	hosts := []*Host{}
 	response := gin.H{"code": http.StatusOK}
-	db := mydb.Table("host")
+	db := mydb.Table("host").Order("status asc")
 
 	if id := c.Query("group_id"); len(id) > 0 {
 		group_id, _ := strconv.Atoi(id)
@@ -62,28 +60,21 @@ func hostList(c *gin.Context) {
 	//db.Count(&cnt)
 	db.Find(&hosts)
 	response["total"] = total
-	for _, h := range hosts {
-		//获取主机关联的组
-		mydb.Joins("JOIN host_group ON host_group.group_id = group.id").
-			Where("host_group.host_id = ?", h.ID).Find(&h.Groups)
+	if page != 0 {
+		for _, h := range hosts {
+			//获取主机关联的组
+			mydb.Joins("JOIN host_group ON host_group.group_id = group.id").
+				Where("host_group.host_id = ?", h.ID).Find(&h.Groups)
 
-		//获取metric数量
-		mydb.Table("metric").Where("host_id = ?", h.ID).Count(&h.Metrics)
+			//获取metric数量
+			mydb.Table("metric").Where("host_id = ?", h.ID).Count(&h.Metrics)
 
-		//获取插件数量
-		mydb.Table("host_plugin").Where("host_id = ?", h.ID).Count(&h.Plugins)
+			//获取插件数量
+			mydb.Table("host_plugin").Where("host_id = ?", h.ID).Count(&h.Plugins)
 
-		//获取主机的策略数量
-		strategies := getStrategiesByHostID(h.ID)
-		for _, strategy := range strategies {
-			switch strategy.Type {
-			case types.STRATEGY_GLOBAL:
-				h.GlobalStrategies += 1
-			case types.STRATEGY_GROUP:
-				h.GroupStrategies += 1
-			case types.STRATEGY_HOST:
-				h.HostStrategies += 1
-			}
+			//获取主机的策略数量
+			strategies := getStrategiesByHostID(h.ID)
+			h.Strategies = len(strategies)
 		}
 	}
 	response["hosts"] = hosts
@@ -236,19 +227,10 @@ func strategiesByHostId(c *gin.Context) {
 	host_id := c.Param("id")
 
 	strategies := getStrategiesByHostID(host_id)
-	response := gin.H{"global_strategy": make([]gin.H, 0), "group_strategy": make([]gin.H, 0), "host_strategy": make([]gin.H, 0)}
+	response := gin.H{"strategies": make([]gin.H, 0)}
 	for _, strategy := range strategies {
-		switch strategy.Type {
-		case types.STRATEGY_GLOBAL:
-			strategy_slice := response["global_strategy"].([]gin.H)
-			response["global_strategy"] = append(strategy_slice, gin.H{"id": strategy.ID, "name": strategy.Name})
-		case types.STRATEGY_GROUP:
-			strategy_slice := response["group_strategy"].([]gin.H)
-			response["group_strategy"] = append(strategy_slice, gin.H{"id": strategy.ID, "name": strategy.Name})
-		case types.STRATEGY_HOST:
-			strategy_slice := response["host_strategy"].([]gin.H)
-			response["host_strategy"] = append(strategy_slice, gin.H{"id": strategy.ID, "name": strategy.Name})
-		}
+		strategy_slice := response["strategies"].([]gin.H)
+		response["strategies"] = append(strategy_slice, gin.H{"id": strategy.ID, "name": strategy.Name})
 	}
 
 	c.JSON(http.StatusOK, gin.H{"code": http.StatusOK, "response": response})
@@ -265,10 +247,6 @@ func getStrategiesByHostID(host_id string) []types.Strategy {
 	strategies = append(strategies, temp_strategies...)
 	mydb.Joins("JOIN strategy_host ON strategy_host.strategy_id = strategy.id").
 		Where("strategy_host.host_id = ?", host_id).Find(&temp_strategies)
-	strategies = append(strategies, temp_strategies...)
-	mydb.Table("strategy").Where("host_id = ?", host_id).Find(&temp_strategies)
-	strategies = append(strategies, temp_strategies...)
-	mydb.Table("strategy").Where("group_id in (SELECT group_id FROM host_group WHERE host_id = ?)", host_id).Find(&temp_strategies)
 	strategies = append(strategies, temp_strategies...)
 	ids := make(map[int]bool)
 	for _, strategy := range strategies {

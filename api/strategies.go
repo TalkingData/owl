@@ -38,8 +38,14 @@ type StrategyInfo struct {
 	Actions  []*ActionInfo   `json:"actions"`
 }
 
+type StrategyWithName struct {
+	types.Strategy
+	UserName   string `json:"user_name"`
+	ParentName string `json:"parent_name"`
+}
+
 func strategiesList(c *gin.Context) {
-	var strategies []types.Strategy
+	var strategies []StrategyWithName
 	var total int
 	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
 	page_size, err := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
@@ -47,14 +53,22 @@ func strategiesList(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"code": http.StatusBadRequest, "message": err.Error()})
 	}
 	key := c.DefaultQuery("key", "")
+	my := c.DefaultQuery("my", "false")
 
 	offset := (page - 1) * page_size
-	sort := "type asc"
-	where := fmt.Sprintf("name LIKE '%%%s%%'", key)
 
-	mydb.Where(where).Table("strategy").Count(&total)
+	where := ""
+	if my == "false" {
+		where = fmt.Sprintf("s.name LIKE '%%%s%%'", key)
+	} else {
+		where = fmt.Sprintf("s.name LIKE '%%%s%%' and s.user_id = %d", key, GetUser(c).ID)
+	}
 
-	mydb.Where(where).Order(sort).Offset(offset).Limit(page_size).Find(&strategies)
+	mydb.Where(where).Table("strategy s").Count(&total)
+
+	mydb.Table("strategy s").Select("s.*, user.username user_name, ps.name parent_name").
+		Joins("Left Join user ON s.user_id = user.id").
+		Joins("Left Join strategy ps ON s.pid = ps.id").Where(where).Offset(offset).Limit(page_size).Find(&strategies)
 
 	c.JSON(http.StatusOK, gin.H{"code": http.StatusOK, "strategies": &strategies, "total": total})
 }
@@ -64,6 +78,21 @@ func strategyCreate(c *gin.Context) {
 	if err := c.BindJSON(&strategy); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"code": http.StatusBadRequest, "message": err.Error()})
 		return
+	}
+
+	strategy.UserID = GetUser(c).ID
+
+	if strategy.Pid != 0 {
+		var parent_strategy types.Strategy
+		if err := mydb.Where("id = ?", strategy.Pid).First(&parent_strategy).Error; err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"code": http.StatusNotFound, "message": err.Error()})
+			return
+		}
+
+		if parent_strategy.Pid != 0 {
+			c.JSON(http.StatusNotAcceptable, gin.H{"code": http.StatusForbidden, "message": "not allow"})
+			return
+		}
 	}
 
 	if err := mydb.Create(&strategy).Error; err != nil {
@@ -79,8 +108,15 @@ func strategyDelete(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"code": http.StatusBadRequest, "message": err.Error()})
 	}
-	if strategy_id == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"code": http.StatusBadRequest, "message": "strategy_id should be applied"})
+
+	var strategy types.Strategy
+	if err := mydb.Where("id = ?", strategy_id).First(&strategy).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"code": http.StatusNotFound, "message": err.Error()})
+		return
+	}
+
+	if !GetUser(c).IsAdmin() && GetUser(c).ID != strategy.UserID {
+		c.JSON(http.StatusNotFound, gin.H{"code": http.StatusForbidden, "message": "not allow"})
 		return
 	}
 
@@ -124,16 +160,8 @@ func strategyInfo(c *gin.Context) {
 		return
 	}
 
-	if strategy.Type == types.STRATEGY_HOST {
-		mydb.Where("id = ?", strategy.HostID).Find(&hosts)
-	}
-	if strategy.Type == types.STRATEGY_GROUP {
-		mydb.Where("id = ?", strategy.GroupID).Find(&groups)
-	}
-	if strategy.Type == types.STRATEGY_GLOBAL {
-		mydb.Select("`host`.*").Joins("Join strategy_host ON strategy_host.host_id = host.id").Where("strategy_id = ?", strategy_id).Find(&hosts)
-		mydb.Select("`group`.*").Joins("Join strategy_group ON strategy_group.group_id = group.id").Where("strategy_id = ?", strategy_id).Find(&groups)
-	}
+	mydb.Select("`host`.*").Joins("Join strategy_host ON strategy_host.host_id = host.id").Where("strategy_id = ?", strategy_id).Find(&hosts)
+	mydb.Select("`group`.*").Joins("Join strategy_group ON strategy_group.group_id = group.id").Where("strategy_id = ?", strategy_id).Find(&groups)
 	mydb.Where("strategy_id = ?", strategy_id).Order("`index` asc").Find(&triggers)
 	mydb.Where("strategy_id = ?", strategy_id).Find(&actions)
 	for _, action := range actions {
@@ -152,15 +180,19 @@ func strategyInfo(c *gin.Context) {
 
 func strategyUpdate(c *gin.Context) {
 	var strategy Strategy
-	var count int
+	var strategy_db types.Strategy
 	if err := c.BindJSON(&strategy); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"code": http.StatusBadRequest, "message": err.Error()})
 		return
 	}
 
-	mydb.Model(&Strategy{}).Where("id = ?", strategy.ID).Count(&count)
-	if count == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"code": http.StatusNotFound, "message": "strategy not found"})
+	if err := mydb.Where("id = ?", strategy.ID).First(&strategy_db).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"code": http.StatusNotFound, "message": err.Error()})
+		return
+	}
+
+	if !GetUser(c).IsAdmin() && GetUser(c).ID != strategy_db.UserID {
+		c.JSON(http.StatusNotFound, gin.H{"code": http.StatusForbidden, "message": "not allow"})
 		return
 	}
 
@@ -204,14 +236,21 @@ func strategySwitch(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"code": http.StatusBadRequest, "message": err.Error()})
 		return
 	}
-	var strategy types.Strategy
+	var strategy StrategyWithName
 	if len(strategy_id) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"code": http.StatusBadRequest, "message": "strategy_id should be applied"})
 		return
 	}
 
-	if err := mydb.Where("id = ?", strategy_id).First(&strategy).Error; err != nil {
+	if err := mydb.Table("strategy s").Select("s.*, user.username user_name, ps.name parent_name").
+		Joins("Left Join user ON s.user_id = user.id").
+		Joins("Left Join strategy ps ON s.pid = ps.id").Where("s.id = ?", strategy_id).Find(&strategy).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"code": http.StatusNotFound, "message": err.Error()})
+		return
+	}
+
+	if !GetUser(c).IsAdmin() && GetUser(c).ID != strategy.UserID {
+		c.JSON(http.StatusNotFound, gin.H{"code": http.StatusForbidden, "message": "not allow"})
 		return
 	}
 

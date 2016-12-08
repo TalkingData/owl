@@ -313,7 +313,7 @@ CREATE TABLE `strategy_event` (
   `sn` varchar(128) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
   `process_user` char(255) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
   `process_comments` text COLLATE utf8_unicode_ci,
-  `process_time` timestamp NULL DEFAULT NULL,
+  `process_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=5513 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 

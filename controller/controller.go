@@ -23,8 +23,8 @@ func (this *AlarmTasks) Add(task *AlarmTask) {
 		lg.Warn("Task %v has no triggers, skipped it.", task.ID)
 		return
 	}
-	if task.Host.Status == "2" {
-		lg.Debug("Host %v is disable, skipped it.", task.Host.ID)
+	if task.Host.Status == "0" || task.Host.Status == "2" {
+		lg.Debug("Host %v is broken or disable, skipped it.", task.Host.ID)
 		return
 	}
 

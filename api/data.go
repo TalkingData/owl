@@ -14,7 +14,7 @@ func data(c *gin.Context) {
 	end := c.Query("end")
 	response := gin.H{}
 	defer c.JSON(http.StatusOK, response)
-	client, err := types.NewTsdbClient(GlobalConfig.OPENTSDB_ADDR, time.Duration(5)*time.Second)
+	client, err := types.NewTsdbClient(GlobalConfig.OPENTSDB_ADDR, time.Duration(GlobalConfig.OPENTSDB_TIMEOUT)*time.Second)
 	if err != nil {
 		response["message"] = err.Error()
 		response["code"] = http.StatusInternalServerError

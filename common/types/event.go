@@ -87,7 +87,8 @@ func NewStrategyEvent(strategy_id int,
 		IP:              ip,
 		SN:              sn,
 		ProcessUser:     "",
-		ProcessComments: ""}
+		ProcessComments: "",
+		ProcessTime:     time.Now()}
 }
 
 type TriggerEvent struct {

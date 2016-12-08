@@ -14,10 +14,10 @@ import (
 )
 
 var authMiddleware *jwt.GinJWTMiddleware
-var customMiddleware gin.HandlerFunc
+var globalMiddleware gin.HandlerFunc
 
 func InitMiddleware() {
-	customMiddleware = CustomMiddleware()
+	globalMiddleware = GlobalMiddleware()
 	authMiddleware = &jwt.GinJWTMiddleware{
 		Realm:      "TalkingData",
 		Key:        []byte(GlobalConfig.SECRET_KEY),
@@ -86,7 +86,7 @@ func InitMiddleware() {
 	}
 }
 
-func CustomMiddleware() gin.HandlerFunc {
+func GlobalMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user := GetUserFromDataBase(c)
 

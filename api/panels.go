@@ -36,10 +36,12 @@ func panelList(c *gin.Context) {
 		db = db.Offset(offset).Limit(pageSize)
 	}
 	db.Find(&panels)
-	for _, panel := range panels {
-		mydb.Model(&panel).Association("Charts").Find(&panel.Charts)
-		for _, chart := range panel.Charts {
-			mydb.Model(&chart).Related(&chart.Elements)
+	if favor == 0 {
+		for _, panel := range panels {
+			mydb.Model(&panel).Association("Charts").Find(&panel.Charts)
+			for _, chart := range panel.Charts {
+				mydb.Model(&chart).Related(&chart.Elements)
+			}
 		}
 	}
 	response["panels"] = panels
