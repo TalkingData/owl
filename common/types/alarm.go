@@ -48,7 +48,7 @@ type AlarmTask struct {
 }
 
 func NewAlarmTask(host *Host, strategy *Strategy, triggers map[string]*Trigger) *AlarmTask {
-	id := fmt.Sprintf("%v@%v@%v", strategy.Type, strategy.ID, host.ID)
+	id := fmt.Sprintf("%v@%v", strategy.ID, host.ID)
 	return &AlarmTask{id, host, strategy, triggers}
 }
 

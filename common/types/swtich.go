@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 	"owl/common/utils"
 	"strconv"
 	"strings"
@@ -25,7 +26,6 @@ type Switch struct {
 	LastUpdate time.Time             `json:"last_update"`
 	Snmp       SnmpConfig            `json:"snmp"`
 	Interfaces map[string]*Interface `json:"interfaces"`
-	Err        error                 `json:"-"`
 }
 
 type SnmpConfig struct {
@@ -55,11 +55,12 @@ func (this *Switch) Do(buf1 chan<- *TimeSeriesData, buf2 chan<- *MetricConfig) {
 retry:
 	if err := this.BuildInterfaceIndex(); err != nil {
 		if err == utils.ErrRunTimeout {
-			fmt.Println(this.IP, "timeouts")
+			fmt.Fprintln(os.Stderr, this.IP, "timeouts")
 		}
 		time.Sleep(time.Minute * 5)
 		goto retry
 	}
+	this.initAllInterfaceData()
 	this.CollectInterfaceName()
 	this.getHostname()
 	this.CollectIfaceSpeed()
@@ -144,14 +145,14 @@ func (this *Switch) postMetric(buffer chan<- *MetricConfig) {
 					Tags:     map[string]string{"ifName": i.Name},
 				},
 			}
-			buffer <- &MetricConfig{
-				this.ID,
-				TimeSeriesData{
-					Metric:   "agent.alive",
-					DataType: "GAUGE",
-					Cycle:    this.CollectInterval,
-				},
-			}
+		}
+		buffer <- &MetricConfig{
+			this.ID,
+			TimeSeriesData{
+				Metric:   "agent.alive",
+				DataType: "GAUGE",
+				Cycle:    this.CollectInterval,
+			},
 		}
 		time.Sleep(time.Minute * 5)
 	}
@@ -159,13 +160,15 @@ func (this *Switch) postMetric(buffer chan<- *MetricConfig) {
 
 func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 	for {
-		this.CollectTraffic()
 		ts := time.Now().Unix()
+		this.CollectTraffic()
 		interval := uint64(this.CollectInterval)
+		flag := 0
 		for _, i := range this.Interfaces {
-			if i.InBytes[0] == 0 || !this.IsLegalPrefix(i.Name) {
+			if !this.IsLegalPrefix(i.Name) || i.InBytes[0] == 12345678987654321 {
 				continue
 			}
+			flag++
 			buffer <- &TimeSeriesData{
 				Metric:    "sw.if.InBytes",
 				DataType:  "COUNTER",
@@ -231,7 +234,7 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 				Tags:      map[string]string{"ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
 			}
 		}
-		if this.Err == nil {
+		if flag != 0 {
 			buffer <- &TimeSeriesData{
 				Metric:    "host.alive",
 				DataType:  "GAUGE",
@@ -330,13 +333,17 @@ func parseLine(s string, sep string) []string {
 }
 
 func (this *Switch) CollectPerformanceData(oid string) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(os.Stderr,"recover :%s", r)
+		}
+	}()
 	output, err := this.walk(oid)
 	if err != nil {
-		this.Err = err
-		this.cleanAllInterfaceData()
+		fmt.Fprintln(os.Stderr, err.Error())
+		this.initAllInterfaceData()
 		return
 	}
-	this.Err = nil
 	buf := bytes.NewBuffer(output)
 	for {
 		line, err := buf.ReadString('\n')
@@ -393,13 +400,14 @@ func (this *Switch) getHostname() {
 	this.Hostname = fields[len(fields)-1]
 }
 
-func (this *Switch) cleanAllInterfaceData() {
+func (this *Switch) initAllInterfaceData() {
+	var init uint64 = 12345678987654321
 	for _, i := range this.Interfaces {
-		i.InBytes = [2]uint64{}
-		i.OutBytes = [2]uint64{}
-		i.InErrors = [2]uint64{}
-		i.OutErrors = [2]uint64{}
-		i.InDiscards = [2]uint64{}
-		i.OutDiscards = [2]uint64{}
+		i.InBytes = [2]uint64{init, init}
+		i.OutBytes = [2]uint64{init, init}
+		i.InErrors = [2]uint64{init, init}
+		i.OutErrors = [2]uint64{init, init}
+		i.InDiscards = [2]uint64{init, init}
+		i.OutDiscards = [2]uint64{init, init}
 	}
 }

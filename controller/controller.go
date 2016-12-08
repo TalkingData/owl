@@ -23,7 +23,16 @@ func (this *AlarmTasks) Add(task *AlarmTask) {
 		lg.Warn("Task %v has no triggers, skipped it.", task.ID)
 		return
 	}
+	if task.Host.Status == "2" {
+		lg.Debug("Host %v is disable, skipped it.", task.Host.ID)
+		return
+	}
 
+	parentKey := fmt.Sprintf("%v@%v", task.Strategy.Pid, task.Host.ID)
+
+	if _, ok := this.tasks[parentKey]; ok {
+		delete(this.tasks, parentKey)
+	}
 	this.tasks[task.ID] = task
 }
 
@@ -95,14 +104,8 @@ func (this *Controller) loadStrategiesiForever() {
 	duration := time.Duration(GlobalConfig.LOAD_STRATEGIES_INTERVAL) * time.Second
 	for {
 		alarm_tasks = &AlarmTasks{make(map[string]*AlarmTask)}
-		for _, strategy := range mydb.GetStrategiesByType(STRATEGY_GLOBAL) {
-			this.loadTaskForGlobalStrategy(strategy)
-		}
-		for _, strategy := range mydb.GetStrategiesByType(STRATEGY_GROUP) {
-			this.loadTaskForGroupStrategy(strategy)
-		}
-		for _, strategy := range mydb.GetStrategiesByType(STRATEGY_HOST) {
-			this.loadTaskForHostStrategy(strategy)
+		for _, strategy := range mydb.GetStrategies() {
+			this.loadTaskForStrategy(strategy)
 		}
 		this.taskPool.PutTasks(alarm_tasks.tasks)
 		lg.Info("Loaded tasks %v", len(alarm_tasks.tasks))
@@ -110,84 +113,28 @@ func (this *Controller) loadStrategiesiForever() {
 	}
 }
 
-func (this *Controller) loadTaskForGlobalStrategy(strategy *Strategy) {
+func (this *Controller) loadTaskForStrategy(strategy *Strategy) {
 	if strategy.Enable == false {
-		lg.Info("Global strategy %v is not enabled, skipped it.", strategy.Name)
+		lg.Info("Strategy %v is not enabled, skipped it.", strategy.Name)
 		return
 	}
+
+	global_hosts := make([]*Host, 0)
 
 	for _, group := range mydb.GetGroupsByStrategyID(strategy.ID) {
-		hosts := mydb.GetHostsByGroupID(group.ID)
-		if group_strategies := mydb.GetStrategiesByGroupIDAndTypeAndPid(group.ID, STRATEGY_GROUP, strategy.ID); len(group_strategies) != 0 {
-			for _, host := range hosts {
-				if host_strategies := mydb.GetStrategiesByHostIDAndTypeAndPid(host.ID, STRATEGY_HOST, group_strategies[0].ID); len(host_strategies) != 0 {
-					triggers := mydb.GetTriggersByStrategyID(host_strategies[0].ID)
-					alarm_tasks.Add(NewAlarmTask(host, host_strategies[0], triggers))
-				} else {
-					triggers := mydb.GetTriggersByStrategyID(group_strategies[0].ID)
-					alarm_tasks.Add(NewAlarmTask(host, group_strategies[0], triggers))
-				}
-			}
-		} else {
-			for _, host := range hosts {
-				if host_strategies := mydb.GetStrategiesByHostIDAndTypeAndPid(host.ID, STRATEGY_HOST, strategy.ID); len(host_strategies) != 0 {
-					triggers := mydb.GetTriggersByStrategyID(host_strategies[0].ID)
-					alarm_tasks.Add(NewAlarmTask(host, host_strategies[0], triggers))
-				} else {
-					triggers := mydb.GetTriggersByStrategyID(strategy.ID)
-					alarm_tasks.Add(NewAlarmTask(host, strategy, triggers))
-				}
-			}
-		}
+		group_hosts := mydb.GetHostsByGroupID(group.ID)
+		global_hosts = append(global_hosts, group_hosts...)
 	}
 
-	for _, host := range mydb.GetHostsByStrategyID(strategy.ID) {
-		if host_strategies := mydb.GetStrategiesByHostIDAndTypeAndPid(host.ID, STRATEGY_HOST, strategy.ID); len(host_strategies) != 0 {
-			triggers := mydb.GetTriggersByStrategyID(host_strategies[0].ID)
-			alarm_tasks.Add(NewAlarmTask(host, host_strategies[0], triggers))
-		} else {
-			triggers := mydb.GetTriggersByStrategyID(strategy.ID)
-			alarm_tasks.Add(NewAlarmTask(host, strategy, triggers))
-		}
-	}
-	lg.Info("Loaded tasks for global strategy %v", strategy.Name)
-}
+	hosts := mydb.GetHostsByStrategyID(strategy.ID)
+	global_hosts = append(global_hosts, hosts...)
 
-func (this *Controller) loadTaskForGroupStrategy(group_strategy *Strategy) {
-	if group_strategy.Enable == false {
-		lg.Info("Group Strategy %v is not enabled, skipped it.", group_strategy.Name)
-		return
-	}
-	if group_strategy.Pid != 0 {
-		return
+	for _, host := range global_hosts {
+		triggers := mydb.GetTriggersByStrategyID(strategy.ID)
+		alarm_tasks.Add(NewAlarmTask(host, strategy, triggers))
 	}
 
-	hosts := mydb.GetHostsByGroupID(group_strategy.GroupID)
-	for _, host := range hosts {
-		if host_strategies := mydb.GetStrategiesByHostIDAndTypeAndPid(host.ID, STRATEGY_HOST, group_strategy.ID); len(host_strategies) != 0 {
-			triggers := mydb.GetTriggersByStrategyID(host_strategies[0].ID)
-			alarm_tasks.Add(NewAlarmTask(host, host_strategies[0], triggers))
-		} else {
-			triggers := mydb.GetTriggersByStrategyID(group_strategy.ID)
-			alarm_tasks.Add(NewAlarmTask(host, group_strategy, triggers))
-		}
-	}
-
-	lg.Info("Loaded tasks for group strategy %v", group_strategy.Name)
-}
-
-func (this *Controller) loadTaskForHostStrategy(host_strategy *Strategy) {
-	if host_strategy.Enable == false {
-		lg.Info("Host strategy %v is not enabled, skipped it.", host_strategy.Name)
-		return
-	}
-	if host_strategy.Pid != 0 {
-		return
-	}
-	host := mydb.GetHostByHostID(host_strategy.HostID)
-	triggers := mydb.GetTriggersByStrategyID(host_strategy.ID)
-	alarm_tasks.Add(NewAlarmTask(host, host_strategy, triggers))
-	lg.Info("Loaded tasks for host strategy %v", host_strategy.Name)
+	lg.Info("Loaded tasks for strategy %v", strategy.Name)
 }
 
 func (this *Controller) processStrategyResultForever() {
@@ -322,7 +269,6 @@ func generateTemplateObj(host *Host, strategy_event *StrategyEvent, trigger_even
 	template.STRATEGY.NAME = strategy_event.StrategyName
 	template.STRATEGY.CYCLE = strategy_event.Cycle
 	template.STRATEGY.STATUS = STRATEGY_STATUS_MAPPING[strategy_event.Status]
-	template.STRATEGY.TYPE = STRATEGY_PRIORITY_MAPPING[strategy_event.StrategyType]
 	template.STRATEGY.PRIORITY = STRATEGY_PRIORITY_MAPPING[strategy_event.Priority]
 	template.STRATEGY.ALARM_COUNT = strategy_event.AlarmCount
 	template.STRATEGY.COUNT = strategy_event.Count
@@ -402,53 +348,40 @@ func (this *Controller) processResult(strategy_result *StrategyResult) {
 		aware_strategy_event.UpdateTime = strategy_result.CreateTime
 	}
 
-	if new_strategy_event != nil && aware_strategy_event == nil {
-		if strategy_result.Triggered == false {
-			this.doRestoreAction(task.Host, strategy_event, trigger_event_sets)
-			new_strategy_event.Status = EVENT_CLOSED
-			new_strategy_event.ProcessUser = "系统"
-			new_strategy_event.ProcessComments = "报警恢复"
-			new_strategy_event.ProcessTime = time.Now()
-			if err := mydb.UpdateStrategyEvent(new_strategy_event, trigger_event_sets); err != nil {
-				return
-			}
-			return
-		}
-		new_strategy_event.Count += 1
-		if err := mydb.UpdateStrategyEvent(new_strategy_event, trigger_event_sets); err != nil {
-			return
-		}
-		if new_strategy_event.Count > task.Strategy.AlarmCount {
-			return
-		}
-		this.doAlarmAction(task.Host, strategy_event, trigger_event_sets)
-	}
-
-	if new_strategy_event == nil && aware_strategy_event != nil {
+	if aware_strategy_event != nil {
 		if strategy_result.Triggered == false {
 			this.doRestoreAction(task.Host, strategy_event, trigger_event_sets)
 			aware_strategy_event.Status = EVENT_CLOSED
 			aware_strategy_event.ProcessUser = "系统"
 			aware_strategy_event.ProcessComments = "报警恢复"
 			aware_strategy_event.ProcessTime = time.Now()
-			if err := mydb.UpdateStrategyEvent(aware_strategy_event, trigger_event_sets); err != nil {
-				return
-			}
+		}
+		mydb.UpdateStrategyEvent(aware_strategy_event, trigger_event_sets)
+		return
+	}
+
+	if new_strategy_event != nil {
+		if strategy_result.Triggered == false {
+			this.doRestoreAction(task.Host, strategy_event, trigger_event_sets)
+			new_strategy_event.Status = EVENT_CLOSED
+			new_strategy_event.ProcessUser = "系统"
+			new_strategy_event.ProcessComments = "报警恢复"
+			new_strategy_event.ProcessTime = time.Now()
+			mydb.UpdateStrategyEvent(new_strategy_event, trigger_event_sets)
 			return
 		}
-		aware_strategy_event.Count += 1
-		if err := mydb.UpdateStrategyEvent(aware_strategy_event, trigger_event_sets); err != nil {
-			return
+		if new_strategy_event.Count < task.Strategy.AlarmCount || task.Strategy.AlarmCount == 0 {
+			new_strategy_event.Count += 1
+			this.doAlarmAction(task.Host, strategy_event, trigger_event_sets)
 		}
+		mydb.UpdateStrategyEvent(new_strategy_event, trigger_event_sets)
+		return
 	}
 
 	if new_strategy_event == nil && aware_strategy_event == nil {
 		if strategy_result.Triggered == true {
 			strategy_event.Status = EVENT_NEW
-			last_id, err := mydb.CreateStrategyEvent(strategy_event, trigger_event_sets)
-			if err != nil {
-				return
-			}
+			last_id, _ := mydb.CreateStrategyEvent(strategy_event, trigger_event_sets)
 			strategy_event.ID = last_id
 			this.doAlarmAction(task.Host, strategy_event, trigger_event_sets)
 		}
@@ -462,7 +395,6 @@ func generateEvent(strategy_result *StrategyResult, task *AlarmTask) (*StrategyE
 
 	strategy_event = NewStrategyEvent(task.Strategy.ID,
 		task.Strategy.Name,
-		task.Strategy.Type,
 		task.Strategy.Priority,
 		task.Strategy.Cycle,
 		task.Strategy.AlarmCount,

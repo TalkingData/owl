@@ -278,17 +278,16 @@ CREATE TABLE `strategy` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `priority` int(1) unsigned NOT NULL,
-  `type` int(1) unsigned NOT NULL,
   `pid` int(10) unsigned NOT NULL,
   `alarm_count` int(4) unsigned NOT NULL DEFAULT '0',
   `cycle` int(10) unsigned NOT NULL DEFAULT '5',
   `expression` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `group_id` int(10) unsigned NOT NULL DEFAULT '0',
-  `host_id` char(32) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
   `description` varchar(255) COLLATE utf8_unicode_ci DEFAULT '',
+  `user_id` int(10) unsigned NOT NULL,
   `enable` tinyint(1) unsigned NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `idx_name` (`name`)
+  UNIQUE KEY `idx_name` (`name`),
+  KEY `idx_pid` (`pid`)
 ) ENGINE=InnoDB AUTO_INCREMENT=193 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- ----------------------------
@@ -299,7 +298,6 @@ CREATE TABLE `strategy_event` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `strategy_id` bigint(20) unsigned NOT NULL,
   `strategy_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `strategy_type` int(1) unsigned NOT NULL,
   `priority` int(1) unsigned NOT NULL,
   `cycle` int(10) unsigned NOT NULL,
   `alarm_count` int(4) unsigned NOT NULL,

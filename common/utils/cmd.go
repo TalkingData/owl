@@ -41,3 +41,8 @@ func RunCmdWithTimeout(cmd string, args []string, timeout int) ([]byte, error) {
 		return stdout.Bytes(), nil
 	}
 }
+
+func RunShell(cmd string) ([]byte, error) {
+	out, err := exec.Command("sh", "-c", cmd).CombinedOutput()
+	return out, err
+}

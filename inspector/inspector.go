@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"owl/common/tcp"
@@ -111,8 +110,6 @@ func (this *Inspector) taskWorker() {
 }
 
 func (this *Inspector) processTask(task *types.AlarmTask) {
-	info := strings.SplitN(task.ID, "@", 3)
-	host_id := info[2]
 	triggers_results := make(map[string]*types.TriggerResultSet)
 	parameters := make(map[string]interface{})
 	error_message := ""
@@ -122,19 +119,19 @@ func (this *Inspector) processTask(task *types.AlarmTask) {
 		var err error
 		switch trigger.Method {
 		case MAX_METHOD:
-			trigger_result_set, err = maxMethod(host_id, task.Strategy.Cycle, trigger)
+			trigger_result_set, err = maxMethod(task.Host.ID, task.Strategy.Cycle, trigger)
 		case MIN_METHOD:
-			trigger_result_set, err = minMethod(host_id, task.Strategy.Cycle, trigger)
+			trigger_result_set, err = minMethod(task.Host.ID, task.Strategy.Cycle, trigger)
 		case RATIO_METHOD:
-			trigger_result_set, err = ratioMethod(host_id, task.Strategy.Cycle, trigger)
+			trigger_result_set, err = ratioMethod(task.Host.ID, task.Strategy.Cycle, trigger)
 		case TOP_METHOD:
-			trigger_result_set, err = topMethod(host_id, task.Strategy.Cycle, trigger)
+			trigger_result_set, err = topMethod(task.Host.ID, task.Strategy.Cycle, trigger)
 		case BOTTOM_METHOD:
-			trigger_result_set, err = bottomMethod(host_id, task.Strategy.Cycle, trigger)
+			trigger_result_set, err = bottomMethod(task.Host.ID, task.Strategy.Cycle, trigger)
 		case LAST_METHOD:
-			trigger_result_set, err = lastMethod(host_id, task.Strategy.Cycle, trigger)
+			trigger_result_set, err = lastMethod(task.Host.ID, task.Strategy.Cycle, trigger)
 		case NODATA_METHOD:
-			trigger_result_set, err = nodataMethod(host_id, task.Strategy.Cycle, trigger)
+			trigger_result_set, err = nodataMethod(task.Host.ID, task.Strategy.Cycle, trigger)
 		default:
 			lg.Error("Trigger method %v not found", trigger.Method)
 			err = errors.New(fmt.Sprintf("Trigger method %v not found", trigger.Method))

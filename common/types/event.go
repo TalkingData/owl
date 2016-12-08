@@ -21,7 +21,6 @@ type StrategyEvent struct {
 	ID              int64     `json:"id"`
 	StrategyID      int       `json:"strategy_id"`
 	StrategyName    string    `json:"strategy_name"`
-	StrategyType    int       `json:"strategy_type"`
 	Priority        int       `json:"priority"`
 	Cycle           int       `json:"cycle"`
 	AlarmCount      int       `json:"alarm_count"`
@@ -61,7 +60,6 @@ func (StrategyEvent) TableName() string {
 
 func NewStrategyEvent(strategy_id int,
 	strategy_name string,
-	strategy_type int,
 	priority int,
 	cycle int,
 	alarm_count int,
@@ -75,7 +73,6 @@ func NewStrategyEvent(strategy_id int,
 	return &StrategyEvent{
 		StrategyID:      strategy_id,
 		StrategyName:    strategy_name,
-		StrategyType:    strategy_type,
 		Priority:        priority,
 		Cycle:           cycle,
 		AlarmCount:      alarm_count,
