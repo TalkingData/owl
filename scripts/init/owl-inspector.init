@@ -55,7 +55,6 @@ start(){
     fi
     
     if [ "`id -u -n`" == root ] ; then
-        # Changes the owner of the log directory to allow non-root OpenTSDB
         # daemons to create and rename log files.
         chown $USER: $LOG_DIR > /dev/null 2>&1
         chown $USER: ${LOG_DIR}*.log > /dev/null 2>&1

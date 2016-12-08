@@ -10,8 +10,7 @@
 # Required-Start: $network
 # Required-Stop: $network
 # Short-Description: start and stop owl_agent
-# Description: owl_agent is a daemon which collects system 
-#               and application performance metrics periodically
+# Description: 
 ### END INIT INFO
 # Source init functions
 . /etc/init.d/functions
@@ -56,7 +55,6 @@ start(){
     fi
     
     if [ "`id -u -n`" == root ] ; then
-        # Changes the owner of the log directory to allow non-root OpenTSDB
         # daemons to create and rename log files.
         chown $USER: $LOG_DIR > /dev/null 2>&1
         chown $USER: ${LOG_DIR}/*.log > /dev/null 2>&1
@@ -83,8 +81,6 @@ stop() {
   killproc -p $PID_FILE $NAME
   retval=$?
   echo
-  # Non-root users don't have enough permission to remove pid and lock files.
-  # and the command service owl-agent status" will complain about the existing pid file.
   # Makes the pid file empty.
   echo > $PID_FILE
   [ $retval -eq 0 ] && (rm -f $PID_FILE && rm -f $LOCK_FILE)

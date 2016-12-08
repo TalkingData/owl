@@ -1,16 +1,16 @@
 #!/bin/sh
 #
-# owl_controller      This shell script takes care of starting and stopping owl_controller.
+# owl_proxy      This shell script takes care of starting and stopping owl_proxy.
 #
 # chkconfig: 35 99 01
 # description: OWL is a distributed, scalable monitor system 
 #
 ### BEGIN INIT INFO
-# Provides: owl_controller
+# Provides: owl_proxy
 # Required-Start: $network
 # Required-Stop: $network
-# Short-Description: start and stop owl_controller
-# Description: owl_controller is a daemon 
+# Short-Description: start and stop owl_proxy
+# Description: owl_proxy is a daemon 
 ### END INIT INFO
 # Source init functions
 . /etc/init.d/functions
@@ -20,7 +20,7 @@ MAX_OPEN_FILES=65535
 
 # Default program options
 USER=root
-NAME=controller
+NAME=proxy
 BASE_DIR=/usr/local/owl-${NAME}
 PROG=$BASE_DIR/$NAME
 
@@ -57,7 +57,7 @@ start(){
     if [ "`id -u -n`" == root ] ; then
         # daemons to create and rename log files.
         chown $USER: $LOG_DIR > /dev/null 2>&1
-        chown $USER: ${LOG_DIR}*.log > /dev/null 2>&1
+        chown $USER: ${LOG_DIR}/*.log > /dev/null 2>&1
 
         # Changes the owner of the lock, and the pid files to allow
         touch $LOCK_FILE && chown $USER: $LOCK_FILE
