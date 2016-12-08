@@ -17,7 +17,7 @@ func UpdatHostAive() {
 		for {
 			for _, host := range mydb.GetNoMaintainHost() {
 				time_diff := time.Now().Sub(host.UpdateAt).Seconds()
-				if time_diff > 60 {
+				if time_diff > 120 {
 					if host.IsAlive() {
 						lg.Info("set host(%s %s) status down, time difference:%0.2fs", host.IP, host.Hostname, time_diff)
 						mydb.SetHostAlive(host.ID, "0")
@@ -29,7 +29,7 @@ func UpdatHostAive() {
 					}
 				}
 			}
-			time.Sleep(time.Minute * 1)
+			time.Sleep(time.Minute * 2)
 		}
 	}()
 }
