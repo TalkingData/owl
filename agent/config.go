@@ -12,8 +12,6 @@ const (
 	DEFAULT_LOG_EXPIRE_DAYS = 7
 	DEFAULT_LOG_LEVEL       = 3
 	DEFAULT_BUFFER_SIZE     = 1024 * 1024
-	DEFAULT_CADVISOR_ADDR   = "http://127.0.0.1:8080/"
-	DEFAULT_CADVISOR_ENABLE = false
 )
 
 var GlobalConfig *Config
@@ -23,9 +21,6 @@ type Config struct {
 	REPEATER_ADDR string
 	TCP_BIND      string
 	BUFFER_SIZE   int
-
-	CADVISOR_ENABLE bool
-	CADVISOR_ADDR   string
 
 	//LOG CONFIG
 	LOG_FILE        string //日志保存目录
@@ -46,8 +41,6 @@ func InitGlobalConfig() error {
 		TCP_BIND:      cfg.MustValue(goconfig.DEFAULT_SECTION, "tcp_bind", DEFAULT_TCP_BIND),
 		BUFFER_SIZE:   cfg.MustInt(goconfig.DEFAULT_SECTION, "buffer_size", DEFAULT_BUFFER_SIZE),
 
-		CADVISOR_ENABLE: cfg.MustBool(goconfig.DEFAULT_SECTION, "cadvisor_enable", DEFAULT_CADVISOR_ENABLE),
-		CADVISOR_ADDR:   cfg.MustValue(goconfig.DEFAULT_SECTION, "cadvisor_addr", DEFAULT_CADVISOR_ADDR),
 		MAX_PACKET_SIZE: cfg.MustInt(goconfig.DEFAULT_SECTION, "max_packet_size", DEFAULT_MAX_PACKET_SIZE),
 		LOG_FILE:        cfg.MustValue(goconfig.DEFAULT_SECTION, "log_FILE", DEFAULT_LOG_PATH),
 		LOG_EXPIRE_DAYS: cfg.MustInt(goconfig.DEFAULT_SECTION, "log_expire_days", DEFAULT_LOG_EXPIRE_DAYS),
