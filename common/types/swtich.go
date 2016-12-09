@@ -236,7 +236,7 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 		}
 		if flag != 0 {
 			buffer <- &TimeSeriesData{
-				Metric:    "host.alive",
+				Metric:    "agent.alive",
 				DataType:  "GAUGE",
 				Value:     1,
 				Timestamp: ts,
