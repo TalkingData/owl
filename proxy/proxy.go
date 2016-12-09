@@ -59,7 +59,7 @@ retry:
 		reconnect = true
 		goto retry
 	}
-	lg.Info("connect cfc %s sucessfully.", GlobalConfig.CFC_ADDR)
+	lg.Info("connect cfc %s successfully.", GlobalConfig.CFC_ADDR)
 	this.cfc = cfc
 	for {
 		if this.cfc.IsClosed() {

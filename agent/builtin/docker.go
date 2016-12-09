@@ -185,7 +185,7 @@ func DockerMetrics(cycle int, cadvisor_addr string) []*types.TimeSeriesData {
 				Tags:      map[string]string{"name": cName, "id": id},
 			},
 			&types.TimeSeriesData{
-				Metric:    "docker.net.tcp.closeing",
+				Metric:    "docker.net.tcp.closing",
 				Value:     float64(c.Network.Tcp.Closing),
 				Cycle:     cycle,
 				Timestamp: ts,
