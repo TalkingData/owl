@@ -93,7 +93,7 @@ func (sess *Session) writeLoop() {
 			binary.Write(&buf, binary.BigEndian, head)
 			binary.Write(&buf, binary.BigEndian, data)
 			if _, err := sess.conn.Write(buf.Bytes()); err != nil {
-				fmt.Println("writeLoop: %s", err.Error())
+				fmt.Printf("writeLoop: %s", err.Error())
 				return
 			}
 			buf.Reset()

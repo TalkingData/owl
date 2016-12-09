@@ -136,7 +136,7 @@ func userUpdate(c *gin.Context) {
 
 func changePassword(c *gin.Context) {
 	request := struct {
-		ID              int    `json:'id'`
+		ID              int    `json:"id"`
 		CurrentPassword string `json:"current_password"`
 		NewPassword     string `json:"new_password"`
 	}{}

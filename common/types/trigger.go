@@ -3,7 +3,7 @@ package types
 type Trigger struct {
 	ID          int64   `form:"id" json:"-" `
 	StrategyID  int     `form:"strategy_id" json:"strategy_id"`
-	Metric      string  `form:"metric" json:"metric" "`
+	Metric      string  `form:"metric" json:"metric"`
 	Tags        string  `form:"tags" json:"tags"`
 	Number      int     `form:"number" json:"number"`
 	Index       string  `form:"index" json:"index" `
