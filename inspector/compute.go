@@ -18,6 +18,7 @@ const (
 	TOP_METHOD    = "top"
 	BOTTOM_METHOD = "bottom"
 	LAST_METHOD   = "last"
+	DIFF_METHOD   = "diff"
 	NODATA_METHOD = "nodata"
 )
 
@@ -345,6 +346,58 @@ func lastMethod(host_id string, cycle int, trigger *types.Trigger) (*types.Trigg
 		if !trigger_result_set.Triggered && trigger_result {
 			trigger_result_set.Triggered = trigger_result
 			current_threshold = sum / float64(trigger.Number)
+		}
+
+		trigger_result_set.TriggerResults = append(trigger_result_set.TriggerResults, types.NewTriggerResult(trigger.Index, result.Tags, result.AggregateTags, current_threshold, trigger_result))
+	}
+
+	return trigger_result_set, nil
+}
+
+func diffMethod(host_id string, cycle int, trigger *types.Trigger) (*types.TriggerResultSet, error) {
+	trigger_result_set := &types.TriggerResultSet{make([]*types.TriggerResult, 0), false}
+
+	params := NewQueryParams(host_id, fmt.Sprintf("%dm-ago", cycle), "", trigger.Tags, "sum", trigger.Metric)
+	results, err := tsdbClient.Query(params)
+	if err != nil {
+		lg.Error(err.Error())
+		return nil, err
+	}
+
+	for _, result := range results {
+		if len(result.Dps) == 0 {
+			continue
+		}
+
+		values := make([]float64, 0)
+		for _, value := range result.Dps {
+			values = append(values, value)
+		}
+
+		var current_threshold float64 = 0
+
+		if len(values) > 1 {
+			value_tmp := values[0]
+			for _, value := range values[1:] {
+				if value != value_tmp {
+					current_threshold = 1
+					break
+				}
+			}
+		}
+
+		parameters := make(map[string]interface{}, 8)
+		parameters["current_threshold"] = current_threshold
+		parameters["threshold"] = trigger.Threshold
+		expression := fmt.Sprintf("current_threshold %s threshold", trigger.Symbol)
+		trigger_result, err := compute(parameters, expression)
+		if err != nil {
+			lg.Error(err.Error())
+			return trigger_result_set, err
+		}
+
+		if !trigger_result_set.Triggered && trigger_result {
+			trigger_result_set.Triggered = trigger_result
 		}
 
 		trigger_result_set.TriggerResults = append(trigger_result_set.TriggerResults, types.NewTriggerResult(trigger.Index, result.Tags, result.AggregateTags, current_threshold, trigger_result))

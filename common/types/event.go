@@ -125,7 +125,7 @@ func (this *TriggerEvent) String() string {
 	if this.Number != 0 {
 		number = strconv.Itoa(this.Number)
 	}
-	return fmt.Sprintf("\n%v: %v %v %v %v %v %v %v", this.Index, this.Metric, this.Tags, this.Method, number, utils.Bytes2Human(this.CurrentThreshold), this.Symbol, utils.Bytes2Human(this.Threshold))
+	return fmt.Sprintf("\n%v: %v %v %v %v %v %v 当前值:%v 结果:%v", this.Index, this.Metric, this.Tags, this.Method, number, this.Symbol, utils.Bytes2Human(this.Threshold), utils.Bytes2Human(this.CurrentThreshold), this.Triggered)
 }
 
 type TemplateStrategy struct {

@@ -130,6 +130,8 @@ func (this *Inspector) processTask(task *types.AlarmTask) {
 			trigger_result_set, err = bottomMethod(task.Host.ID, task.Strategy.Cycle, trigger)
 		case LAST_METHOD:
 			trigger_result_set, err = lastMethod(task.Host.ID, task.Strategy.Cycle, trigger)
+		case DIFF_METHOD:
+			trigger_result_set, err = diffMethod(task.Host.ID, task.Strategy.Cycle, trigger)
 		case NODATA_METHOD:
 			trigger_result_set, err = nodataMethod(task.Host.ID, task.Strategy.Cycle, trigger)
 		default:

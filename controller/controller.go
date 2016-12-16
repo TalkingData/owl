@@ -175,7 +175,7 @@ func (this *Controller) doAlarmAction(host *Host, strategy_event *StrategyEvent,
 	actions := mydb.GetActions(strategy_event.StrategyID, ACTION_ALARM)
 	for _, action := range actions {
 		subject := action.AlarmSubject
-		content := fillTemplate(action.AlarmTemplate, generateTemplateObj(host, strategy_event, trigger_event_sets))
+		content := fillTemplate(action.AlarmTemplate, generateTemplateObj(host, strategy_event, triggerEventFilter(trigger_event_sets, ACTION_ALARM)))
 		broadcastMessage(strategy_event.ID, subject, content, action)
 	}
 }
@@ -185,12 +185,36 @@ func (this *Controller) doRestoreAction(host *Host, strategy_event *StrategyEven
 	actions := mydb.GetActions(strategy_event.StrategyID, ACTION_RESTORE)
 	for _, action := range actions {
 		subject := action.RestoreSubject
-		content := fillTemplate(action.RestoreTemplate, generateTemplateObj(host, strategy_event, trigger_event_sets))
+		content := fillTemplate(action.RestoreTemplate, generateTemplateObj(host, strategy_event, triggerEventFilter(trigger_event_sets, ACTION_RESTORE)))
 		broadcastMessage(strategy_event.ID, subject, content, action)
 	}
 }
 
 func (this *Controller) doCustomAction(host *Host, strategy_event *StrategyEvent, trigger_event_sets map[string][]*TriggerEvent) {
+	//TODO when alarm event is triggered, the custom action would be run which is the script wrote by user.
+}
+
+func triggerEventFilter(trigger_event_sets map[string][]*TriggerEvent, action_type int) map[string][]*TriggerEvent {
+	new_trigger_event_sets := make(map[string][]*TriggerEvent)
+	switch action_type {
+	case ACTION_ALARM:
+		for index, trigger_event_set := range trigger_event_sets {
+			for _, trigger_event := range trigger_event_set {
+				if trigger_event.Triggered == true {
+					new_trigger_event_sets[index] = append(new_trigger_event_sets[index], trigger_event)
+				}
+			}
+		}
+	case ACTION_RESTORE:
+		for index, trigger_event_set := range trigger_event_sets {
+			for _, trigger_event := range trigger_event_set {
+				if trigger_event.Triggered == false {
+					new_trigger_event_sets[index] = append(new_trigger_event_sets[index], trigger_event)
+				}
+			}
+		}
+	}
+	return new_trigger_event_sets
 }
 
 func broadcastMessage(strategy_event_id int64, subject, content string, action *Action) {
@@ -409,9 +433,6 @@ func generateEvent(strategy_result *StrategyResult, task *AlarmTask) (*StrategyE
 	for index, trigger_result_set := range strategy_result.TriggerResultSets {
 		trigger := task.Triggers[index]
 		for _, trigger_result := range trigger_result_set.TriggerResults {
-			if trigger_result.Triggered == false && trigger_result_set.Triggered == true {
-				continue
-			}
 			trigger_event_sets[index] = append(trigger_event_sets[index], NewTriggerEvent(strategy_event.ID, index, trigger.Metric, trigger_result.Tags, trigger_result.AggregateTags, trigger.Symbol, trigger.Method, trigger.Number, trigger.Threshold, trigger_result.CurrentThreshold, trigger_result.Triggered))
 		}
 	}
