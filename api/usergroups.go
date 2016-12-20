@@ -15,8 +15,6 @@ type userGroup struct {
 
 func userGroupList(c *gin.Context) {
 	q := c.DefaultQuery("q", "")
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", DefaultPageSize))
 
 	groups := []*userGroup{}
 	db := mydb.Table("user_group")
@@ -24,8 +22,7 @@ func userGroupList(c *gin.Context) {
 		q = fmt.Sprintf("%%%s%%", q)
 		db = db.Where("name like ?", q)
 	}
-	offset := (page - 1) * pageSize
-	db.Offset(offset).Limit(pageSize).Find(&groups)
+	db.Find(&groups)
 	for _, group := range groups {
 		mydb.Model(&group).Association("Users").Find(&group.Users)
 	}
