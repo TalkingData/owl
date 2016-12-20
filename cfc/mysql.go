@@ -55,8 +55,8 @@ func (this *db) DeleteHost(host *Host) error {
 
 func (this *db) GetHost(host_id string) *Host {
 	host := &Host{ID: host_id}
-	if err := this.QueryRow("SELECT `ip`, `hostname`, `agent_version` FROM `host` WHERE id=?",
-		host_id).Scan(&host.IP, &host.Hostname, &host.AgentVersion); err != nil {
+	if err := this.QueryRow("SELECT `ip`, `hostname`, `agent_version`, `sn` FROM `host` WHERE id=?",
+		host_id).Scan(&host.IP, &host.Hostname, &host.AgentVersion, &host.SN); err != nil {
 		if err == sql.ErrNoRows {
 			return nil
 		}

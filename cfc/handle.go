@@ -44,7 +44,10 @@ func (this *handle) Handle(sess *tcp.Session, data []byte) {
 			} else {
 				lg.Info("create host:%v", host)
 			}
-		} else {
+		} else if h.IP != host.IP ||
+			h.Hostname != host.Hostname ||
+			h.AgentVersion != host.AgentVersion ||
+			h.SN != host.SN {
 			lg.Info("update host: %v->%v", h, host)
 			mydb.UpdateHost(host)
 		}
