@@ -143,15 +143,24 @@ func (this *NetCollect) SendConfig2CFC() {
 			if s.Hostname == "" || s.Hostname == "Unknown" {
 				continue
 			}
+			h := &types.Host{
+				ID:           s.ID,
+				IP:           s.IP,
+				Hostname:     s.Hostname,
+				AgentVersion: AgentVersion,
+			}
+			//config
 			this.cfc.Send(
 				types.Pack(
 					types.MESS_POST_HOST_CONFIG,
-					&types.Host{
-						ID:           s.ID,
-						IP:           s.IP,
-						Hostname:     s.Hostname,
-						AgentVersion: AgentVersion,
-					}))
+					h,
+				))
+			//heartbeat
+			this.cfc.Send(
+				types.Pack(
+					types.MESS_POST_HOST_ALIVE,
+					h,
+				))
 		}
 	sleep:
 		time.Sleep(time.Minute * 1)
