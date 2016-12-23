@@ -78,9 +78,11 @@ func InitIpRange() error {
 		netCollect.switchs = append(netCollect.switchs, s)
 		lg.Info("do %s, %#v", s.IP, s.Snmp)
 		go s.Do(netCollect.tsdBuffer, netCollect.metricBuffer)
-		go netCollect.SendConfig2CFC()
-		go netCollect.SendMetri2CFC()
 	}
+
+	go netCollect.SendConfig2CFC()
+	go netCollect.SendMetri2CFC()
+
 	return nil
 }
 
