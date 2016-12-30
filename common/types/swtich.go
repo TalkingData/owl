@@ -175,7 +175,7 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 				Value:     float64((i.InBytes[1] - i.InBytes[0]) / interval),
 				Timestamp: ts,
 				Cycle:     this.CollectInterval,
-				Tags:      map[string]string{"ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
+				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
 			}
 			buffer <- &TimeSeriesData{
 				Metric:    "sw.if.OutBytes",
@@ -183,7 +183,7 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 				Value:     float64((i.OutBytes[1] - i.OutBytes[0]) / interval),
 				Timestamp: ts,
 				Cycle:     this.CollectInterval,
-				Tags:      map[string]string{"ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
+				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
 			}
 			buffer <- &TimeSeriesData{
 				Metric:    "sw.if.InErrors",
@@ -191,7 +191,7 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 				Value:     float64((i.InErrors[1] - i.InErrors[0]) / interval),
 				Timestamp: ts,
 				Cycle:     this.CollectInterval,
-				Tags:      map[string]string{"ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
+				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
 			}
 			buffer <- &TimeSeriesData{
 				Metric:    "sw.if.OutErrors",
@@ -199,7 +199,7 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 				Value:     float64((i.OutErrors[1] - i.OutErrors[0]) / interval),
 				Timestamp: ts,
 				Cycle:     this.CollectInterval,
-				Tags:      map[string]string{"ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
+				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
 			}
 			buffer <- &TimeSeriesData{
 				Metric:    "sw.if.InDiscards",
@@ -207,7 +207,7 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 				Value:     float64((i.InDiscards[1] - i.InDiscards[0]) / interval),
 				Timestamp: ts,
 				Cycle:     this.CollectInterval,
-				Tags:      map[string]string{"ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
+				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
 			}
 			buffer <- &TimeSeriesData{
 				Metric:    "sw.if.OutDiscards",
@@ -215,7 +215,7 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 				Value:     float64((i.OutDiscards[1] - i.OutDiscards[0]) / interval),
 				Timestamp: ts,
 				Cycle:     this.CollectInterval,
-				Tags:      map[string]string{"ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
+				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
 			}
 			buffer <- &TimeSeriesData{
 				Metric:    "sw.if.InUsed.Percent",
@@ -223,7 +223,7 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 				Value:     float64(((i.InBytes[1] - i.InBytes[0]) / interval) / i.Speed * 100),
 				Timestamp: ts,
 				Cycle:     this.CollectInterval,
-				Tags:      map[string]string{"ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
+				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
 			}
 			buffer <- &TimeSeriesData{
 				Metric:    "sw.if.OutUsed.Percent",
@@ -231,7 +231,7 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 				Value:     float64(((i.OutBytes[1] - i.OutBytes[0]) / interval) / i.Speed * 100),
 				Timestamp: ts,
 				Cycle:     this.CollectInterval,
-				Tags:      map[string]string{"ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
+				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
 			}
 		}
 		if flag != 0 {
@@ -241,7 +241,7 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 				Value:     1,
 				Timestamp: ts,
 				Cycle:     this.CollectInterval,
-				Tags:      map[string]string{"ip": this.IP, "hostname": this.Hostname, "id": this.ID},
+				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "hostname": this.Hostname},
 			}
 		}
 		time.Sleep(time.Second * time.Duration(this.CollectInterval))
