@@ -250,6 +250,9 @@ func getStrategiesByHostID(host_id string) []types.Strategy {
 	strategies = append(strategies, temp_strategies...)
 	ids := make(map[int]bool)
 	for _, strategy := range strategies {
+		if strategy.Enable == false {
+			continue
+		}
 		if _, ok := ids[strategy.ID]; ok {
 			continue
 		}
