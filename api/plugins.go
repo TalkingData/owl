@@ -22,7 +22,7 @@ func pluginList(c *gin.Context) {
 	db := mydb.Table("plugin").Order("create_at desc")
 	if len(q) > 0 {
 		q = fmt.Sprintf("%%%s%%", q)
-		db = db.Where("phone like ? or weixin like ? or mail like ?", q, q, q)
+		db = db.Where("name like ? or args like ?", q, q)
 	}
 	var total int
 	db.Count(&total)
