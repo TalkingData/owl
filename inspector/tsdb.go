@@ -73,8 +73,6 @@ type QueryParams struct {
 	Delete            bool        `json:"delete,omitempty"`
 }
 
-var results []Result
-
 type Result struct {
 	Metric        string             `json:"metric"`
 	Tags          map[string]string  `json:"tags"`
@@ -98,13 +96,15 @@ func (this ErrorResp) String() string {
 
 func NewQueryParams(host_id, start, end string, rawTags string, aggregator string, metric string) *QueryParams {
 	tags := make(map[string]string)
-	tags["uuid"] = host_id
 	if rawTags != "" {
 		tags_pairs := strings.Split(rawTags, ",")
 		for _, tag_pair := range tags_pairs {
 			tag_k_v := strings.Split(tag_pair, "=")
 			tags[tag_k_v[0]] = tag_k_v[1]
 		}
+	}
+	if _, ok := tags["hostname"]; !ok {
+		tags["uuid"] = host_id
 	}
 	queries := []Query{Query{Aggregator: aggregator, Metric: metric, Tags: tags}}
 	return &QueryParams{Start: start, End: end, Queries: queries}

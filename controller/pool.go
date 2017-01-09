@@ -76,7 +76,7 @@ LOOP:
 			lg.Debug("Load result %v into result pool", result.TaskID)
 			break LOOP
 		default:
-			lg.Warn("Task pool is full")
+			lg.Warn("Result pool is full")
 			time.Sleep(time.Second * time.Duration(1))
 		}
 	}
