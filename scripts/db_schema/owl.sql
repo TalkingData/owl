@@ -185,7 +185,7 @@ CREATE TABLE `metric` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `host_id` char(32) COLLATE utf8_unicode_ci NOT NULL,
   `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL COMMENT 'cpu.idle/cpu=all',
-  `dt` enum('GAUGE','DRIVER','COUNTER') COLLATE utf8_unicode_ci NOT NULL,
+  `dt` enum('GAUGE','DERIVE','COUNTER') COLLATE utf8_unicode_ci NOT NULL,
   `cycle` int(10) NOT NULL,
   `create_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
