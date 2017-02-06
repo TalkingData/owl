@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-redis/redis"
 	"github.com/urfave/cli"
+	"gopkg.in/redis.v5"
 )
 
 func FetchData(c *cli.Context) error {
