@@ -135,7 +135,6 @@ func (this *Inspector) processTask(task *types.AlarmTask) {
 		case NODATA_METHOD:
 			trigger_result_set, err = nodataMethod(task.Host.ID, task.Strategy.Cycle, trigger)
 		default:
-			lg.Error("Trigger method %v not found", trigger.Method)
 			err = errors.New(fmt.Sprintf("Trigger method %v not found", trigger.Method))
 		}
 
@@ -160,6 +159,7 @@ func (this *Inspector) processTask(task *types.AlarmTask) {
 		}
 		result = compute_result
 	}
+	lg.Error(error_message)
 
 	strategy_result := types.NewStrategyResult(task.ID, task.Strategy.Priority, triggers_results, error_message, result, time.Now())
 	this.resultPool.PutResult(strategy_result)
