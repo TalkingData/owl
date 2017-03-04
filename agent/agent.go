@@ -194,7 +194,7 @@ func (this *Agent) SendTSD2Repeater() {
 					case "GAUGE", "gauge":
 					case "COUNTER", "counter":
 						tsd.Value = (tsd.Value - history) / float64(tsd.Cycle)
-					case "DRIVER", "driver":
+					case "DERIVE", "derive":
 						tsd.Value = tsd.Value - history
 						if tsd.Value < 0 {
 							continue

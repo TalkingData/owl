@@ -3,11 +3,10 @@
 
 import os
 import json
-import urllib
 import argparse
 import urllib2
-
 import sys
+
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
@@ -15,6 +14,7 @@ CORP_ID = ""
 SECRET = ""
 AGENT_ID = 0
 FILE = "/tmp/wechat_token"
+
 
 def get_access_token(new=False):
     token = ""
@@ -41,6 +41,7 @@ def get_access_token(new=False):
         token = tmp_file.read()
 
     return True, token
+
 
 def send(receiver, content, token):
     api = "https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token={0}"
@@ -81,4 +82,3 @@ if __name__ == "__main__":
         sys.exit("{0} {1}".format(status, response))
 
     print status, response
-        

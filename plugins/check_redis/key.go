@@ -18,7 +18,7 @@ var infoKeys = map[string]string{
 
 type Metric struct {
 	Metric   string            `json:"metric"`    //sys.cpu.idle
-	DataType string            `json:"data_type"` //COUNTER,GAUGE,DRIVE
+	DataType string            `json:"data_type"` //COUNTER,GAUGE,DERIVE
 	Value    interface{}       `json:"value"`     //99.00
 	Tags     map[string]string `json:"tags"`      //{"product":"app01", "group":"dev02"}
 }

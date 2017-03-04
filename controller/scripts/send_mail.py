@@ -5,9 +5,10 @@ import sys
 import smtplib
 from email.mime.text import MIMEText
 
-mail_host=""
-mail_user=""
-mail_pass=""
+mail_host = ""
+mail_user = ""
+mail_pass = ""
+
 
 def send(sub, content, receiver):
     me = "<"+mail_user+">"
@@ -18,7 +19,7 @@ def send(sub, content, receiver):
     try:
         server = smtplib.SMTP()
         server.connect(mail_host)
-	server.starttls()
+        server.starttls()
         server.login(mail_user, mail_pass)
         server.sendmail(me, receiver, msg.as_string())
         server.quit()
