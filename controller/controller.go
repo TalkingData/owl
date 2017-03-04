@@ -244,6 +244,9 @@ func broadcastMessage(strategy_event_id int64, subject, content string, action *
 			case SEND_WECHAT:
 				file_path = GlobalConfig.SEND_WECHAT_SCRIPT
 				params = append(params, user.Weixin)
+			case SEND_CALL:
+				file_path = GlobalConfig.SEND_CALL_SCRIPT
+				params = append(params, user.Phone)
 			default:
 				lg.Error("Unknown send type %v", action.SendType)
 				return
@@ -323,7 +326,7 @@ func runScript(file_path string, params []string) (string, error) {
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
 	if err := cmd.Start(); err != nil {
-		lg.Error("Run script %v params %v error %v", file_path, params, err.Error())
+		lg.Error("Run script %v error %v", file_path, err.Error())
 		return err.Error(), err
 	}
 
@@ -341,7 +344,7 @@ func runScript(file_path string, params []string) (string, error) {
 		return fmt.Sprintf("Run script %v timeout in %v", file_path, GlobalConfig.ACTION_TIMEOUT), errors.New(fmt.Sprintf("Run script %v timeout in %v", file_path, GlobalConfig.ACTION_TIMEOUT))
 	case err := <-done:
 		if err != nil {
-			lg.Error("Run script %v params %v error %v output %v", file_path, params, err.Error(), stderr.String())
+			lg.Error("Run script %v error %v output %v", file_path, err.Error(), stderr.String())
 			return stderr.String(), err
 		}
 		return stdout.String(), err
