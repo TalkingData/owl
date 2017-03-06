@@ -1,17 +1,16 @@
 #!/usr/bin/env python
+# -*- coding: UTF-8 -*-
 
-import random
 import sys
 import httplib
-import json
 import urllib
 import argparse
 
 address = ""
 
+
 def send(subject, content, phone):
-    headers = {"Content-type": "application/json", "Accept": "text/plain"}
-    conn = httplib.HTTPConnection(address, timeout=30)
+    conn = httplib.HTTPConnection(address, timeout=60)
     url = "/sendalart?severity=1&subject={0}&msg={1}&phones={2}".format(subject, content, phone)
     conn.request("GET", urllib.quote(url, ":/=&()?,>."))
     response = conn.getresponse()

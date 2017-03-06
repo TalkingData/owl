@@ -23,7 +23,7 @@ const (
 )
 
 func maxMethod(host_id string, cycle int, trigger *types.Trigger) (*types.TriggerResultSet, error) {
-	trigger_result_set := &types.TriggerResultSet{TriggerResults:make([]*types.TriggerResult, 0), Triggered: false}
+	trigger_result_set := &types.TriggerResultSet{TriggerResults: make([]*types.TriggerResult, 0), Triggered: false}
 
 	params := NewQueryParams(host_id, fmt.Sprintf("%dm-ago", cycle), "", trigger.Tags, "sum", trigger.Metric)
 	results, err := tsdbClient.Query(params)
@@ -62,7 +62,7 @@ func maxMethod(host_id string, cycle int, trigger *types.Trigger) (*types.Trigge
 }
 
 func minMethod(host_id string, cycle int, trigger *types.Trigger) (*types.TriggerResultSet, error) {
-	trigger_result_set := &types.TriggerResultSet{TriggerResults:make([]*types.TriggerResult, 0), Triggered: false}
+	trigger_result_set := &types.TriggerResultSet{TriggerResults: make([]*types.TriggerResult, 0), Triggered: false}
 
 	params := NewQueryParams(host_id, fmt.Sprintf("%dm-ago", cycle), "", trigger.Tags, "sum", trigger.Metric)
 	results, err := tsdbClient.Query(params)
@@ -106,7 +106,7 @@ func ratioMethod(host_id string, cycle int, trigger *types.Trigger) (*types.Trig
 		return nil, err
 	}
 
-	trigger_result_set := &types.TriggerResultSet{TriggerResults:make([]*types.TriggerResult, 0), Triggered: false}
+	trigger_result_set := &types.TriggerResultSet{TriggerResults: make([]*types.TriggerResult, 0), Triggered: false}
 	params := NewQueryParams(host_id, fmt.Sprintf("%dm-ago", cycle), "", trigger.Tags, "sum", trigger.Metric)
 	results, err := tsdbClient.Query(params)
 	if err != nil {
@@ -156,34 +156,30 @@ func topMethod(host_id string, cycle int, trigger *types.Trigger) (*types.Trigge
 		err := errors.New("number can not be 0")
 		return nil, err
 	}
-
-	trigger_result_set := &types.TriggerResultSet{TriggerResults:make([]*types.TriggerResult, 0), Triggered: false}
+	trigger_result_set := &types.TriggerResultSet{TriggerResults: make([]*types.TriggerResult, 0), Triggered: false}
 	params := NewQueryParams(host_id, fmt.Sprintf("%dm-ago", cycle), "", trigger.Tags, "sum", trigger.Metric)
 	results, err := tsdbClient.Query(params)
 	if err != nil {
 		return nil, err
 	}
-
 	for _, result := range results {
 		if len(result.Dps) == 0 {
 			continue
 		}
-
 		values := make([]float64, 0)
 		for _, value := range result.Dps {
 			values = append(values, value)
 		}
 		sort.Sort(sort.Reverse(sort.Float64Slice(values)))
-
 		trigger_result := true
 		var count int
 		var sum float64
 		var current_threshold float64
 		for _, value := range values {
-			count += 1
-			if count > trigger.Number {
+			if count >= trigger.Number {
 				break
 			}
+			count += 1
 			sum += value
 			parameters := make(map[string]interface{}, 8)
 			parameters["current_threshold"] = value
@@ -193,19 +189,16 @@ func topMethod(host_id string, cycle int, trigger *types.Trigger) (*types.Trigge
 			if err != nil {
 				return trigger_result_set, err
 			}
-
+			current_threshold = value
 			if !one_result {
 				trigger_result = false
+				break
 			}
-
-			current_threshold = value
 		}
-
 		if !trigger_result_set.Triggered && trigger_result {
 			trigger_result_set.Triggered = trigger_result
-			current_threshold = sum / float64(trigger.Number)
+			current_threshold = sum / float64(count)
 		}
-
 		trigger_result_set.TriggerResults = append(trigger_result_set.TriggerResults, types.NewTriggerResult(trigger.Index, result.Tags, result.AggregateTags, current_threshold, trigger_result))
 	}
 
@@ -217,34 +210,30 @@ func bottomMethod(host_id string, cycle int, trigger *types.Trigger) (*types.Tri
 		err := errors.New("number can not be 0")
 		return nil, err
 	}
-
-	trigger_result_set := &types.TriggerResultSet{TriggerResults:make([]*types.TriggerResult, 0), Triggered: false}
+	trigger_result_set := &types.TriggerResultSet{TriggerResults: make([]*types.TriggerResult, 0), Triggered: false}
 	params := NewQueryParams(host_id, fmt.Sprintf("%dm-ago", cycle), "", trigger.Tags, "sum", trigger.Metric)
 	results, err := tsdbClient.Query(params)
 	if err != nil {
 		return nil, err
 	}
-
 	for _, result := range results {
 		if len(result.Dps) == 0 {
 			continue
 		}
-
 		values := make([]float64, 0)
 		for _, value := range result.Dps {
 			values = append(values, value)
 		}
 		sort.Float64s(values)
-
 		trigger_result := true
 		var count int
 		var sum float64
 		var current_threshold float64
 		for _, value := range values {
-			count += 1
-			if count > trigger.Number {
+			if count >= trigger.Number {
 				break
 			}
+			count += 1
 			sum += value
 			parameters := make(map[string]interface{}, 8)
 			parameters["current_threshold"] = value
@@ -254,19 +243,16 @@ func bottomMethod(host_id string, cycle int, trigger *types.Trigger) (*types.Tri
 			if err != nil {
 				return trigger_result_set, err
 			}
-
+			current_threshold = value
 			if !one_result {
 				trigger_result = false
+				break
 			}
-
-			current_threshold = value
 		}
-
 		if !trigger_result_set.Triggered && trigger_result {
 			trigger_result_set.Triggered = trigger_result
-			current_threshold = sum / float64(trigger.Number)
+			current_threshold = sum / float64(count)
 		}
-
 		trigger_result_set.TriggerResults = append(trigger_result_set.TriggerResults, types.NewTriggerResult(trigger.Index, result.Tags, result.AggregateTags, current_threshold, trigger_result))
 	}
 
@@ -278,40 +264,34 @@ func lastMethod(host_id string, cycle int, trigger *types.Trigger) (*types.Trigg
 		err := errors.New("number can not be 0")
 		return nil, err
 	}
-
-	trigger_result_set := &types.TriggerResultSet{TriggerResults:make([]*types.TriggerResult, 0), Triggered: false}
+	trigger_result_set := &types.TriggerResultSet{TriggerResults: make([]*types.TriggerResult, 0), Triggered: false}
 	params := NewQueryParams(host_id, fmt.Sprintf("%dm-ago", cycle), "", trigger.Tags, "sum", trigger.Metric)
 	results, err := tsdbClient.Query(params)
 	if err != nil {
 		return nil, err
 	}
-
 	for _, result := range results {
 		if len(result.Dps) == 0 {
 			continue
 		}
-
 		value_times := make([]string, 0)
 		for value_time := range result.Dps {
 			value_times = append(value_times, value_time)
 		}
-
 		sort.Strings(value_times)
-
 		values := make([]float64, len(value_times))
 		for index, value_time := range value_times {
 			values[len(value_times)-(index+1)] = result.Dps[value_time]
 		}
-
 		trigger_result := true
 		var count int
 		var sum float64
 		var current_threshold float64
 		for _, value := range values {
-			count += 1
-			if count > trigger.Number {
+			if count >= trigger.Number {
 				break
 			}
+			count += 1
 			sum += value
 			parameters := make(map[string]interface{}, 8)
 			parameters["current_threshold"] = value
@@ -321,19 +301,16 @@ func lastMethod(host_id string, cycle int, trigger *types.Trigger) (*types.Trigg
 			if err != nil {
 				return trigger_result_set, err
 			}
-
+			current_threshold = value
 			if !one_result {
 				trigger_result = false
+				break
 			}
-
-			current_threshold = value
 		}
-
 		if !trigger_result_set.Triggered && trigger_result {
 			trigger_result_set.Triggered = trigger_result
-			current_threshold = sum / float64(trigger.Number)
+			current_threshold = sum / float64(count)
 		}
-
 		trigger_result_set.TriggerResults = append(trigger_result_set.TriggerResults, types.NewTriggerResult(trigger.Index, result.Tags, result.AggregateTags, current_threshold, trigger_result))
 	}
 
@@ -341,7 +318,7 @@ func lastMethod(host_id string, cycle int, trigger *types.Trigger) (*types.Trigg
 }
 
 func diffMethod(host_id string, cycle int, trigger *types.Trigger) (*types.TriggerResultSet, error) {
-	trigger_result_set := &types.TriggerResultSet{TriggerResults:make([]*types.TriggerResult, 0), Triggered: false}
+	trigger_result_set := &types.TriggerResultSet{TriggerResults: make([]*types.TriggerResult, 0), Triggered: false}
 
 	params := NewQueryParams(host_id, fmt.Sprintf("%dm-ago", cycle), "", trigger.Tags, "sum", trigger.Metric)
 	results, err := tsdbClient.Query(params)
@@ -391,7 +368,7 @@ func diffMethod(host_id string, cycle int, trigger *types.Trigger) (*types.Trigg
 }
 
 func nodataMethod(host_id string, cycle int, trigger *types.Trigger) (*types.TriggerResultSet, error) {
-	trigger_result_set := &types.TriggerResultSet{TriggerResults:make([]*types.TriggerResult, 0), Triggered: false}
+	trigger_result_set := &types.TriggerResultSet{TriggerResults: make([]*types.TriggerResult, 0), Triggered: false}
 
 	params := NewQueryParams(host_id, fmt.Sprintf("%dm-ago", cycle), "", trigger.Tags, "sum", trigger.Metric)
 	results, err := tsdbClient.Query(params)

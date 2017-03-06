@@ -27,6 +27,7 @@ const (
 	DEFAULT_SEND_MAIL_SCRIPT         = "./scripts/send_mail.py"
 	DEFAULT_SEND_SMS_SCRIPT          = "./scripts/send_sms.py"
 	DEFAULT_SEND_WECHAT_SCRIPT       = "./scripts/send_wechat.py"
+	DEFAULT_SEND_CALL_SCRIPT         = "./scripts/send_call.py"
 )
 
 var GlobalConfig *Config
@@ -67,6 +68,8 @@ type Config struct {
 	SEND_SMS_SCRIPT string
 
 	SEND_WECHAT_SCRIPT string
+
+	SEND_CALL_SCRIPT string
 }
 
 func InitGlobalConfig() error {
@@ -96,6 +99,7 @@ func InitGlobalConfig() error {
 		SEND_MAIL_SCRIPT:         cfg.MustValue(goconfig.DEFAULT_SECTION, "send_mail_script", DEFAULT_SEND_MAIL_SCRIPT),
 		SEND_SMS_SCRIPT:          cfg.MustValue(goconfig.DEFAULT_SECTION, "send_sms_script", DEFAULT_SEND_SMS_SCRIPT),
 		SEND_WECHAT_SCRIPT:       cfg.MustValue(goconfig.DEFAULT_SECTION, "send_wechat_script", DEFAULT_SEND_WECHAT_SCRIPT),
+		SEND_CALL_SCRIPT:         cfg.MustValue(goconfig.DEFAULT_SECTION, "send_call_script", DEFAULT_SEND_CALL_SCRIPT),
 	}
 	return nil
 }

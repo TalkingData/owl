@@ -244,6 +244,9 @@ func broadcastMessage(strategy_event_id int64, subject, content string, action *
 			case SEND_WECHAT:
 				file_path = GlobalConfig.SEND_WECHAT_SCRIPT
 				params = append(params, user.Weixin)
+			case SEND_CALL:
+				file_path = GlobalConfig.SEND_CALL_SCRIPT
+				params = append(params, user.Phone)
 			default:
 				lg.Error("Unknown send type %v", action.SendType)
 				return
