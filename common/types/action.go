@@ -4,6 +4,7 @@ const (
 	SEND_MAIL = iota + 1
 	SEND_SMS
 	SEND_WECHAT
+	SEND_CALL
 )
 
 const (

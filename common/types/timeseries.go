@@ -10,7 +10,7 @@ import (
 
 type TimeSeriesData struct {
 	Metric    string            `json:"metric"`    //sys.cpu.idle
-	DataType  string            `json:"data_type"` //COUNTER,GAUGE,DRIVE
+	DataType  string            `json:"data_type"` //COUNTER,GAUGE,DERIVE
 	Value     float64           `json:"value"`     //99.00
 	Timestamp int64             `json:"timestamp"` //unix timestamp
 	Cycle     int               `json:"cycle"`

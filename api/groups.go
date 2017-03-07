@@ -89,7 +89,6 @@ func groupDelete(c *gin.Context) {
 		mydb.Delete(&group)
 		response["message"] = "delete success"
 	}
-	c.JSON(http.StatusOK, response)
 }
 
 func groupHostList(c *gin.Context) {
