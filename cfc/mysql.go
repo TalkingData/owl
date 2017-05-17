@@ -32,8 +32,9 @@ func InitMysqlConnPool() error {
 }
 
 func (this *db) CreateHost(id, sn, ip, hostname, agent_version string) error {
-	_, err := this.Exec("INSERT INTO `host`(`id`, `sn`, `ip`, `hostname`, `agent_version`) values(?,?,?,?,?)",
-		id, sn, ip, hostname, agent_version)
+	now := time.Now().Format("2006-01-02 15:04:05")
+	_, err := this.Exec("INSERT INTO `host`(`id`, `sn`, `ip`, `hostname`, `agent_version`,`create_at`, `update_at`) values(?,?,?,?,?,?,?)",
+		id, sn, ip, hostname, agent_version, now, now)
 	if err != nil {
 		return err
 	}
@@ -97,6 +98,7 @@ func (this *db) SetHostAlive(id string, st string) {
 
 func (this *db) GetPlugins(host_id string) []Plugin {
 	plugins := []Plugin{}
+	idMap := make(map[int]struct{})
 	rows, err := this.Query("SELECT `id`, `name`, `args`, `interval`, `timeout` FROM `plugin` WHERE "+
 		" id in(SELECT `plugin_id` FROM `host_plugin` WHERE `host_id`=?)", host_id)
 	if err != nil {
@@ -111,6 +113,28 @@ func (this *db) GetPlugins(host_id string) []Plugin {
 			continue
 		}
 		plugins = append(plugins, plugin)
+		idMap[plugin.ID] = struct{}{}
+	}
+	//获取主机组所有的插件
+	rows, err = this.Query("SELECT `id`, `name`, `args`, `interval`, `timeout` FROM `plugin` WHERE "+
+		"id in (SELECT `plugin_id` FROM `group_plugin` WHERE group_id "+
+		"in(SELECT `group_id` FROM `host_group` WHERE host_id=?))", host_id)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+	defer rows.Close()
+	for rows.Next() {
+		plugin := Plugin{}
+		if err := rows.Scan(&plugin.ID, &plugin.Name, &plugin.Args, &plugin.Interval, &plugin.Timeout); err != nil {
+			fmt.Println(err)
+			continue
+		}
+		if _, ok := idMap[plugin.ID]; ok {
+			continue
+		}
+		plugins = append(plugins, plugin)
+		idMap[plugin.ID] = struct{}{}
 	}
 	return plugins
 }
