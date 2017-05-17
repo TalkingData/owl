@@ -265,9 +265,8 @@ func getStrategiesByHostID(host_id string) []types.Strategy {
 func hostDelete(c *gin.Context) {
 	id := c.Param("id")
 	host := types.Host{}
-	mydb.Table("host").Where("id = ?", id).First(&host)
-	if host.ID == "" {
-		c.JSON(http.StatusOK, gin.H{"code": http.StatusBadRequest, "message": "host not found"})
+	if mydb.Table("host").Where("id =? or sn =? ", id, id).First(&host).RecordNotFound() {
+		c.JSON(http.StatusOK, gin.H{"code": http.StatusNotFound, "message": "host not found"})
 		return
 	}
 	mydb.Delete(&host)
@@ -298,26 +297,22 @@ func hostRename(c *gin.Context) {
 func hostEnable(c *gin.Context) {
 	id := c.Param("id")
 	host := types.Host{}
-	mydb.Table("host").Where("id = ?", id).First(&host)
-	if err := mydb.Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": http.StatusBadRequest, "message": err.Error()})
+	if mydb.Table("host").Where("id =? or sn =? ", id, id).First(&host).RecordNotFound() {
+		c.JSON(http.StatusOK, gin.H{"code": http.StatusNotFound, "message": "host not found"})
 		return
 	}
-	host.Status = "1"
-	mydb.Save(&host)
+	mydb.Model(&host).UpdateColumn("status", "1")
 	c.JSON(http.StatusOK, gin.H{"code": http.StatusOK, "message": "enable the host success"})
 }
 
 func hostDisable(c *gin.Context) {
 	id := c.Param("id")
 	host := types.Host{}
-	mydb.Table("host").Where("id = ?", id).First(&host)
-	if err := mydb.Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"code": http.StatusBadRequest, "message": err.Error()})
+	if mydb.Table("host").Where("id =? or sn =? ", id, id).First(&host).RecordNotFound() {
+		c.JSON(http.StatusOK, gin.H{"code": http.StatusNotFound, "message": "host not found"})
 		return
 	}
-	host.Status = "2"
-	mydb.Save(&host)
+	mydb.Model(&host).UpdateColumn("status", "2")
 	c.JSON(http.StatusOK, gin.H{"code": http.StatusOK, "host": "disable the host success"})
 }
 

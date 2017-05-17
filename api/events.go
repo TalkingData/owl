@@ -29,8 +29,8 @@ func eventsList(c *gin.Context) {
 	end := c.DefaultQuery("end", time.Now().Format("2006-01-02 15:04:05"))
 
 	offset := (page - 1) * page_size
-	sort := "status asc,update_time desc,priority asc"
-	where := fmt.Sprintf("`update_time` BETWEEN '%s' AND '%s'", start, end)
+	sort := "status asc,create_time desc,priority asc"
+	where := fmt.Sprintf("`create_time` BETWEEN '%s' AND '%s'", start, end)
 
 	if priority != 0 {
 		where += fmt.Sprintf(" AND `priority` = %d", priority)
