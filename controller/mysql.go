@@ -230,16 +230,26 @@ func (this *db) UpdateStrategyEvent(strategy_event *StrategyEvent, trigger_event
 		return err
 	}
 
-	stmt, err := tx.Prepare("UPDATE `strategy_event` SET `update_time` = ?, `count` = ?, `status` = ?, `process_user` = ?, `process_comments` = ?, `process_time` = ? WHERE `id` = ?")
+	stmt, err := tx.Prepare("UPDATE `strategy_event` SET `strategy_name` = ?, `priority` = ?, `cycle` = ?, `alarm_count` = ?, `expression` = ?, `update_time` = ?, `count` = ?, `status` = ?, `host_id` = ?, `host_cname` = ?, `host_name` = ?, `ip` = ?, `sn` = ?, `process_user` = ?, `process_comments` = ?, `process_time` = ? WHERE `id` = ?")
 	if err != nil {
 		lg.Error(err.Error())
 		return err
 	}
 
 	_, err = stmt.Exec(
+		strategy_event.StrategyName,
+		strategy_event.Priority,
+		strategy_event.Cycle,
+		strategy_event.AlarmCount,
+		strategy_event.Expression,
 		strategy_event.UpdateTime,
 		strategy_event.Count,
 		strategy_event.Status,
+		strategy_event.HostID,
+		strategy_event.HostCname,
+		strategy_event.HostName,
+		strategy_event.IP,
+		strategy_event.SN,
 		strategy_event.ProcessUser,
 		strategy_event.ProcessComments,
 		strategy_event.ProcessTime,
@@ -362,7 +372,7 @@ func (this *db) GetUsers(action_id int) []*User {
 }
 
 func (this *db) CreateActionResult(action_result *ActionResult) error {
-	stmt, err := this.Prepare("INSERT INTO `action_result` VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+	stmt, err := this.Prepare("INSERT INTO `action_result` VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		lg.Error(err.Error())
 		return err
@@ -380,7 +390,8 @@ func (this *db) CreateActionResult(action_result *ActionResult) error {
 		action_result.Subject,
 		action_result.Content,
 		action_result.Success,
-		action_result.Response)
+		action_result.Response,
+		action_result.FilePath)
 	if err != nil {
 		lg.Error(err.Error())
 		return err

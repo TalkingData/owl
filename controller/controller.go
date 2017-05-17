@@ -2,9 +2,11 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"text/template"
 	"time"
 
@@ -44,6 +46,19 @@ type Controller struct {
 	highResultPool *ResultPool
 	lowResultPool  *ResultPool
 	nodePool       *NodePool
+	mailQueue      *Queue
+	smsQueue       *Queue
+	wechatQueue    *Queue
+	callQueue      *Queue
+	actionQueue    *Queue
+}
+
+type QueueTask struct {
+	strategy_event_id int64
+	file_path         string
+	params            []string
+	action            *Action
+	user              *User
 }
 
 func InitController() error {
@@ -58,18 +73,28 @@ func InitController() error {
 		NewTaskPool(GlobalConfig.TASK_POOL_SIZE),
 		NewResultPool(GlobalConfig.RESULT_POOL_SIZE),
 		NewResultPool(GlobalConfig.RESULT_POOL_SIZE),
-		NewNodePool()}
+		NewNodePool(),
+		NewQueue(0),
+		NewQueue(0),
+		NewQueue(0),
+		NewQueue(0),
+		NewQueue(0)}
 
 	go controller.loadStrategiesiForever()
 	go controller.processStrategyResultForever()
 	go controller.checkNodesForever()
+	go controller.doMail()
+	go controller.doSms()
+	go controller.doWechat()
+	go controller.doCall()
+	go controller.doAction()
 	return nil
 }
 
 func (this *Controller) checkNodesForever() {
 	for {
 		this.checkNodes()
-		time.Sleep(time.Second * 10)
+		time.Sleep(time.Second * time.Duration(10))
 	}
 }
 
@@ -101,7 +126,6 @@ func (this *Controller) refreshNode(heartbeat *HeartBeat) {
 }
 
 func (this *Controller) loadStrategiesiForever() {
-	duration := time.Duration(GlobalConfig.LOAD_STRATEGIES_INTERVAL) * time.Second
 	for {
 		alarm_tasks = &AlarmTasks{make(map[string]*AlarmTask)}
 		for _, strategy := range mydb.GetStrategies() {
@@ -109,7 +133,7 @@ func (this *Controller) loadStrategiesiForever() {
 		}
 		this.taskPool.PutTasks(alarm_tasks.tasks)
 		lg.Info("Loaded tasks %v", len(alarm_tasks.tasks))
-		time.Sleep(duration)
+		time.Sleep(time.Second * time.Duration(GlobalConfig.LOAD_STRATEGIES_INTERVAL))
 	}
 }
 
@@ -176,7 +200,7 @@ func (this *Controller) doAlarmAction(host *Host, strategy_event *StrategyEvent,
 	for _, action := range actions {
 		subject := action.AlarmSubject
 		content := fillTemplate(action.AlarmTemplate, generateTemplateObj(host, strategy_event, triggerEventFilter(trigger_event_sets, ACTION_ALARM)))
-		broadcastMessage(strategy_event.ID, subject, content, action)
+		this.sendToQueue(strategy_event.ID, subject, content, action)
 	}
 }
 
@@ -186,12 +210,8 @@ func (this *Controller) doRestoreAction(host *Host, strategy_event *StrategyEven
 	for _, action := range actions {
 		subject := action.RestoreSubject
 		content := fillTemplate(action.RestoreTemplate, generateTemplateObj(host, strategy_event, triggerEventFilter(trigger_event_sets, ACTION_RESTORE)))
-		broadcastMessage(strategy_event.ID, subject, content, action)
+		this.sendToQueue(strategy_event.ID, subject, content, action)
 	}
-}
-
-func (this *Controller) doCustomAction(host *Host, strategy_event *StrategyEvent, trigger_event_sets map[string][]*TriggerEvent) {
-	//TODO when alarm event is triggered, the custom action would be run which is the script wrote by user.
 }
 
 func triggerEventFilter(trigger_event_sets map[string][]*TriggerEvent, action_type int) map[string][]*TriggerEvent {
@@ -217,7 +237,7 @@ func triggerEventFilter(trigger_event_sets map[string][]*TriggerEvent, action_ty
 	return new_trigger_event_sets
 }
 
-func broadcastMessage(strategy_event_id int64, subject, content string, action *Action) {
+func (this *Controller) sendToQueue(strategy_event_id int64, subject, content string, action *Action) {
 	users := make(map[int]*User)
 	users_obj_from_group := mydb.GetUsersByGroups(action.ID)
 	users_obj_from_user := mydb.GetUsers(action.ID)
@@ -229,50 +249,144 @@ func broadcastMessage(strategy_event_id int64, subject, content string, action *
 	}
 
 	for _, user := range users {
-		go func(user *User) {
-			params := make([]string, 0)
-			params = append(params, subject)
-			params = append(params, content)
-			var file_path string
-			switch action.SendType {
-			case SEND_MAIL:
-				file_path = GlobalConfig.SEND_MAIL_SCRIPT
-				params = append(params, user.Mail)
-			case SEND_SMS:
-				file_path = GlobalConfig.SEND_SMS_SCRIPT
-				params = append(params, user.Phone)
-			case SEND_WECHAT:
-				file_path = GlobalConfig.SEND_WECHAT_SCRIPT
-				params = append(params, user.Weixin)
-			case SEND_CALL:
-				file_path = GlobalConfig.SEND_CALL_SCRIPT
-				params = append(params, user.Phone)
-			default:
-				lg.Error("Unknown send type %v", action.SendType)
-				return
-			}
-			result, err := runScript(file_path, params)
-			action_result := &ActionResult{}
-			action_result.StrategyEventID = strategy_event_id
-			action_result.ActionID = action.ID
-			action_result.ActionType = action.Type
-			action_result.ActionSendType = action.SendType
-			action_result.UserID = user.ID
-			action_result.Username = user.Username
-			action_result.Phone = user.Phone
-			action_result.Mail = user.Mail
-			action_result.Weixin = user.Weixin
-			action_result.Subject = subject
-			action_result.Content = content
+		params := make([]string, 0)
+		params = append(params, subject)
+		params = append(params, content)
+
+		switch action.SendType {
+		case SEND_MAIL:
+			file_path := filepath.Join(GlobalConfig.SEND_NOTIFICATIONS_DIR, GlobalConfig.SEND_MAIL_SCRIPT)
+			params = append(params, user.Mail)
+			this.mailQueue.PutNoWait(&QueueTask{strategy_event_id, file_path, params, action, user})
+		case SEND_SMS:
+			file_path := filepath.Join(GlobalConfig.SEND_NOTIFICATIONS_DIR, GlobalConfig.SEND_SMS_SCRIPT)
+			params = append(params, user.Phone)
+			this.smsQueue.PutNoWait(&QueueTask{strategy_event_id, file_path, params, action, user})
+		case SEND_WECHAT:
+			file_path := filepath.Join(GlobalConfig.SEND_NOTIFICATIONS_DIR, GlobalConfig.SEND_WECHAT_SCRIPT)
+			params = append(params, user.Weixin)
+			this.wechatQueue.PutNoWait(&QueueTask{strategy_event_id, file_path, params, action, user})
+		case SEND_CALL:
+			file_path := filepath.Join(GlobalConfig.SEND_NOTIFICATIONS_DIR, GlobalConfig.SEND_CALL_SCRIPT)
+			params = append(params, user.Phone)
+			this.callQueue.PutNoWait(&QueueTask{strategy_event_id, file_path, params, action, user})
+		case SEND_ACTION:
+			file_path := filepath.Join(GlobalConfig.SEND_NOTIFICATIONS_DIR, action.FilePath)
+			user_info, err := json.Marshal(user)
 			if err != nil {
-				action_result.Success = false
-			} else {
-				action_result.Success = true
+				lg.Error(err.Error())
 			}
-			action_result.Response = result
-			mydb.CreateActionResult(action_result)
-		}(user)
+			params = append(params, string(user_info))
+			this.actionQueue.PutNoWait(&QueueTask{strategy_event_id, file_path, params, action, user})
+		default:
+			lg.Error("Unknown send type %v", action.SendType)
+			return
+		}
+
 	}
+}
+
+func (this *Controller) doMail() {
+	for {
+		waitAMinute(this.mailQueue.Size())
+		if !GlobalConfig.SEND_SWITCH {
+			continue
+		}
+		task, err := this.mailQueue.Get(0)
+		if err != nil {
+			lg.Error(err.Error())
+		}
+		go doSend(task.(*QueueTask))
+	}
+}
+
+func (this *Controller) doSms() {
+	for {
+		waitAMinute(this.smsQueue.Size())
+		if !GlobalConfig.SEND_SWITCH {
+			continue
+		}
+		task, err := this.smsQueue.Get(0)
+		if err != nil {
+			lg.Error(err.Error())
+		}
+		go doSend(task.(*QueueTask))
+	}
+}
+
+func (this *Controller) doWechat() {
+	for {
+		waitAMinute(this.wechatQueue.Size())
+		if !GlobalConfig.SEND_SWITCH {
+			continue
+		}
+		task, err := this.wechatQueue.Get(0)
+		if err != nil {
+			lg.Error(err.Error())
+		}
+		go doSend(task.(*QueueTask))
+	}
+}
+
+func (this *Controller) doCall() {
+	for {
+		waitAMinute(this.callQueue.Size())
+		if !GlobalConfig.SEND_SWITCH {
+			continue
+		}
+		task, err := this.callQueue.Get(0)
+		if err != nil {
+			lg.Error(err.Error())
+		}
+		go doSend(task.(*QueueTask))
+	}
+}
+
+func (this *Controller) doAction() {
+	for {
+		waitAMinute(this.actionQueue.Size())
+		if !GlobalConfig.SEND_SWITCH {
+			continue
+		}
+		task, err := this.actionQueue.Get(0)
+		if err != nil {
+			lg.Error(err.Error())
+		}
+		go doSend(task.(*QueueTask))
+	}
+}
+
+func waitAMinute(queueSize int) {
+	if queueSize < GlobalConfig.SEND_MAX {
+		time.Sleep(time.Millisecond * time.Duration(GlobalConfig.SEND_INTERVAL))
+		return
+	}
+	time.Sleep(time.Duration(queueSize/GlobalConfig.SEND_MAX*GlobalConfig.SEND_INTERVAL*3) * time.Millisecond)
+}
+
+func doSend(queueTask *QueueTask) {
+	action_result := &ActionResult{}
+	action_result.StrategyEventID = queueTask.strategy_event_id
+	action_result.ActionID = queueTask.action.ID
+	action_result.ActionType = queueTask.action.Type
+	action_result.ActionSendType = queueTask.action.SendType
+	action_result.UserID = queueTask.user.ID
+	action_result.Username = queueTask.user.Username
+	action_result.Phone = queueTask.user.Phone
+	action_result.Mail = queueTask.user.Mail
+	action_result.Weixin = queueTask.user.Weixin
+	action_result.Subject = queueTask.params[0]
+	action_result.Content = queueTask.params[1]
+	action_result.FilePath = queueTask.action.FilePath
+
+	result, err := runScript(queueTask.file_path, queueTask.params)
+	if err != nil {
+		action_result.Success = false
+	} else {
+		action_result.Success = true
+	}
+	action_result.Response = result
+	mydb.CreateActionResult(action_result)
 }
 
 func fillTemplate(raw_template string, template_obj Template) string {
@@ -362,50 +476,42 @@ func (this *Controller) processResult(strategy_result *StrategyResult) {
 		return
 	}
 
-	strategy_event, trigger_event_sets := generateEvent(strategy_result, task)
+	var aware_strategy_event, new_strategy_event *StrategyEvent
 
-	new_strategy_event := mydb.GetStrategyEvent(strategy_event.StrategyID, EVENT_NEW, strategy_event.HostID)
-	if new_strategy_event != nil {
-		strategy_event.ID = new_strategy_event.ID
-		new_strategy_event.UpdateTime = strategy_result.CreateTime
-	}
-	aware_strategy_event := mydb.GetStrategyEvent(strategy_event.StrategyID, EVENT_AWARE, strategy_event.HostID)
-	if aware_strategy_event != nil {
-		strategy_event.ID = aware_strategy_event.ID
-		aware_strategy_event.UpdateTime = strategy_result.CreateTime
-	}
-
-	if aware_strategy_event != nil {
+	if aware_strategy_event := mydb.GetStrategyEvent(task.Strategy.ID, EVENT_AWARE, task.Host.ID); aware_strategy_event != nil {
+		strategy_event, trigger_event_sets := generateEvent(aware_strategy_event, strategy_result, task)
 		if strategy_result.Triggered == false {
 			this.doRestoreAction(task.Host, strategy_event, trigger_event_sets)
-			aware_strategy_event.Status = EVENT_CLOSED
-			aware_strategy_event.ProcessUser = "系统"
-			aware_strategy_event.ProcessComments = "报警恢复"
-			aware_strategy_event.ProcessTime = time.Now()
+			strategy_event.Status = EVENT_CLOSED
+			strategy_event.ProcessUser = "系统"
+			strategy_event.ProcessComments = "报警恢复"
+			strategy_event.ProcessTime = time.Now()
 		}
-		mydb.UpdateStrategyEvent(aware_strategy_event, trigger_event_sets)
+		mydb.UpdateStrategyEvent(strategy_event, trigger_event_sets)
 		return
 	}
 
-	if new_strategy_event != nil {
+	if new_strategy_event := mydb.GetStrategyEvent(task.Strategy.ID, EVENT_NEW, task.Host.ID); new_strategy_event != nil {
+		strategy_event, trigger_event_sets := generateEvent(new_strategy_event, strategy_result, task)
 		if strategy_result.Triggered == false {
 			this.doRestoreAction(task.Host, strategy_event, trigger_event_sets)
-			new_strategy_event.Status = EVENT_CLOSED
-			new_strategy_event.ProcessUser = "系统"
-			new_strategy_event.ProcessComments = "报警恢复"
-			new_strategy_event.ProcessTime = time.Now()
-			mydb.UpdateStrategyEvent(new_strategy_event, trigger_event_sets)
+			strategy_event.Status = EVENT_CLOSED
+			strategy_event.ProcessUser = "系统"
+			strategy_event.ProcessComments = "报警恢复"
+			strategy_event.ProcessTime = time.Now()
+			mydb.UpdateStrategyEvent(strategy_event, trigger_event_sets)
 			return
 		}
 		if new_strategy_event.Count < task.Strategy.AlarmCount || task.Strategy.AlarmCount == 0 {
-			new_strategy_event.Count += 1
+			strategy_event.Count += 1
 			this.doAlarmAction(task.Host, strategy_event, trigger_event_sets)
 		}
-		mydb.UpdateStrategyEvent(new_strategy_event, trigger_event_sets)
+		mydb.UpdateStrategyEvent(strategy_event, trigger_event_sets)
 		return
 	}
 
 	if new_strategy_event == nil && aware_strategy_event == nil {
+		strategy_event, trigger_event_sets := generateEvent(nil, strategy_result, task)
 		if strategy_result.Triggered == true {
 			strategy_event.Status = EVENT_NEW
 			last_id, _ := mydb.CreateStrategyEvent(strategy_event, trigger_event_sets)
@@ -415,12 +521,8 @@ func (this *Controller) processResult(strategy_result *StrategyResult) {
 	}
 }
 
-func generateEvent(strategy_result *StrategyResult, task *AlarmTask) (*StrategyEvent, map[string][]*TriggerEvent) {
-
-	var strategy_event *StrategyEvent
-	trigger_event_sets := make(map[string][]*TriggerEvent)
-
-	strategy_event = NewStrategyEvent(task.Strategy.ID,
+func generateEvent(strategy_event *StrategyEvent, strategy_result *StrategyResult, task *AlarmTask) (merged_strategy_event *StrategyEvent, trigger_event_sets map[string][]*TriggerEvent) {
+	merged_strategy_event = NewStrategyEvent(task.Strategy.ID,
 		task.Strategy.Name,
 		task.Strategy.Priority,
 		task.Strategy.Cycle,
@@ -433,12 +535,24 @@ func generateEvent(strategy_result *StrategyResult, task *AlarmTask) (*StrategyE
 		task.Host.IP,
 		task.Host.SN)
 
+	trigger_event_sets = make(map[string][]*TriggerEvent)
 	for index, trigger_result_set := range strategy_result.TriggerResultSets {
 		trigger := task.Triggers[index]
 		for _, trigger_result := range trigger_result_set.TriggerResults {
-			trigger_event_sets[index] = append(trigger_event_sets[index], NewTriggerEvent(strategy_event.ID, index, trigger.Metric, trigger_result.Tags, trigger_result.AggregateTags, trigger.Symbol, trigger.Method, trigger.Number, trigger.Threshold, trigger_result.CurrentThreshold, trigger_result.Triggered))
+			trigger_event_sets[index] = append(trigger_event_sets[index], NewTriggerEvent(merged_strategy_event.ID, index, trigger.Metric, trigger_result.Tags, trigger_result.AggregateTags, trigger.Symbol, trigger.Method, trigger.Number, trigger.Threshold, trigger_result.CurrentThreshold, trigger_result.Triggered))
 		}
 	}
 
-	return strategy_event, trigger_event_sets
+	switch {
+	case strategy_event != nil && strategy_event.Status == EVENT_NEW:
+		merged_strategy_event.ID = strategy_event.ID
+		merged_strategy_event.Count = strategy_event.Count
+
+	case strategy_event != nil && strategy_event.Status == EVENT_AWARE:
+		merged_strategy_event.ID = strategy_event.ID
+		merged_strategy_event.Count = strategy_event.Count
+		merged_strategy_event.Status = strategy_event.Status
+	}
+
+	return
 }

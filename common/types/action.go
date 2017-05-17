@@ -5,12 +5,12 @@ const (
 	SEND_SMS
 	SEND_WECHAT
 	SEND_CALL
+	SEND_ACTION
 )
 
 const (
 	ACTION_ALARM = iota + 1
 	ACTION_RESTORE
-	ACTION_CUSTOM
 )
 
 type Action struct {
@@ -43,6 +43,7 @@ type ActionResult struct {
 	Content         string `json:"content"`
 	Success         bool   `json:"success"`
 	Response        string `json:"response"`
+	FilePath        string `json:"file_path"`
 }
 
 type ActionUser struct {

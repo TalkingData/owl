@@ -15,6 +15,10 @@
 # Source init functions
 . /etc/init.d/functions
 
+if [ ~/.bash_profile ];then
+    . ~/.bash_profile
+fi
+
 # Maximum number of open files
 MAX_OPEN_FILES=65535
 

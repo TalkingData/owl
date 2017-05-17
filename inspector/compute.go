@@ -427,8 +427,8 @@ func compute(params map[string]interface{}, express string) (bool, error) {
 }
 
 func unit(cycle, number int) (start_time, end_time string) {
-	start := time.Now().Add(-time.Duration(time.Duration(number) * 24 * time.Hour)).Add(-time.Duration(time.Duration(cycle) * time.Minute))
-	end := time.Now().Add(-time.Duration(time.Duration(number) * 24 * time.Hour))
+	start := time.Now().Add(-time.Duration(number) * time.Minute).Add(-time.Duration(cycle) * time.Minute)
+	end := time.Now().Add(-time.Duration(number) * time.Minute)
 
 	start_time = start.Format("2006/01/02 15:04:05")
 	end_time = end.Format("2006/01/02 15:04:05")

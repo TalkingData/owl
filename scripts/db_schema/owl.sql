@@ -21,7 +21,7 @@ CREATE TABLE `action` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `strategy_id` bigint(20) unsigned NOT NULL,
   `type` tinyint(1) unsigned NOT NULL,
-  `file_path` text COLLATE utf8_unicode_ci NOT NULL,
+  `file_path` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `alarm_subject` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `restore_subject` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `alarm_template` text COLLATE utf8_unicode_ci NOT NULL,
@@ -30,7 +30,7 @@ CREATE TABLE `action` (
   PRIMARY KEY (`id`),
   KEY `fk_action_strategy_id` (`strategy_id`),
   CONSTRAINT `fk_action_strategy_id` FOREIGN KEY (`strategy_id`) REFERENCES `strategy` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=452 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- ----------------------------
 --  Table structure for `action_result`
@@ -50,6 +50,7 @@ CREATE TABLE `action_result` (
   `content` text COLLATE utf8_unicode_ci NOT NULL,
   `success` tinyint(1) unsigned NOT NULL,
   `response` text COLLATE utf8_unicode_ci NOT NULL,
+  `file_path` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   KEY `fk_action_result_strategy_event_id` (`strategy_event_id`),
   CONSTRAINT `fk_action_result_strategy_event_id` FOREIGN KEY (`strategy_event_id`) REFERENCES `strategy_event` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
@@ -82,7 +83,7 @@ CREATE TABLE `action_user_group` (
   KEY `fk_action_user_group_user_group_id` (`user_group_id`),
   CONSTRAINT `fk_action_user_group_action_id` FOREIGN KEY (`action_id`) REFERENCES `action` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_action_user_group_user_group_id` FOREIGN KEY (`user_group_id`) REFERENCES `user_group` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=636 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- ----------------------------
 --  Table structure for `chart`
@@ -101,7 +102,7 @@ CREATE TABLE `chart` (
   UNIQUE KEY `idx_name_user_id` (`name`, `user_id`),
   KEY `fk_chart_user` (`user_id`),
   CONSTRAINT `fk_chart_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=98 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- ----------------------------
 --  Table structure for `chart_element`
@@ -116,7 +117,7 @@ CREATE TABLE `chart_element` (
   PRIMARY KEY (`id`),
   KEY `fk_chart_element_chart_id` (`chart_id`),
   CONSTRAINT `fk_chart_element_chart_id` FOREIGN KEY (`chart_id`) REFERENCES `chart` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=140 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- ----------------------------
 --  Table structure for `group`
@@ -127,7 +128,7 @@ CREATE TABLE `group` (
   `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=45 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- ----------------------------
 --  Table structure for `host`
@@ -160,7 +161,7 @@ CREATE TABLE `host_group` (
   KEY `fk_host_group_group_id` (`group_id`),
   CONSTRAINT `fk_host_group_group_id` FOREIGN KEY (`group_id`) REFERENCES `group` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_host_group_host_id` FOREIGN KEY (`host_id`) REFERENCES `host` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=460 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- ----------------------------
 --  Table structure for `host_plugin`
@@ -175,7 +176,22 @@ CREATE TABLE `host_plugin` (
   KEY `fk_host_plugin_plugin_id` (`plugin_id`),
   CONSTRAINT `fk_host_plugin_host_id` FOREIGN KEY (`host_id`) REFERENCES `host` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_host_plugin_plugin_id` FOREIGN KEY (`plugin_id`) REFERENCES `plugin` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=217 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+-- ----------------------------
+--  Table structure for `group_plugin`
+-- ----------------------------
+DROP TABLE IF EXISTS `group_plugin`;
+CREATE TABLE `group_plugin` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `group_id` int(10) unsigned NOT NULL,
+  `plugin_id` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `group_id` (`group_id`),
+  KEY `plugin_id` (`plugin_id`),
+  CONSTRAINT `fk_group_id` FOREIGN KEY (`group_id`) REFERENCES `group` (`id`),
+  CONSTRAINT `fk_plugin_id` FOREIGN KEY (`plugin_id`) REFERENCES `plugin` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- ----------------------------
 --  Table structure for `metric`
@@ -193,7 +209,7 @@ CREATE TABLE `metric` (
   UNIQUE KEY `idx_name` (`name`,`host_id`),
   KEY `fk_metric_host` (`host_id`),
   CONSTRAINT `fk_metric_host` FOREIGN KEY (`host_id`) REFERENCES `host` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=19813 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- ----------------------------
 --  Table structure for `metric_index`
@@ -204,7 +220,7 @@ CREATE TABLE `metric_index` (
   `metric` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_metric` (`metric`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=465 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 --  Table structure for `operations`
@@ -219,7 +235,7 @@ CREATE TABLE `operations` (
   `operation_result` tinyint(1) unsigned NOT NULL,
   PRIMARY KEY (`id`),
   KEY `operation_time` (`operation_time`)
-) ENGINE=InnoDB AUTO_INCREMENT=222220 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- ----------------------------
 --  Table structure for `panel`
@@ -237,7 +253,7 @@ CREATE TABLE `panel` (
   UNIQUE KEY `idx_name_user_id` (`name`, `user_id`),
   KEY `fk_panel_user` (`user_id`),
   CONSTRAINT `fk_panel_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=67 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- ----------------------------
 --  Table structure for `panel_chart`
@@ -252,7 +268,7 @@ CREATE TABLE `panel_chart` (
   KEY `fk_panel_chart_panel_id` (`panel_id`),
   CONSTRAINT `fk_panel_chart_chart_id` FOREIGN KEY (`chart_id`) REFERENCES `chart` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_panel_chart_panel_id` FOREIGN KEY (`panel_id`) REFERENCES `panel` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=60 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- ----------------------------
 --  Table structure for `plugin`
@@ -268,7 +284,7 @@ CREATE TABLE `plugin` (
   `update_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_name_args` (`name`, `args`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- ----------------------------
 --  Table structure for `strategy`
@@ -288,7 +304,7 @@ CREATE TABLE `strategy` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_name` (`name`),
   KEY `idx_pid` (`pid`)
-) ENGINE=InnoDB AUTO_INCREMENT=193 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- ----------------------------
 --  Table structure for `strategy_event`
@@ -315,7 +331,7 @@ CREATE TABLE `strategy_event` (
   `process_comments` text COLLATE utf8_unicode_ci,
   `process_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5513 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- ----------------------------
 --  Table structure for `strategy_group`
@@ -330,7 +346,7 @@ CREATE TABLE `strategy_group` (
   KEY `fk_strategy_group_group_id` (`group_id`),
   CONSTRAINT `fk_strategy_group_group_id` FOREIGN KEY (`group_id`) REFERENCES `group` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_strategy_group_strategy_id` FOREIGN KEY (`strategy_id`) REFERENCES `strategy` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=298 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- ----------------------------
 --  Table structure for `strategy_host`
@@ -345,7 +361,7 @@ CREATE TABLE `strategy_host` (
   KEY `fk_strategy_host_host_id` (`host_id`),
   CONSTRAINT `fk_strategy_host_host_id` FOREIGN KEY (`host_id`) REFERENCES `host` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_strategy_host_strategy_id` FOREIGN KEY (`strategy_id`) REFERENCES `strategy` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=440 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- ----------------------------
 --  Table structure for `tag_index`
@@ -357,7 +373,7 @@ CREATE TABLE `tag_index` (
   `tagv` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_tagk_tagv` (`tagk`,`tagv`)
-) ENGINE=InnoDB AUTO_INCREMENT=1119 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 --  Table structure for `trigger`
@@ -378,7 +394,7 @@ CREATE TABLE `trigger` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_strategy_id_index_index` (`strategy_id`,`index`),
   CONSTRAINT `fk_strategy_strategy_id` FOREIGN KEY (`strategy_id`) REFERENCES `strategy` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=259 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- ----------------------------
 --  Table structure for `trigger_event`
@@ -417,7 +433,7 @@ CREATE TABLE `user` (
   `update_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_username` (`username`)
-) ENGINE=InnoDB AUTO_INCREMENT=190 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- ----------------------------
 --  Table structure for `user_group`
@@ -428,7 +444,7 @@ CREATE TABLE `user_group` (
   `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- ----------------------------
 --  Table structure for `user_user_group`
@@ -443,6 +459,6 @@ CREATE TABLE `user_user_group` (
   KEY `fk_user_usergroup_user_group_id` (`user_group_id`),
   CONSTRAINT `fk_user_user_group_user_id` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_user_usergroup_user_group_id` FOREIGN KEY (`user_group_id`) REFERENCES `user_group` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=273 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;

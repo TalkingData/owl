@@ -113,7 +113,6 @@ func (this *Inspector) processTask(task *types.AlarmTask) {
 	triggers_results := make(map[string]*types.TriggerResultSet)
 	parameters := make(map[string]interface{})
 	error_message := ""
-	task.Strategy.Cycle += 1
 	for index, trigger := range task.Triggers {
 		var trigger_result_set *types.TriggerResultSet
 		var err error
@@ -159,7 +158,6 @@ func (this *Inspector) processTask(task *types.AlarmTask) {
 		}
 		result = compute_result
 	}
-	lg.Error(error_message)
 
 	strategy_result := types.NewStrategyResult(task.ID, task.Strategy.Priority, triggers_results, error_message, result, time.Now())
 	this.resultPool.PutResult(strategy_result)

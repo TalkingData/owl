@@ -24,10 +24,14 @@ const (
 	DEFAULT_TASK_SIZE                = 10
 	DEFAULT_WORKER_COUNT             = 5
 	DEFAULT_ACTION_TIMEOUT           = 60
-	DEFAULT_SEND_MAIL_SCRIPT         = "./scripts/send_mail.py"
-	DEFAULT_SEND_SMS_SCRIPT          = "./scripts/send_sms.py"
-	DEFAULT_SEND_WECHAT_SCRIPT       = "./scripts/send_wechat.py"
-	DEFAULT_SEND_CALL_SCRIPT         = "./scripts/send_call.py"
+	DEFAULT_SEND_NOTIFICATIONS_DIR   = "./scripts/notifications/"
+	DEFAULT_SEND_MAIL_SCRIPT         = "send_mail.py"
+	DEFAULT_SEND_SMS_SCRIPT          = "send_sms.py"
+	DEFAULT_SEND_WECHAT_SCRIPT       = "send_wechat.py"
+	DEFAULT_SEND_CALL_SCRIPT         = "send_call.py"
+	DEFAULT_SEND_INTERVAL            = 100
+	DEFAULT_SEND_SWITCH              = true
+	DEFAULT_SEND_MAX                 = 1000
 )
 
 var GlobalConfig *Config
@@ -63,13 +67,21 @@ type Config struct {
 
 	ACTION_TIMEOUT int //报警动作超时时间
 
-	SEND_MAIL_SCRIPT string
+	SEND_MAIL_SCRIPT string //发送邮件的脚本
 
-	SEND_SMS_SCRIPT string
+	SEND_SMS_SCRIPT string //发送短信的脚本
 
-	SEND_WECHAT_SCRIPT string
+	SEND_WECHAT_SCRIPT string //发送微信的脚本
 
-	SEND_CALL_SCRIPT string
+	SEND_CALL_SCRIPT string //打电话的脚本
+
+	SEND_NOTIFICATIONS_DIR string //自定义脚本的目录
+
+	SEND_INTERVAL int //发送消息间隔时间单位毫秒
+
+	SEND_SWITCH bool //发送报警开关
+
+	SEND_MAX int //队列报警大于此值减速
 }
 
 func InitGlobalConfig() error {
@@ -100,6 +112,10 @@ func InitGlobalConfig() error {
 		SEND_SMS_SCRIPT:          cfg.MustValue(goconfig.DEFAULT_SECTION, "send_sms_script", DEFAULT_SEND_SMS_SCRIPT),
 		SEND_WECHAT_SCRIPT:       cfg.MustValue(goconfig.DEFAULT_SECTION, "send_wechat_script", DEFAULT_SEND_WECHAT_SCRIPT),
 		SEND_CALL_SCRIPT:         cfg.MustValue(goconfig.DEFAULT_SECTION, "send_call_script", DEFAULT_SEND_CALL_SCRIPT),
+		SEND_NOTIFICATIONS_DIR:   cfg.MustValue(goconfig.DEFAULT_SECTION, "send_notifications_dir", DEFAULT_SEND_NOTIFICATIONS_DIR),
+		SEND_INTERVAL:            cfg.MustInt(goconfig.DEFAULT_SECTION, "send_interval", DEFAULT_SEND_INTERVAL),
+		SEND_SWITCH:              cfg.MustBool(goconfig.DEFAULT_SECTION, "send_switch", DEFAULT_SEND_SWITCH),
+		SEND_MAX:                 cfg.MustInt(goconfig.DEFAULT_SECTION, "send_max", DEFAULT_SEND_MAX),
 	}
 	return nil
 }
