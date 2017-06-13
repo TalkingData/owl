@@ -1,13 +1,10 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"os"
-	"os/exec"
 	"owl/common/types"
-	"strings"
+	"owl/common/utils"
 	"sync"
 	"time"
 )
@@ -25,6 +22,7 @@ type Task struct {
 	cycle int
 	exit  chan struct{}
 	flag  int
+	args  []string
 }
 
 type TaskList struct {
@@ -42,9 +40,12 @@ func NewTaskList() *TaskList {
 func NewTask(p types.Plugin) *Task {
 	t := new(Task)
 	t.Plugin = p
-	//t.timer = time.NewTicker(time.Duration(p.Interval) * time.Second)
+
 	t.cycle = p.Interval
 	t.exit = make(chan struct{})
+	if len(p.Args) != 0 {
+		t.args = parseCommandArgs(p.Args)
+	}
 	return t
 }
 
@@ -73,58 +74,32 @@ func (this *Task) Stop() {
 
 func (this *Task) Run() {
 	var (
-		fpath  string
-		args   []string
-		err    error
-		stderr bytes.Buffer
-		stdout bytes.Buffer
-		done   chan error = make(chan error, 1)
+		fpath string
+		err   error
 	)
-	lg.Info("run %s %s", this.Name, this.Args)
+	lg.Info("run %s %s", this.Name, this.args)
 	fpath = fmt.Sprintf("./plugins/%s", this.Name)
-	if len(this.Args) != 0 {
-		args = strings.Split(this.Args, " ")
-	}
-	cmd := exec.Command(fpath, args...)
-	cmd.Env = os.Environ()
-	cmd.Stderr = &stderr
-	cmd.Stdout = &stdout
-	if err = cmd.Start(); err != nil {
-		lg.Error("start task error %s %s %s", this.Name, this.Args, err.Error())
+	output, err := utils.RunCmdWithTimeout(fpath, this.args, this.Timeout)
+	if err != nil {
+		lg.Error("run %s/%s %s", fpath, this.args, err.Error())
 		return
 	}
-	go func() {
-		done <- cmd.Wait()
-	}()
-	select {
-	case <-time.After(time.Second * time.Duration(this.Timeout)):
-		if err = cmd.Process.Kill(); err != nil {
-			lg.Error("failed to kill:", err.Error())
-			return
-		}
-		lg.Warn("process killed as timeout reached, %s %s", fpath, this.Args)
-	case err = <-done:
-		if err != nil {
-			lg.Error("task run error %s %s %s %s", fpath, this.Args, err.Error(), stderr.String())
-		} else {
-			result := []types.TimeSeriesData{}
-			err = json.Unmarshal(stdout.Bytes(), &result)
-			if err != nil {
-				lg.Error("unmarshal task result error %s %s", stdout.String(), err.Error())
-				return
-			}
-			ts := time.Now().Unix()
-			for _, tsd := range result {
-				if tsd.Metric == "" || tsd.DataType == "" {
-					continue
-				}
-				tsd.Cycle = this.Interval
-				tsd.Timestamp = ts
-				agent.SendChan <- tsd
-			}
-
-		}
+	result := []types.TimeSeriesData{}
+	err = json.Unmarshal(output, &result)
+	if err != nil {
+		lg.Error("unmarshal task result error %s %s", output, err.Error())
+		return
 	}
+	ts := time.Now().Unix()
+	for _, tsd := range result {
+		if tsd.Metric == "" || tsd.DataType == "" {
+			continue
+		}
+		tsd.Cycle = this.Interval
+		tsd.Timestamp = ts
+		agent.SendChan <- tsd
+	}
+
 }
 
 func (this *TaskList) AddTask(t *Task) {

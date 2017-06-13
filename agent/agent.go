@@ -1,6 +1,9 @@
 package main
 
 import (
+	"bufio"
+	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/exec"
@@ -15,7 +18,7 @@ import (
 const (
 	SendHostConfigInterval    = 5  //minute
 	GetHostPluginListInterval = 5  //minute
-	RunBuiltinMetricCycle     = 30 //second
+	RunBuiltinMetricCycle     = 60 //second
 )
 
 type Agent struct {
@@ -278,20 +281,6 @@ func (this *Agent) RunBuiltinMetric() {
 			go builtin.DiskMetrics(RunBuiltinMetricCycle, this.SendChan)
 			go builtin.FdMetrics(RunBuiltinMetricCycle, this.SendChan)
 			go builtin.CpuMetrics(RunBuiltinMetricCycle, this.SendChan)
-			//metrics := []*types.TimeSeriesData{}
-			//metrics = append(metrics, builtin.MemoryMetrics(RunBuiltinMetricCycle)...)
-			//metrics = append(metrics, builtin.SwapMetrics(RunBuiltinMetricCycle)...)
-			//metrics = append(metrics, builtin.LoadMetrics(RunBuiltinMetricCycle)...)
-			//metrics = append(metrics, builtin.NetMetrics(RunBuiltinMetricCycle)...)
-			//metrics = append(metrics, builtin.DiskMetrics(RunBuiltinMetricCycle)...)
-			//metrics = append(metrics, builtin.FdMetrics(RunBuiltinMetricCycle)...)
-			//metrics = append(metrics, builtin.CpuMetrics(RunBuiltinMetricCycle)...)
-			//for _, v := range metrics {
-			//	if v == nil {
-			//		continue
-			//	}
-			//	this.SendChan <- *v
-			//}
 		}
 	}()
 }
@@ -304,4 +293,36 @@ func NewHostConfig() *types.Host {
 		Hostname:     agent.Hostname(),
 		AgentVersion: AgentVersion,
 	}
+}
+
+func parseCommandArgs(s string) []string {
+	rd := bufio.NewReader(strings.NewReader(s))
+	fields := []string{}
+	var flag byte
+	for {
+		field, err := rd.ReadString(32)
+		if err != nil {
+			if err == io.EOF && len(field) > 0 {
+				fields = append(fields, strings.TrimSpace(field))
+			}
+			break
+		}
+		if field == " " {
+			continue
+		}
+
+		if strings.Contains(field, string(34)) { //双引号
+			flag = 34
+		}
+		if flag != 0 {
+			s, err := rd.ReadString(flag)
+			if err != nil {
+				break
+			}
+			field = strings.Trim(fmt.Sprintf("%s %s", field, s), string(34))
+			flag = 0
+		}
+		fields = append(fields, strings.TrimSpace(field))
+	}
+	return fields
 }
