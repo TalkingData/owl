@@ -3,42 +3,42 @@ package utils
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"os/exec"
 	"time"
 )
 
 var ErrRunTimeout = errors.New("command execution timeouts")
 
+//如果timeout为0， 则没有超时
 func RunCmdWithTimeout(cmd string, args []string, timeout int) ([]byte, error) {
 	var (
-		stderr bytes.Buffer
-		stdout bytes.Buffer
-		err    error
-		done   chan error = make(chan error)
+		buf  bytes.Buffer
+		err  error
+		done chan error = make(chan error)
 	)
 	c := exec.Command(cmd, args...)
-	c.Stdout = &stdout
-	c.Stderr = &stderr
+	c.Stdout = &buf
+	c.Stderr = &buf
 	if err = c.Start(); err != nil {
 		return nil, err
 	}
-
 	go func() {
 		done <- c.Wait()
 	}()
 
-	select {
-	case <-time.After(time.Second * time.Duration(timeout)):
-		if err = c.Process.Kill(); err != nil {
-			return nil, err
+	if timeout == 0 {
+		err = <-done
+		return buf.Bytes(), err
+	} else {
+		select {
+		case <-time.After(time.Second * time.Duration(timeout)):
+			if err = c.Process.Kill(); err != nil {
+				return nil, err
+			}
+			return nil, ErrRunTimeout
+		case err = <-done:
+			return buf.Bytes(), err
 		}
-		return nil, ErrRunTimeout
-	case err = <-done:
-		if err != nil {
-			return nil, fmt.Errorf("%s %s", stderr.Bytes(), err)
-		}
-		return stdout.Bytes(), nil
 	}
 }
 
