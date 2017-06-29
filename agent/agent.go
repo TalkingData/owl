@@ -130,7 +130,7 @@ func (this *Agent) Hostname() string {
 }
 
 func (this *Agent) RIP() string {
-	res, err := exec.Command("sh", "-c", "/usr/bin/ipmitool lan print | awk -F ':' '/IP Address.*[1-9]/ {print $2}'").Output()
+	res, err := exec.Command("sh", "-c", "/usr/bin/ipmitool lan print | awk -F '[: ]+' '/IP Address.*[0-9]/ {print $3}'").Output()
 	if err != nil {
 		return err.Error()
 	}
