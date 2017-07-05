@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-var oids []string = []string{"ifHCOutOctets", "ifHCInOctets", "inErrors", "outErrors", "inDiscards", "outDiscards"}
+var oids []string = []string{"ifHCOutOctets", "ifHCInOctets", "inErrors", "outErrors", "inDiscards", "outDiscards", "OperStatus"}
 
 type Switch struct {
 	ID              string   `json:"id"`
@@ -37,7 +37,7 @@ type SnmpConfig struct {
 type Interface struct {
 	Index       string    `json:"index"`
 	Name        string    `json:"name"`
-	OperStatus  string    `json:"oper_starus"`
+	OperStatus  uint64    `json:"oper_starus"`
 	InBytes     [2]uint64 `json:"in_bytes"`
 	OutBytes    [2]uint64 `json:"out_bytes"`
 	InDiscards  [2]uint64 `json:"in_discards"`
@@ -145,6 +145,15 @@ func (this *Switch) postMetric(buffer chan<- *MetricConfig) {
 					Tags:     map[string]string{"ifName": i.Name},
 				},
 			}
+			buffer <- &MetricConfig{
+				this.ID,
+				TimeSeriesData{
+					Metric:   "sw.if.OperStatus",
+					DataType: "GAUGE",
+					Cycle:    this.CollectInterval,
+					Tags:     map[string]string{"ifName": i.Name},
+				},
+			}
 		}
 		buffer <- &MetricConfig{
 			this.ID,
@@ -229,6 +238,14 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 				Metric:    "sw.if.OutUsed.Percent",
 				DataType:  "COUNTER",
 				Value:     float64(((i.OutBytes[1] - i.OutBytes[0]) / interval) / i.Speed * 100),
+				Timestamp: ts,
+				Cycle:     this.CollectInterval,
+				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
+			}
+			buffer <- &TimeSeriesData{
+				Metric:    "sw.if.OperStatus",
+				DataType:  "GAUGE",
+				Value:     float64(i.OperStatus),
 				Timestamp: ts,
 				Cycle:     this.CollectInterval,
 				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
@@ -354,13 +371,25 @@ func (this *Switch) CollectPerformanceData(oid string) {
 		indexField := parseLine(fields[0], ".")
 		index := indexField[len(indexField)-1]
 		valField := fields[len(fields)-1]
-		val, err := strconv.ParseUint(valField, 10, 64)
-		if err != nil {
-			continue
-		}
+
 		if _, ok := this.Interfaces[index]; !ok {
 			continue
 		}
+
+		var val uint64
+		if oid == "OperStatus" {
+			if strings.Contains(valField, "up") {
+				val = 1
+			} else {
+				val = 0
+			}
+		} else {
+			val, err = strconv.ParseUint(valField, 10, 64)
+			if err != nil {
+				continue
+			}
+		}
+
 		switch oid {
 		case "ifHCInOctets":
 			this.Interfaces[index].InBytes[0] = this.Interfaces[index].InBytes[1]
@@ -380,6 +409,8 @@ func (this *Switch) CollectPerformanceData(oid string) {
 		case "outErrors":
 			this.Interfaces[index].OutErrors[0] = this.Interfaces[index].OutErrors[1]
 			this.Interfaces[index].OutErrors[1] = val
+		case "OperStatus":
+			this.Interfaces[index].OperStatus = val
 		default:
 		}
 	}
