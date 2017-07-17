@@ -24,7 +24,7 @@ def get_access_token(new=False):
         try:
             response = urllib2.urlopen(url)
             content  = json.loads(response.read())
-            if "errcode" in content:
+            if "errcode" in content and content["errcode"] != 0:
                 return False, content
             token = content["access_token"]
             with open(FILE, "w") as tmp_file:
@@ -55,11 +55,11 @@ def send(receiver, content, token):
         data = json.dumps(data, ensure_ascii=False).encode("utf-8")
         response = urllib2.urlopen(url, data)
         result  = json.loads(response.read())
-        if "errcode" in result and result["errcode"] != 0:
+        if result["errcode"] != 0 or result["invaliduser"] != "" or result["errmsg"] != "ok":
             return False, result
     except Exception as e:
         return False, e
-    
+
     return True, result
 
 if __name__ == "__main__":
