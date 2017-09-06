@@ -87,6 +87,7 @@ func InitServer() error {
 				event.GET("/:id/process", processInfo)
 				event.POST("/:id/inform", eventInform)
 				event.POST("/:id/close", eventClose)
+				event.DELETE("", eventDelete)
 			}
 
 			operation := authorized.Group("/operations")
@@ -156,7 +157,6 @@ func InitServer() error {
 		}
 
 	}
-
 	return Engine.Run(GlobalConfig.HTTP_BIND)
 }
 

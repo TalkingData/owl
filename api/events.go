@@ -30,7 +30,7 @@ func eventsList(c *gin.Context) {
 
 	offset := (page - 1) * page_size
 	sort := "status asc,create_time desc,priority asc"
-	where := fmt.Sprintf("`create_time` BETWEEN '%s' AND '%s'", start, end)
+	where := fmt.Sprintf("`update_time` BETWEEN '%s' AND '%s'", start, end)
 
 	if priority != 0 {
 		where += fmt.Sprintf(" AND `priority` = %d", priority)
@@ -195,6 +195,27 @@ func eventClose(c *gin.Context) {
 		event.ProcessComments = process.ProcessComments
 		event.ProcessTime = time.Now()
 		mydb.Save(&event)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": http.StatusOK, "status": event.Status})
+}
+
+func eventDelete(c *gin.Context) {
+	var bind struct {
+		Ids []int `json:"ids"`
+	}
+	if err := c.BindJSON(&bind); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": http.StatusBadRequest, "message": err.Error()})
+		return
+	}
+	if len(bind.Ids) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"code": http.StatusBadRequest, "message": "ids should be applied"})
+		return
+	}
+	var event = types.StrategyEvent{}
+	if err := mydb.Table("strategy_event").Where("id IN (?)", bind.Ids).Delete(event).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": http.StatusInternalServerError, "message": err.Error()})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"code": http.StatusOK, "status": event.Status})

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gopkg.in/appleboy/gin-jwt.v2"
 
+	"bytes"
 	"owl/common/types"
 	"owl/common/utils"
 )
@@ -121,9 +123,15 @@ func GlobalMiddleware() gin.HandlerFunc {
 		if len(rip) > 0 {
 			operations.IP = rip
 		}
-		operations.Operator = user.Username
-		operations.Content = fmt.Sprintf("%s %s", c.Request.Method, c.Request.URL.String())
 
+		operations.Operator = user.Username
+		body, _ := ioutil.ReadAll(c.Request.Body)
+		c.Request.Body = ioutil.NopCloser(bytes.NewReader(body))
+		if len(body) != 0 {
+			operations.Content = fmt.Sprintf("Method: %s\n\nUrl: %s\n\nBody: %s", c.Request.Method, c.Request.URL.String(), string(body))
+		} else {
+			operations.Content = fmt.Sprintf("Method: %s\n\nUrl: %s\n\n", c.Request.Method, c.Request.URL.String())
+		}
 		c.Next()
 
 		if strings.Contains(c.Request.URL.String(), "/operations") != true {
