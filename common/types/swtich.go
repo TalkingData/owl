@@ -12,7 +12,34 @@ import (
 	"time"
 )
 
-var oids []string = []string{"ifHCOutOctets", "ifHCInOctets", "inErrors", "outErrors", "inDiscards", "outDiscards", "OperStatus"}
+var oids []string = []string{
+	"ifHCOutOctets",
+	"ifHCInOctets",
+	"inErrors",
+	"outErrors",
+	"inDiscards",
+	"outDiscards",
+	"OperStatus",
+}
+
+const (
+	defaultCounterV = 12345678987654321
+)
+
+type Counter struct {
+	Last, Prev uint64
+}
+
+func newCounter() Counter {
+	return Counter{
+		defaultCounterV,
+		defaultCounterV,
+	}
+}
+
+func (c *Counter) getValue(i uint64) float64 {
+	return float64((c.Last - c.Prev)) / float64(i)
+}
 
 type Switch struct {
 	ID              string   `json:"id"`
@@ -32,23 +59,24 @@ type SnmpConfig struct {
 	Port      int    `json:"port"`
 	Version   string `json:"version"`
 	Community string `json:"community"`
+	Timeout   int    `json:"timeout"`
 }
 
 type Interface struct {
-	Index       string    `json:"index"`
-	Name        string    `json:"name"`
-	OperStatus  uint64    `json:"oper_starus"`
-	InBytes     [2]uint64 `json:"in_bytes"`
-	OutBytes    [2]uint64 `json:"out_bytes"`
-	InDiscards  [2]uint64 `json:"in_discards"`
-	OutDiscards [2]uint64 `json:"out_discards"`
-	InErrors    [2]uint64 `json:"in_errors"`
-	OutErrors   [2]uint64 `json:"out_errors"`
-	Speed       uint64    `json:"speed"`
+	Index       string  `json:"index"`
+	Name        string  `json:"name"`
+	OperStatus  uint64  `json:"oper_starus"`
+	InBytes     Counter `json:"in_bytes"`
+	OutBytes    Counter `json:"out_bytes"`
+	InDiscards  Counter `json:"in_discards"`
+	OutDiscards Counter `json:"out_discards"`
+	InErrors    Counter `json:"in_errors"`
+	OutErrors   Counter `json:"out_errors"`
+	Speed       uint64  `json:"speed"`
 }
 
 func (this *Switch) walk(oid string) ([]byte, error) {
-	return utils.RunCmdWithTimeout("snmpwalk", []string{"-v", this.Snmp.Version, "-c", this.Snmp.Community, this.IP, oid}, 5)
+	return utils.RunCmdWithTimeout("snmpwalk", []string{"-v", this.Snmp.Version, "-c", this.Snmp.Community, this.IP, oid}, this.Snmp.Timeout)
 }
 
 func (this *Switch) Do(buf1 chan<- *TimeSeriesData, buf2 chan<- *MetricConfig) {
@@ -174,14 +202,14 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 		interval := uint64(this.CollectInterval)
 		flag := 0
 		for _, i := range this.Interfaces {
-			if !this.IsLegalPrefix(i.Name) || i.InBytes[0] == 12345678987654321 {
+			if !this.IsLegalPrefix(i.Name) || i.InBytes.Prev == defaultCounterV {
 				continue
 			}
 			flag++
 			buffer <- &TimeSeriesData{
 				Metric:    "sw.if.InBytes",
 				DataType:  "COUNTER",
-				Value:     float64((i.InBytes[1] - i.InBytes[0]) / interval),
+				Value:     i.InBytes.getValue(interval),
 				Timestamp: ts,
 				Cycle:     this.CollectInterval,
 				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
@@ -189,7 +217,7 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 			buffer <- &TimeSeriesData{
 				Metric:    "sw.if.OutBytes",
 				DataType:  "COUNTER",
-				Value:     float64((i.OutBytes[1] - i.OutBytes[0]) / interval),
+				Value:     i.OutBytes.getValue(interval),
 				Timestamp: ts,
 				Cycle:     this.CollectInterval,
 				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
@@ -197,7 +225,7 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 			buffer <- &TimeSeriesData{
 				Metric:    "sw.if.InErrors",
 				DataType:  "COUNTER",
-				Value:     float64((i.InErrors[1] - i.InErrors[0]) / interval),
+				Value:     i.InErrors.getValue(interval),
 				Timestamp: ts,
 				Cycle:     this.CollectInterval,
 				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
@@ -205,7 +233,7 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 			buffer <- &TimeSeriesData{
 				Metric:    "sw.if.OutErrors",
 				DataType:  "COUNTER",
-				Value:     float64((i.OutErrors[1] - i.OutErrors[0]) / interval),
+				Value:     i.OutErrors.getValue(interval),
 				Timestamp: ts,
 				Cycle:     this.CollectInterval,
 				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
@@ -213,7 +241,7 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 			buffer <- &TimeSeriesData{
 				Metric:    "sw.if.InDiscards",
 				DataType:  "COUNTER",
-				Value:     float64((i.InDiscards[1] - i.InDiscards[0]) / interval),
+				Value:     i.InDiscards.getValue(interval),
 				Timestamp: ts,
 				Cycle:     this.CollectInterval,
 				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
@@ -221,7 +249,7 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 			buffer <- &TimeSeriesData{
 				Metric:    "sw.if.OutDiscards",
 				DataType:  "COUNTER",
-				Value:     float64((i.OutDiscards[1] - i.OutDiscards[0]) / interval),
+				Value:     i.OutDiscards.getValue(interval),
 				Timestamp: ts,
 				Cycle:     this.CollectInterval,
 				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
@@ -229,7 +257,7 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 			buffer <- &TimeSeriesData{
 				Metric:    "sw.if.InUsed.Percent",
 				DataType:  "COUNTER",
-				Value:     float64(((i.InBytes[1] - i.InBytes[0]) / interval) / i.Speed * 100),
+				Value:     i.InBytes.getValue(interval) / float64(i.Speed) * 100,
 				Timestamp: ts,
 				Cycle:     this.CollectInterval,
 				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
@@ -237,7 +265,7 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 			buffer <- &TimeSeriesData{
 				Metric:    "sw.if.OutUsed.Percent",
 				DataType:  "COUNTER",
-				Value:     float64(((i.OutBytes[1] - i.OutBytes[0]) / interval) / i.Speed * 100),
+				Value:     i.OutBytes.getValue(interval) / float64(i.Speed) * 100,
 				Timestamp: ts,
 				Cycle:     this.CollectInterval,
 				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
@@ -357,7 +385,7 @@ func (this *Switch) CollectPerformanceData(oid string) {
 	}()
 	output, err := this.walk(oid)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
+		fmt.Fprintln(os.Stderr, this.IP, err.Error())
 		this.initAllInterfaceData()
 		return
 	}
@@ -389,26 +417,26 @@ func (this *Switch) CollectPerformanceData(oid string) {
 				continue
 			}
 		}
-
+		iface := this.Interfaces[index]
 		switch oid {
 		case "ifHCInOctets":
-			this.Interfaces[index].InBytes[0] = this.Interfaces[index].InBytes[1]
-			this.Interfaces[index].InBytes[1] = val
+			iface.InBytes.Prev = iface.InBytes.Last
+			iface.InBytes.Last = val
 		case "ifHCOutOctets":
-			this.Interfaces[index].OutBytes[0] = this.Interfaces[index].OutBytes[1]
-			this.Interfaces[index].OutBytes[1] = val
+			iface.OutBytes.Prev = iface.OutBytes.Last
+			iface.OutBytes.Last = val
 		case "inDiscards":
-			this.Interfaces[index].InDiscards[0] = this.Interfaces[index].InDiscards[1]
-			this.Interfaces[index].InDiscards[1] = val
+			iface.InDiscards.Prev = iface.InDiscards.Last
+			iface.InDiscards.Last = val
 		case "outDiscards":
-			this.Interfaces[index].OutDiscards[0] = this.Interfaces[index].OutDiscards[1]
-			this.Interfaces[index].OutDiscards[1] = val
+			iface.OutDiscards.Prev = iface.OutDiscards.Last
+			iface.OutDiscards.Last = val
 		case "inErrors":
-			this.Interfaces[index].InErrors[0] = this.Interfaces[index].InErrors[1]
-			this.Interfaces[index].InErrors[1] = val
+			iface.InErrors.Prev = iface.InErrors.Last
+			iface.InErrors.Last = val
 		case "outErrors":
-			this.Interfaces[index].OutErrors[0] = this.Interfaces[index].OutErrors[1]
-			this.Interfaces[index].OutErrors[1] = val
+			iface.OutErrors.Prev = iface.OutErrors.Last
+			iface.OutErrors.Last = val
 		case "OperStatus":
 			this.Interfaces[index].OperStatus = val
 		default:
@@ -435,13 +463,13 @@ func (this *Switch) getHostname() {
 }
 
 func (this *Switch) initAllInterfaceData() {
-	var init uint64 = 12345678987654321
 	for _, i := range this.Interfaces {
-		i.InBytes = [2]uint64{init, init}
-		i.OutBytes = [2]uint64{init, init}
-		i.InErrors = [2]uint64{init, init}
-		i.OutErrors = [2]uint64{init, init}
-		i.InDiscards = [2]uint64{init, init}
-		i.OutDiscards = [2]uint64{init, init}
+		i.InBytes = newCounter()
+		i.OutBytes = newCounter()
+		i.InErrors = newCounter()
+		i.OutErrors = newCounter()
+		i.InDiscards = newCounter()
+		i.OutDiscards = newCounter()
 	}
+
 }

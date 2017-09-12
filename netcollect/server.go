@@ -73,6 +73,7 @@ func InitIpRange() error {
 				Port:      GlobalConfig.SNMP_PORT,
 				Version:   GlobalConfig.SNMP_VERSION,
 				Community: GlobalConfig.SNMP_COMMUNITY,
+				Timeout:   GlobalConfig.SNMP_TIMEOUT,
 			},
 		}
 		netCollect.switchs = append(netCollect.switchs, s)
