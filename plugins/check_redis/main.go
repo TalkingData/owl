@@ -18,7 +18,7 @@ func main() {
 	app.Version = "0.1"
 	app.Usage = "redis metric collector"
 	app.Authors = []cli.Author{
-		cli.Author{
+		{
 			Name:  "yingsong",
 			Email: "wyingsong@163.com",
 		},

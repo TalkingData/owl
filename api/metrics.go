@@ -117,14 +117,14 @@ func buildMetricAndTagIndex() {
 			tagsMap[tagk][tagv] = struct{}{}
 		}
 	}
-	for metric, _ := range metricMap {
+	for metric := range metricMap {
 		metricIndex := &MetricIndex{
 			Metric: metric,
 		}
 		mydb.Table("metric_index").Where("metric = ?", metric).FirstOrCreate(&metricIndex)
 	}
 	for tagk, v := range tagsMap {
-		for tagv, _ := range v {
+		for tagv := range v {
 			tagIndex := &TagIndex{
 				Tagk: tagk,
 				Tagv: tagv,

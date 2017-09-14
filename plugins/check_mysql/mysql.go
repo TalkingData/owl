@@ -77,7 +77,7 @@ func slaveStatus() []Metric {
 	defer rows.Close()
 	columns, _ := rows.Columns()
 	values := make([]interface{}, len(columns))
-	for i, _ := range values {
+	for i := range values {
 		var v sql.RawBytes
 		values[i] = &v
 	}
