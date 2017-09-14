@@ -104,9 +104,9 @@ func (this *Task) Run() {
 
 func (this *TaskList) AddTask(t *Task) {
 	lg.Info("add task %v", t)
-	this.lock.RLock()
+	this.lock.Lock()
 	this.M[t.ID] = t
-	this.lock.RUnlock()
+	this.lock.Unlock()
 	t.Do()
 }
 

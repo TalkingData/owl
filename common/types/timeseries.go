@@ -44,7 +44,7 @@ func (this *TimeSeriesData) Tags2String() string {
 	taglen := len(this.Tags)
 	keys := make([]string, taglen)
 	i := 0
-	for k, _ := range this.Tags {
+	for k := range this.Tags {
 		keys[i] = k
 		i++
 	}

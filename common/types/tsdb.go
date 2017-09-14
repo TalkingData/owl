@@ -98,7 +98,7 @@ func NewQueryParams(start, end string, rawTags string, aggregator string, metric
 			tags[tag_k_v[0]] = tag_k_v[1]
 		}
 	}
-	queries := []Query{Query{Aggregator: aggregator, Metric: metric, Tags: tags}}
+	queries := []Query{{Aggregator: aggregator, Metric: metric, Tags: tags}}
 	return &QueryParams{Start: start, End: end, Queries: queries}
 }
 
