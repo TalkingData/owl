@@ -25,7 +25,7 @@ func main() {
 	}
 
 	if err = InitRepeater(); err != nil {
-		fmt.Println(err)
+		lg.Error("init repeater error, %s", err)
 		return
 	}
 	go repeater.Forward()

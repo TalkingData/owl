@@ -22,6 +22,8 @@ type Config struct {
 	TCP_BIND string
 
 	OPENTSDB_ADDR string
+	KAFKA_BROKERS []string
+	KAFKA_TOPIC   string
 
 	REPEATER_ADDR string
 	//LOG CONFIG
@@ -43,6 +45,8 @@ func InitGlobalConfig() error {
 		TCP_BIND:      cfg.MustValue(goconfig.DEFAULT_SECTION, "tcp_bind", DEFAULT_TCP_BIND),
 		OPENTSDB_ADDR: cfg.MustValue(goconfig.DEFAULT_SECTION, "opentsdb_addr", DEFAULT_OPENTSDB_ADDR),
 		REPEATER_ADDR: cfg.MustValue(goconfig.DEFAULT_SECTION, "repeater_addr", DEFAULT_REPEATER_ADDR),
+		KAFKA_BROKERS: cfg.MustValueArray(goconfig.DEFAULT_SECTION, "kafka_brokers", ","),
+		KAFKA_TOPIC:   cfg.MustValue(goconfig.DEFAULT_SECTION, "kafka_topic", "owl"),
 
 		MAX_PACKET_SIZE: cfg.MustInt(goconfig.DEFAULT_SECTION, "max_packet_size", DEFAULT_MAX_PACKET_SIZE),
 		BUFFER_SIZE:     cfg.MustInt64(goconfig.DEFAULT_SECTION, "buffer_size", DEFAULT_BUFFER_SIZE),

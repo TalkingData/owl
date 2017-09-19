@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"owl/common/tcp"
 	"owl/common/types"
@@ -24,21 +23,19 @@ func InitRepeater() error {
 	repeater = &Repeater{}
 	repeater.srv = s
 	repeater.buffer = make(chan []byte, GlobalConfig.BUFFER_SIZE)
+	var err error
 	switch GlobalConfig.BACKEND {
 	case "opentsdb":
-		backend, err := backend.NewOpentsdbBackend(GlobalConfig.OPENTSDB_ADDR)
-		if err != nil {
-			return err
-		}
-		repeater.backend = backend
+		repeater.backend, err = backend.NewOpentsdbBackend(GlobalConfig.OPENTSDB_ADDR)
 	case "repeater":
-		backend, err := backend.NewRepeaterBackend(GlobalConfig.REPEATER_ADDR)
-		if err != nil {
-			return err
-		}
-		repeater.backend = backend
+		repeater.backend, err = backend.NewRepeaterBackend(GlobalConfig.REPEATER_ADDR)
+	case "kafka":
+		repeater.backend, err = backend.NewKafkaBackend(GlobalConfig.KAFKA_BROKERS, GlobalConfig.KAFKA_TOPIC)
 	default:
-		return errors.New(fmt.Sprintf("unsupported backend %s", GlobalConfig.BACKEND))
+		err = fmt.Errorf("unsupported backend %s", GlobalConfig.BACKEND)
+	}
+	if err != nil {
+		return fmt.Errorf("%s error:%s", GlobalConfig.BACKEND, err)
 	}
 	return repeater.srv.ListenAndServe()
 }
