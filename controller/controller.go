@@ -271,7 +271,7 @@ func (this *Controller) sendToQueue(strategy_event_id int64, subject, content st
 			params = append(params, user.Phone)
 			this.callQueue.PutNoWait(&QueueTask{strategy_event_id, file_path, params, action, user})
 		case SEND_ACTION:
-			file_path := filepath.Join(GlobalConfig.SEND_NOTIFICATIONS_DIR, action.FilePath)
+			file_path := filepath.Join(GlobalConfig.SEND_ATIONS_DIR, action.FilePath)
 			user_info, err := json.Marshal(user)
 			if err != nil {
 				lg.Error(err.Error())
@@ -552,6 +552,9 @@ func generateEvent(strategy_event *StrategyEvent, strategy_result *StrategyResul
 		merged_strategy_event.ID = strategy_event.ID
 		merged_strategy_event.Count = strategy_event.Count
 		merged_strategy_event.Status = strategy_event.Status
+		merged_strategy_event.ProcessUser = strategy_event.ProcessUser
+		merged_strategy_event.ProcessComments = strategy_event.ProcessComments
+		merged_strategy_event.ProcessTime = strategy_event.ProcessTime
 	}
 
 	return

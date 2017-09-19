@@ -25,6 +25,7 @@ const (
 	DEFAULT_WORKER_COUNT             = 5
 	DEFAULT_ACTION_TIMEOUT           = 60
 	DEFAULT_SEND_NOTIFICATIONS_DIR   = "./scripts/notifications/"
+	DEFAULT_SEND_ATIONS_DIR          = "./scripts/actions/"
 	DEFAULT_SEND_MAIL_SCRIPT         = "send_mail.py"
 	DEFAULT_SEND_SMS_SCRIPT          = "send_sms.py"
 	DEFAULT_SEND_WECHAT_SCRIPT       = "send_wechat.py"
@@ -75,7 +76,9 @@ type Config struct {
 
 	SEND_CALL_SCRIPT string //打电话的脚本
 
-	SEND_NOTIFICATIONS_DIR string //自定义脚本的目录
+	SEND_NOTIFICATIONS_DIR string //原有默认发送通知脚本目录
+
+	SEND_ATIONS_DIR string //自定义脚本的目录
 
 	SEND_INTERVAL int //发送消息间隔时间单位毫秒
 
@@ -97,7 +100,7 @@ func InitGlobalConfig() error {
 		MYSQL_PASSWORD:           cfg.MustValue(goconfig.DEFAULT_SECTION, "mysql_password", DEFAULT_MYSQL_PASSWORD),
 		MYSQL_MAX_CONN:           cfg.MustInt(goconfig.DEFAULT_SECTION, "mysql_max_conn", DEFAULT_MAX_CONN),
 		MYSQL_MAX_IDLE_CONN:      cfg.MustInt(goconfig.DEFAULT_SECTION, "mysql_max_idle_conn", DEFAULT_MAX_IDLE_CONN),
-		LOG_FILE:                 cfg.MustValue(goconfig.DEFAULT_SECTION, "log_file", "./logs/controller.log", DEFAULT_LOG_FILE),
+		LOG_FILE:                 cfg.MustValue(goconfig.DEFAULT_SECTION, "log_file", DEFAULT_LOG_FILE),
 		LOG_EXPIRE_DAYS:          cfg.MustInt(goconfig.DEFAULT_SECTION, "log_expire_days", DEFAULT_LOG_EXPIRE_DAYS),
 		LOG_LEVEL:                cfg.MustInt(goconfig.DEFAULT_SECTION, "log_level", DEFAULT_LOG_LEVEL),
 		MAX_PACKET_SIZE:          cfg.MustInt(goconfig.DEFAULT_SECTION, "max_packet_size", DEFAULT_MAX_PACKET_SIZE),
@@ -113,6 +116,7 @@ func InitGlobalConfig() error {
 		SEND_WECHAT_SCRIPT:       cfg.MustValue(goconfig.DEFAULT_SECTION, "send_wechat_script", DEFAULT_SEND_WECHAT_SCRIPT),
 		SEND_CALL_SCRIPT:         cfg.MustValue(goconfig.DEFAULT_SECTION, "send_call_script", DEFAULT_SEND_CALL_SCRIPT),
 		SEND_NOTIFICATIONS_DIR:   cfg.MustValue(goconfig.DEFAULT_SECTION, "send_notifications_dir", DEFAULT_SEND_NOTIFICATIONS_DIR),
+		SEND_ATIONS_DIR:          cfg.MustValue(goconfig.DEFAULT_SECTION, "send_ations_dir", DEFAULT_SEND_ATIONS_DIR),
 		SEND_INTERVAL:            cfg.MustInt(goconfig.DEFAULT_SECTION, "send_interval", DEFAULT_SEND_INTERVAL),
 		SEND_SWITCH:              cfg.MustBool(goconfig.DEFAULT_SECTION, "send_switch", DEFAULT_SEND_SWITCH),
 		SEND_MAX:                 cfg.MustInt(goconfig.DEFAULT_SECTION, "send_max", DEFAULT_SEND_MAX),

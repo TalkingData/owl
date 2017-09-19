@@ -20,6 +20,7 @@ const (
 	LAST_METHOD   = "last"
 	DIFF_METHOD   = "diff"
 	NODATA_METHOD = "nodata"
+	AVG_METHOD    = "avg"
 )
 
 func maxMethod(host_id string, cycle int, trigger *types.Trigger) (*types.TriggerResultSet, error) {
@@ -396,6 +397,40 @@ func nodataMethod(host_id string, cycle int, trigger *types.Trigger) (*types.Tri
 		trigger_result, err := compute(parameters, expression)
 		if err != nil {
 			return nil, err
+		}
+
+		if !trigger_result_set.Triggered && trigger_result {
+			trigger_result_set.Triggered = trigger_result
+		}
+
+		trigger_result_set.TriggerResults = append(trigger_result_set.TriggerResults, types.NewTriggerResult(trigger.Index, result.Tags, result.AggregateTags, current_threshold, trigger_result))
+	}
+
+	return trigger_result_set, nil
+}
+
+func avgMethod(host_id string, cycle int, trigger *types.Trigger) (*types.TriggerResultSet, error) {
+	trigger_result_set := &types.TriggerResultSet{TriggerResults: make([]*types.TriggerResult, 0), Triggered: false}
+
+	params := NewQueryParams(host_id, fmt.Sprintf("%dm-ago", cycle), "", trigger.Tags, "sum", trigger.Metric)
+	results, err := tsdbClient.Query(params)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, result := range results {
+		if len(result.Dps) == 0 {
+			continue
+		}
+
+		parameters := make(map[string]interface{}, 8)
+		current_threshold := avg(result.Dps)
+		parameters["current_threshold"] = current_threshold
+		parameters["threshold"] = trigger.Threshold
+		expression := fmt.Sprintf("current_threshold %s threshold", trigger.Symbol)
+		trigger_result, err := compute(parameters, expression)
+		if err != nil {
+			return trigger_result_set, err
 		}
 
 		if !trigger_result_set.Triggered && trigger_result {

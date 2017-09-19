@@ -106,7 +106,7 @@ func NewQueryParams(host_id, start, end string, rawTags string, aggregator strin
 	if _, ok := tags["hostname"]; !ok {
 		tags["uuid"] = host_id
 	}
-	queries := []Query{{Aggregator: aggregator, Metric: metric, Tags: tags}}
+	queries := []Query{Query{Aggregator: aggregator, Metric: metric, Tags: tags}}
 	return &QueryParams{Start: start, End: end, Queries: queries}
 }
 
