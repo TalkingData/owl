@@ -20,10 +20,10 @@ func (this *TaskPool) PutTasks(tasks []*types.AlarmTask) {
 		for {
 			select {
 			case this.tasks <- task:
-				lg.Debug("Put task %v into task pool", task.ID)
+				lg.Debug("put task %v into task pool", task.ID)
 				break LOOP
 			default:
-				lg.Warn("Task pool is full")
+				lg.Warn("task pool is full")
 				time.Sleep(time.Second * time.Duration(1))
 			}
 		}
@@ -43,10 +43,10 @@ LOOP:
 	for {
 		select {
 		case this.results <- result:
-			lg.Debug("Put result %v into result pool", result.TaskID)
+			lg.Debug("put result %v into result pool", result.TaskID)
 			break LOOP
 		default:
-			lg.Warn("Result pool is full")
+			lg.Warn("result pool is full")
 			time.Sleep(time.Second * time.Duration(1))
 		}
 	}

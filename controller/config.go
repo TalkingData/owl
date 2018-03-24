@@ -16,23 +16,16 @@ const (
 	DEFAULT_LOG_FILE                 = "./logs/controller.log"
 	DEFAULT_LOG_EXPIRE_DAYS          = 7
 	DEFAULT_LOG_LEVEL                = 3
-	DEFAULT_MAX_PACKET_SIZE          = 40960
+	DEFAULT_MAX_PACKET_SIZE          = 409600
 	DEFAULT_LOAD_STRATEGIES_INTERVAL = 300 //seconds
-	DEFAULT_TASK_POOL_SIZE           = 4096
-	DEFAULT_RESULT_POOL_SIZE         = 4096
+	DEFAULT_TASK_POOL_SIZE           = 409600
+	DEFAULT_RESULT_POOL_SIZE         = 409600
 	DEFAULT_HTTP_SERVER              = ":10051"
-	DEFAULT_TASK_SIZE                = 10
-	DEFAULT_WORKER_COUNT             = 5
-	DEFAULT_ACTION_TIMEOUT           = 60
-	DEFAULT_SEND_NOTIFICATIONS_DIR   = "./scripts/notifications/"
-	DEFAULT_SEND_ATIONS_DIR          = "./scripts/actions/"
-	DEFAULT_SEND_MAIL_SCRIPT         = "send_mail.py"
-	DEFAULT_SEND_SMS_SCRIPT          = "send_sms.py"
-	DEFAULT_SEND_WECHAT_SCRIPT       = "send_wechat.py"
-	DEFAULT_SEND_CALL_SCRIPT         = "send_call.py"
-	DEFAULT_SEND_INTERVAL            = 100
-	DEFAULT_SEND_SWITCH              = true
-	DEFAULT_SEND_MAX                 = 1000
+	DEFAULT_TASK_SIZE                = 100
+	DEFAULT_WORKER_COUNT             = 20
+	DEFAULT_ACTION_TIMEOUT           = 60 //seconds
+	DEFAULT_SEND_MAX                 = 100
+	DEFAULT_MAX_INTERVAL_WAIT_TIME   = 5 //seconds
 )
 
 var GlobalConfig *Config
@@ -68,23 +61,10 @@ type Config struct {
 
 	ACTION_TIMEOUT int //报警动作超时时间
 
-	SEND_MAIL_SCRIPT string //发送邮件的脚本
-
-	SEND_SMS_SCRIPT string //发送短信的脚本
-
-	SEND_WECHAT_SCRIPT string //发送微信的脚本
-
-	SEND_CALL_SCRIPT string //打电话的脚本
-
-	SEND_NOTIFICATIONS_DIR string //原有默认发送通知脚本目录
-
-	SEND_ATIONS_DIR string //自定义脚本的目录
-
-	SEND_INTERVAL int //发送消息间隔时间单位毫秒
-
-	SEND_SWITCH bool //发送报警开关
-
 	SEND_MAX int //队列报警大于此值减速
+
+	MAX_INTERVAL_WAIT_TIME int //队列报警发送间隔最大上限值
+
 }
 
 func InitGlobalConfig() error {
@@ -111,15 +91,8 @@ func InitGlobalConfig() error {
 		TASK_SIZE:                cfg.MustInt(goconfig.DEFAULT_SECTION, "task_size", DEFAULT_TASK_SIZE),
 		WORKER_COUNT:             cfg.MustInt(goconfig.DEFAULT_SECTION, "worker_count", DEFAULT_WORKER_COUNT),
 		ACTION_TIMEOUT:           cfg.MustInt(goconfig.DEFAULT_SECTION, "action_timeout", DEFAULT_ACTION_TIMEOUT),
-		SEND_MAIL_SCRIPT:         cfg.MustValue(goconfig.DEFAULT_SECTION, "send_mail_script", DEFAULT_SEND_MAIL_SCRIPT),
-		SEND_SMS_SCRIPT:          cfg.MustValue(goconfig.DEFAULT_SECTION, "send_sms_script", DEFAULT_SEND_SMS_SCRIPT),
-		SEND_WECHAT_SCRIPT:       cfg.MustValue(goconfig.DEFAULT_SECTION, "send_wechat_script", DEFAULT_SEND_WECHAT_SCRIPT),
-		SEND_CALL_SCRIPT:         cfg.MustValue(goconfig.DEFAULT_SECTION, "send_call_script", DEFAULT_SEND_CALL_SCRIPT),
-		SEND_NOTIFICATIONS_DIR:   cfg.MustValue(goconfig.DEFAULT_SECTION, "send_notifications_dir", DEFAULT_SEND_NOTIFICATIONS_DIR),
-		SEND_ATIONS_DIR:          cfg.MustValue(goconfig.DEFAULT_SECTION, "send_ations_dir", DEFAULT_SEND_ATIONS_DIR),
-		SEND_INTERVAL:            cfg.MustInt(goconfig.DEFAULT_SECTION, "send_interval", DEFAULT_SEND_INTERVAL),
-		SEND_SWITCH:              cfg.MustBool(goconfig.DEFAULT_SECTION, "send_switch", DEFAULT_SEND_SWITCH),
 		SEND_MAX:                 cfg.MustInt(goconfig.DEFAULT_SECTION, "send_max", DEFAULT_SEND_MAX),
+		MAX_INTERVAL_WAIT_TIME:   cfg.MustInt(goconfig.DEFAULT_SECTION, "max_interval_wait_time", DEFAULT_MAX_INTERVAL_WAIT_TIME),
 	}
 	return nil
 }

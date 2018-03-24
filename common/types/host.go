@@ -7,14 +7,14 @@ import (
 
 type Host struct {
 	ID           string    `json:"id"`
-	Name         string    `json:"name"`
 	IP           string    `json:"ip"`
-	SN           string    `json:"sn"`
 	Hostname     string    `json:"hostname"`
-	AgentVersion string    `json:"agent_version"`
+	AgentVersion string    `json:"agent_version" db:"agent_version"`
 	Status       string    `json:"status"`
-	CreateAt     time.Time `json:"-"`
-	UpdateAt     time.Time `json:"-"`
+	CreateAt     time.Time `json:"create_at" db:"create_at"`
+	UpdateAt     time.Time `json:"update_at" db:"update_at"`
+	Uptime       float64   `json:"uptime" db:"uptime"`
+	IdlePct      float64   `json:"idle_pct" db:"idle_pct"`
 }
 
 func (this *Host) Encode() []byte {
@@ -28,8 +28,4 @@ func (this *Host) Decode(data []byte) error {
 
 func (this *Host) IsAlive() bool {
 	return this.Status == "1"
-}
-
-func (Host) TableName() string {
-	return "host"
 }

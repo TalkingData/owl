@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"owl/common/tcp"
@@ -43,12 +44,13 @@ func (this *Inspector) Dial() {
 retry:
 	session, err := this.Connect(GlobalConfig.CONTROLLER_ADDR, nil)
 	if err != nil || session.IsClosed() {
-		lg.Error("Can not connect to controller %v, error: %v", GlobalConfig.CONTROLLER_ADDR, err)
+		lg.Error("can not connect to controller %v, error: %v", GlobalConfig.CONTROLLER_ADDR, err)
 		time.Sleep(time.Second * time.Duration(3))
 		goto retry
 	}
 	this.session = session
-	lg.Info("Inspector connected to controller: %v", GlobalConfig.CONTROLLER_ADDR)
+	this.session.Send(types.AlarmPack(types.ALAR_MESS_INSPECTOR_HEARTBEAT, types.NewHeartBeat(this.session.LocalAddr(), GetHostName())))
+	lg.Info("inspector connected to controller: %v", GlobalConfig.CONTROLLER_ADDR)
 }
 
 func (this *Inspector) DialForever() {
@@ -65,25 +67,36 @@ func (this *Inspector) HeartBeatForever() {
 		if this.session != nil {
 			this.session.Send(types.AlarmPack(types.ALAR_MESS_INSPECTOR_HEARTBEAT, types.NewHeartBeat(this.session.LocalAddr(), GetHostName())))
 		}
-		time.Sleep(time.Second * 30)
+		time.Sleep(time.Second * 5)
 	}
 }
 
 func (this *Inspector) GetInspectorTasksForever() {
 	for {
 		if len(this.taskPool.tasks) == 0 && this.session != nil {
-			this.session.Send(types.AlarmPack(types.ALAR_MESS_INSPECTOR_TASK_REQUEST, types.NewHeartBeat(this.session.LocalAddr(), GetHostName())))
+			this.session.Send(types.AlarmPack(types.ALAR_MESS_INSPECTOR_TASK_REQUEST, nil))
 		}
 		time.Sleep(time.Millisecond * 100)
 	}
 }
 
 func (this *Inspector) SendResultForever() {
+	result_buffer := &types.AlarmResults{}
 	for {
 		select {
 		case result := <-this.resultPool.results:
-			this.session.Send(types.AlarmPack(types.ALAR_MESS_INSPECTOR_RESULT, result))
+			result_buffer.Results = append(result_buffer.Results, result)
+			if len(result_buffer.Results) == GlobalConfig.RESULT_BUFFER {
+				this.session.Send(types.AlarmPack(types.ALAR_MESS_INSPECTOR_RESULTS, result_buffer))
+				lg.Info("Send %d Results to controller", len(result_buffer.Results))
+				result_buffer.Results = result_buffer.Results[:0]
+			}
 		default:
+			if len(result_buffer.Results) > 0 {
+				this.session.Send(types.AlarmPack(types.ALAR_MESS_INSPECTOR_RESULTS, result_buffer))
+				lg.Info("Send %d Results to controller", len(result_buffer.Results))
+				result_buffer.Results = result_buffer.Results[:0]
+			}
 			time.Sleep(time.Millisecond * 100)
 		}
 	}
@@ -102,7 +115,7 @@ func (this *Inspector) taskWorker() {
 		select {
 		case task := <-this.taskPool.tasks:
 			this.processTask(task)
-			lg.Debug("Get task %v from task pool", task.ID)
+			lg.Debug("get task %v from task pool", task.ID)
 		default:
 			time.Sleep(time.Millisecond * 100)
 		}
@@ -112,31 +125,37 @@ func (this *Inspector) taskWorker() {
 func (this *Inspector) processTask(task *types.AlarmTask) {
 	triggers_results := make(map[string]*types.TriggerResultSet)
 	parameters := make(map[string]interface{})
+	host_id := strings.SplitN(task.ID, "@", 2)[1]
 	error_message := ""
 	for index, trigger := range task.Triggers {
 		var trigger_result_set *types.TriggerResultSet
 		var err error
+		if trigger.Tags == "" {
+			trigger.Tags = fmt.Sprintf("uuid=%s", host_id)
+		} else {
+			trigger.Tags = fmt.Sprintf("%s,uuid=%s", trigger.Tags, host_id)
+		}
 		switch trigger.Method {
 		case MAX_METHOD:
-			trigger_result_set, err = maxMethod(task.Host.ID, task.Strategy.Cycle, trigger)
+			trigger_result_set, err = maxMethod(task.Strategy.Cycle, trigger)
 		case MIN_METHOD:
-			trigger_result_set, err = minMethod(task.Host.ID, task.Strategy.Cycle, trigger)
+			trigger_result_set, err = minMethod(task.Strategy.Cycle, trigger)
 		case RATIO_METHOD:
-			trigger_result_set, err = ratioMethod(task.Host.ID, task.Strategy.Cycle, trigger)
+			trigger_result_set, err = ratioMethod(task.Strategy.Cycle, trigger)
 		case TOP_METHOD:
-			trigger_result_set, err = topMethod(task.Host.ID, task.Strategy.Cycle, trigger)
+			trigger_result_set, err = topMethod(task.Strategy.Cycle, trigger)
 		case BOTTOM_METHOD:
-			trigger_result_set, err = bottomMethod(task.Host.ID, task.Strategy.Cycle, trigger)
+			trigger_result_set, err = bottomMethod(task.Strategy.Cycle, trigger)
 		case LAST_METHOD:
-			trigger_result_set, err = lastMethod(task.Host.ID, task.Strategy.Cycle, trigger)
+			trigger_result_set, err = lastMethod(task.Strategy.Cycle, trigger)
 		case DIFF_METHOD:
-			trigger_result_set, err = diffMethod(task.Host.ID, task.Strategy.Cycle, trigger)
+			trigger_result_set, err = diffMethod(task.Strategy.Cycle, trigger)
 		case NODATA_METHOD:
-			trigger_result_set, err = nodataMethod(task.Host.ID, task.Strategy.Cycle, trigger)
+			trigger_result_set, err = nodataMethod(task.Strategy.Cycle, trigger)
 		case AVG_METHOD:
-			trigger_result_set, err = avgMethod(task.Host.ID, task.Strategy.Cycle, trigger)
+			trigger_result_set, err = avgMethod(task.Strategy.Cycle, trigger)
 		default:
-			err = errors.New(fmt.Sprintf("Trigger method %v not found", trigger.Method))
+			err = errors.New(fmt.Sprintf("trigger method %v not found", trigger.Method))
 		}
 
 		if err != nil {

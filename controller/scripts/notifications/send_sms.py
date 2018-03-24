@@ -5,6 +5,7 @@ import sys
 import httplib
 import urllib
 import argparse
+import json
 
 address = ""
 
@@ -23,7 +24,8 @@ if __name__ == "__main__":
     parser.add_argument("receiver", help="the alarm send to by sms")
     args = parser.parse_args()
 
-    status, reason, response = send(args.subject, args.content, args.receiver)
+    receiver = json.loads(args.receiver)
+    status, reason, response = send(args.subject, args.content, receiver["phone"])
 
     if status != 200:
         sys.exit("{0} {1} {2}".format(status, reason, response))

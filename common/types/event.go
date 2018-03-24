@@ -1,64 +1,44 @@
 package types
 
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
-
-	"owl/common/utils"
 )
+
+var DEFAULT_TIME, _ = time.Parse(time.RFC3339, "1980-01-01T00:00:00+00:00")
 
 const (
 	EVENT_NEW = iota + 1
 	EVENT_AWARE
 	EVENT_CLOSED
+	EVENT_NODATA
+	EVENT_UNKNOW
 )
 
-var STRATEGY_STATUS_MAPPING = map[int]string{1: "活跃报警", 2: "已知悉报警", 3: "已关闭报警"}
-
 type StrategyEvent struct {
-	ID              int64     `json:"id"`
-	StrategyID      int       `json:"strategy_id"`
-	StrategyName    string    `json:"strategy_name"`
-	Priority        int       `json:"priority"`
-	Cycle           int       `json:"cycle"`
-	AlarmCount      int       `json:"alarm_count"`
-	Expression      string    `json:"expression"`
-	CreateTime      time.Time `json:"create_time"`
-	UpdateTime      time.Time `json:"update_time"`
-	Count           int       `json:"count"`
-	Status          int       `json:"status"`
-	HostID          string    `json:"host_id"`
-	HostCname       string    `json:"host_cname"`
-	HostName        string    `json:"host_name"`
-	IP              string    `json:"ip"`
-	SN              string    `json:"sn"`
-	ProcessUser     string    `json:"process_user"`
-	ProcessComments string    `json:"process_comments"`
-	ProcessTime     time.Time `json:"process_time"`
+	ID           int64     `json:"id" db:"id"`
+	ProductID    int       `json:"product_id" db:"product_id"`
+	StrategyID   int       `json:"strategy_id" db:"strategy_id"`
+	StrategyName string    `json:"strategy_name" db:"strategy_name"`
+	Priority     int       `json:"priority"`
+	Cycle        int       `json:"cycle"`
+	AlarmCount   int       `json:"alarm_count" db:"alarm_count"`
+	Expression   string    `json:"expression"`
+	CreateTime   time.Time `json:"create_time" db:"create_time"`
+	UpdateTime   time.Time `json:"update_time" db:"update_time"`
+	AwareEndTime time.Time `json:"aware_end_time" db:"aware_end_time"`
+	Count        int       `json:"count"`
+	Status       int       `json:"status"`
+	HostID       string    `json:"host_id" db:"host_id"`
+	HostName     string    `json:"host_name" db:"host_name"`
+	IP           string    `json:"ip"`
+	ErrorMessage string    `json:"error_message"`
 }
 
-func (s StrategyEvent) MarshalJSON() ([]byte, error) {
-	type Alias StrategyEvent
-	return json.Marshal(&struct {
-		Alias
-		ProcessTime string `json:"process_time"`
-		CreateTime  string `json:"create_time"`
-		UpdateTime  string `json:"update_time"`
-	}{
-		Alias:       (Alias)(s),
-		ProcessTime: s.ProcessTime.Format("2006-01-02 15:04:05"),
-		CreateTime:  s.CreateTime.Format("2006-01-02 15:04:05"),
-		UpdateTime:  s.UpdateTime.Format("2006-01-02 15:04:05"),
-	})
-}
-
-func (StrategyEvent) TableName() string {
-	return "strategy_event"
-}
-
-func NewStrategyEvent(strategy_id int,
+func NewStrategyEvent(
+	product_id int,
+	strategy_id int,
 	strategy_name string,
 	priority int,
 	cycle int,
@@ -66,43 +46,41 @@ func NewStrategyEvent(strategy_id int,
 	expression string,
 	create_time time.Time,
 	host_id string,
-	host_cname string,
 	host_name string,
 	ip string,
-	sn string) *StrategyEvent {
+	error_message string) *StrategyEvent {
 	return &StrategyEvent{
-		StrategyID:      strategy_id,
-		StrategyName:    strategy_name,
-		Priority:        priority,
-		Cycle:           cycle,
-		AlarmCount:      alarm_count,
-		Expression:      expression,
-		CreateTime:      create_time,
-		UpdateTime:      create_time,
-		Count:           1,
-		Status:          1,
-		HostID:          host_id,
-		HostCname:       host_cname,
-		HostName:        host_name,
-		IP:              ip,
-		SN:              sn,
-		ProcessUser:     "",
-		ProcessComments: "",
-		ProcessTime:     time.Now()}
+		ProductID:    product_id,
+		StrategyID:   strategy_id,
+		StrategyName: strategy_name,
+		Priority:     priority,
+		Cycle:        cycle,
+		AlarmCount:   alarm_count,
+		Expression:   expression,
+		CreateTime:   create_time,
+		UpdateTime:   create_time,
+		AwareEndTime: DEFAULT_TIME,
+		Count:        1,
+		Status:       1,
+		HostID:       host_id,
+		HostName:     host_name,
+		IP:           ip,
+		ErrorMessage: error_message}
 }
 
 type TriggerEvent struct {
-	StrategyEventID  int64   `json:"strategy_event_id"`
-	Index            string  `json:"index"`
-	Metric           string  `json:"metric"`
+	StrategyEventID  int64   `json:"strategy_event_id" db:"strategy_event_id"`
+	Index            string  `json:"index" db:"index"`
+	Metric           string  `json:"metric" db:"metric"`
 	Tags             string  `json:"tags"`
 	Number           int     `json:"number"`
-	AggregateTags    string  `json:"aggregate_tags"`
-	CurrentThreshold float64 `json:"current_threshold"`
+	AggregateTags    string  `json:"aggregate_tags" db:"aggregate_tags"`
+	CurrentThreshold float64 `json:"current_threshold" db:"current_threshold"`
 	Method           string  `json:"method"`
 	Symbol           string  `json:"symbol"`
 	Threshold        float64 `json:"threshold"`
 	Triggered        bool    `json:"triggered"`
+	TriggerChanged   bool    `json:"-"`
 }
 
 func NewTriggerEvent(strategy_event_id int64, index, metric, tags, aggregate_tags, symbol, method string, number int, threshold, current_threshold float64, triggered bool) *TriggerEvent {
@@ -125,32 +103,19 @@ func (this *TriggerEvent) String() string {
 	if this.Number != 0 {
 		number = strconv.Itoa(this.Number)
 	}
-	return fmt.Sprintf("\n%v: %v %v %v %v %v %v 当前值:%v 结果:%v", this.Index, this.Metric, this.Tags, this.Method, number, this.Symbol, utils.Bytes2Human(this.Threshold), utils.Bytes2Human(this.CurrentThreshold), this.Triggered)
+	return fmt.Sprintf("\n%v: %v %v %v %v %v %v 当前值:%v 结果:%v", this.Index, this.Metric, this.Tags, this.Method, number, this.Symbol, bytes2Human(this.Threshold), bytes2Human(this.CurrentThreshold), this.Triggered)
 }
 
-type TemplateStrategy struct {
-	ID                int64
-	NAME              string
-	TYPE              string
-	CYCLE             int
-	PRIORITY          string
-	STATUS            string
-	ALARM_COUNT       int
-	COUNT             int
-	UPDATE_TIME       string
-	EXPRESSION        string
-	EXPRESSION_DETAIL string
-}
-
-type TemplateHost struct {
-	CNAME  string
-	NAME   string
-	IP     string
-	STATUS string
-	SN     string
-}
-
-type Template struct {
-	STRATEGY TemplateStrategy
-	HOST     TemplateHost
+func bytes2Human(num float64) string {
+	if num < 1000.00 {
+		return fmt.Sprintf("%3.2f", num)
+	}
+	suffix := []string{"", "K", "M", "G", "T", "P", "E", "Z"}
+	for _, unit := range suffix {
+		if num < 1000.00 {
+			return fmt.Sprintf("%3.2f%s%s", num, unit, "B")
+		}
+		num /= 1000.00
+	}
+	return fmt.Sprintf("%.2f%s%s", num, "Y", "B")
 }

@@ -33,9 +33,5 @@ func main() {
 		fmt.Println("failed to init tcp server:", err)
 		return
 	}
-	if err := InitHttpServer(); err != nil {
-		fmt.Println("failed to init http server:", err)
-		return
-	}
 	select {}
 }

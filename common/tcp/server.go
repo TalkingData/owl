@@ -6,6 +6,9 @@ import (
 	"time"
 )
 
+// 已经迁移到 github.com/wuyingsong/tcp
+// 测试稳定将移除
+
 type Server struct {
 	Addr    string //TCP address to listen on
 	Listen  *net.TCPListener

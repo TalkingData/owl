@@ -1,39 +1,38 @@
 package types
 
 const (
-	SEND_MAIL = iota + 1
-	SEND_SMS
-	SEND_WECHAT
-	SEND_CALL
-	SEND_ACTION
+	ACTION_ALARM = iota
+	ACTION_RESTORE
 )
 
 const (
-	ACTION_ALARM = iota + 1
-	ACTION_RESTORE
+	ACTION_NOTIFY = iota + 1
+	ACTION_RUN
 )
 
 type Action struct {
 	ID              int    `json:"-"`
-	StrategyID      int    `form:"strategy_id" json:"strategy_id" binding:"required"`
-	Type            int    `form:"type" json:"type" binding:"required"`
-	FilePath        string `form:"file_path" json:"file_path"`
-	AlarmSubject    string `form:"alarm_subject" json:"alarm_subject"`
-	RestoreSubject  string `form:"restore_subject" json:"restore_subject"`
-	AlarmTemplate   string `form:"alarm_template" json:"alarm_template"`
-	RestoreTemplate string `form:"restore_template" json:"restore_template"`
-	SendType        int    `form:"send_type" json:"send_type" binding:"require"`
-}
-
-func (Action) TableName() string {
-	return "action"
+	StrategyID      int    `json:"strategy_id" db:"strategy_id"`
+	Type            int    `json:"type"`
+	Kind            int    `json:"kind"`
+	ScriptID        int    `json:"script_id" db:"script_id"`
+	FilePath        string `json:"file_path" db:"file_path"`
+	AlarmSubject    string `json:"alarm_subject" db:"alarm_subject"`
+	AlarmTemplate   string `json:"alarm_template" db:"alarm_template"`
+	RestoreSubject  string `json:"restore_subject" db:"restore_subject"`
+	RestoreTemplate string `json:"restore_template" db:"restore_template"`
+	BeginTime       string `json:"begin_time" db:"begin_time"`
+	EndTime         string `json:"end_time" db:"end_time"`
+	TimePeriod      int    `json:"time_period" db:"time_period"`
 }
 
 type ActionResult struct {
 	StrategyEventID int64  `json:"strategy_event_id"`
+	Count           int    `json:"count"`
 	ActionID        int    `json:"action_id"`
 	ActionType      int    `json:"action_type"`
-	ActionSendType  int    `json:"action_send_type"`
+	ActionKind      int    `json:"action_kind"`
+	ScriptID        int    `json:"script_id"`
 	UserID          int    `json:"user_id"`
 	Username        string `json:"username"`
 	Phone           string `json:"phone"`
@@ -46,22 +45,32 @@ type ActionResult struct {
 	FilePath        string `json:"file_path"`
 }
 
-type ActionUser struct {
-	ID       int `json:"-"`
-	ActionID int `json:"-"`
-	UserID   int `json:"user_id"`
+func NewActionResult(
+	strategy_event_id int64,
+	count, action_id, action_type, action_kind, script_id, user_id int,
+	user_name, phone, mail, weixin, subject, content, response string,
+	success bool) *ActionResult {
+	return &ActionResult{
+		StrategyEventID: strategy_event_id,
+		Count:           count,
+		ActionID:        action_id,
+		ActionType:      action_type,
+		ActionKind:      action_kind,
+		ScriptID:        script_id,
+		UserID:          user_id,
+		Username:        user_name,
+		Phone:           phone,
+		Mail:            mail,
+		Weixin:          weixin,
+		Subject:         subject,
+		Content:         content,
+		Success:         success,
+		Response:        response,
+	}
 }
 
-func (ActionUser) TableName() string {
-	return "action_user"
-}
-
-type ActionUserGroup struct {
-	ID          int `json:"-"`
-	ActionID    int `json:"-"`
-	UserGroupID int `form:"user_group_id" json:"user_group_id"`
-}
-
-func (ActionUserGroup) TableName() string {
-	return "action_user_group"
+type Script struct {
+	ID       int    `db:"id"`
+	Name     string `db:"name"`
+	FilePath string `db:"file_path"`
 }

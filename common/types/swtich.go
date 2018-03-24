@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"owl/common/utils"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/wuyingsong/utils"
 )
 
 var oids []string = []string{
@@ -21,6 +22,15 @@ var oids []string = []string{
 	"outDiscards",
 	"OperStatus",
 }
+
+const (
+	H3C_CPU_OID    = ".1.3.6.1.4.1.25506.2.6.1.1.1.1.6"
+	H3C_MEM_OID    = ".1.3.6.1.4.1.25506.2.6.1.1.1.1.8"
+	CISCO_CPU_OID  = ".1.3.6.1.4.1.9.9.109.1.1.1.1.7"
+	CISCO_MEM_OID  = ".1.3.6.1.4.1.9.9.109.1.1.1.1.12"
+	HUAWEI_MEM_OID = ".1.3.6.1.4.1.2011.5.25.31.1.1.1.1.7"
+	HUAWEI_CPU_OID = ".1.3.6.1.4.1.2011.5.25.31.1.1.1.1.5"
+)
 
 const (
 	defaultCounterV = 12345678987654321
@@ -45,6 +55,7 @@ type Switch struct {
 	ID              string   `json:"id"`
 	IP              string   `json:"ip"`
 	Hostname        string   `json:"hostname"`
+	Vendor          string   `json:"vendor"`
 	AgentVersion    string   `json:"agent_version"`
 	CollectInterval int      `json:"collect_interval"`
 	LegalPrefix     []string `json:"legal_prefix"`
@@ -53,6 +64,8 @@ type Switch struct {
 	LastUpdate time.Time             `json:"last_update"`
 	Snmp       SnmpConfig            `json:"snmp"`
 	Interfaces map[string]*Interface `json:"interfaces"`
+	Cpu        map[string]uint64
+	Mem        map[string]uint64
 }
 
 type SnmpConfig struct {
@@ -88,9 +101,12 @@ retry:
 		time.Sleep(time.Minute * 5)
 		goto retry
 	}
+	this.Cpu = make(map[string]uint64)
+	this.Mem = make(map[string]uint64)
 	this.initAllInterfaceData()
 	this.CollectInterfaceName()
 	this.getHostname()
+	this.getVendor()
 	this.CollectIfaceSpeed()
 	go this.loop(buf1)
 	go this.postMetric(buf2)
@@ -183,6 +199,28 @@ func (this *Switch) postMetric(buffer chan<- *MetricConfig) {
 				},
 			}
 		}
+		for idx := range this.Cpu {
+			buffer <- &MetricConfig{
+				this.ID,
+				TimeSeriesData{
+					Metric:   "sw.cpu.used.percent",
+					DataType: "GAUGE",
+					Cycle:    this.CollectInterval,
+					Tags:     map[string]string{"index": idx},
+				},
+			}
+		}
+		for idx := range this.Mem {
+			buffer <- &MetricConfig{
+				this.ID,
+				TimeSeriesData{
+					Metric:   "sw.mem.used.percent",
+					DataType: "GAUGE",
+					Cycle:    this.CollectInterval,
+					Tags:     map[string]string{"index": idx},
+				},
+			}
+		}
 		buffer <- &MetricConfig{
 			this.ID,
 			TimeSeriesData{
@@ -196,6 +234,11 @@ func (this *Switch) postMetric(buffer chan<- *MetricConfig) {
 }
 
 func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintln(os.Stderr, "recover ", this.IP, r)
+		}
+	}()
 	for {
 		ts := time.Now().Unix()
 		this.CollectTraffic()
@@ -212,7 +255,7 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 				Value:     i.InBytes.getValue(interval),
 				Timestamp: ts,
 				Cycle:     this.CollectInterval,
-				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
+				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "host": this.Hostname, "ifName": i.Name},
 			}
 			buffer <- &TimeSeriesData{
 				Metric:    "sw.if.OutBytes",
@@ -220,7 +263,7 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 				Value:     i.OutBytes.getValue(interval),
 				Timestamp: ts,
 				Cycle:     this.CollectInterval,
-				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
+				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "host": this.Hostname, "ifName": i.Name},
 			}
 			buffer <- &TimeSeriesData{
 				Metric:    "sw.if.InErrors",
@@ -228,7 +271,7 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 				Value:     i.InErrors.getValue(interval),
 				Timestamp: ts,
 				Cycle:     this.CollectInterval,
-				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
+				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "host": this.Hostname, "ifName": i.Name},
 			}
 			buffer <- &TimeSeriesData{
 				Metric:    "sw.if.OutErrors",
@@ -236,7 +279,7 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 				Value:     i.OutErrors.getValue(interval),
 				Timestamp: ts,
 				Cycle:     this.CollectInterval,
-				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
+				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "host": this.Hostname, "ifName": i.Name},
 			}
 			buffer <- &TimeSeriesData{
 				Metric:    "sw.if.InDiscards",
@@ -244,7 +287,7 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 				Value:     i.InDiscards.getValue(interval),
 				Timestamp: ts,
 				Cycle:     this.CollectInterval,
-				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
+				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "host": this.Hostname, "ifName": i.Name},
 			}
 			buffer <- &TimeSeriesData{
 				Metric:    "sw.if.OutDiscards",
@@ -252,7 +295,7 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 				Value:     i.OutDiscards.getValue(interval),
 				Timestamp: ts,
 				Cycle:     this.CollectInterval,
-				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
+				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "host": this.Hostname, "ifName": i.Name},
 			}
 			buffer <- &TimeSeriesData{
 				Metric:    "sw.if.InUsed.Percent",
@@ -260,7 +303,7 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 				Value:     i.InBytes.getValue(interval) / float64(i.Speed) * 100,
 				Timestamp: ts,
 				Cycle:     this.CollectInterval,
-				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
+				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "host": this.Hostname, "ifName": i.Name},
 			}
 			buffer <- &TimeSeriesData{
 				Metric:    "sw.if.OutUsed.Percent",
@@ -268,7 +311,7 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 				Value:     i.OutBytes.getValue(interval) / float64(i.Speed) * 100,
 				Timestamp: ts,
 				Cycle:     this.CollectInterval,
-				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
+				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "host": this.Hostname, "ifName": i.Name},
 			}
 			buffer <- &TimeSeriesData{
 				Metric:    "sw.if.OperStatus",
@@ -276,7 +319,7 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 				Value:     float64(i.OperStatus),
 				Timestamp: ts,
 				Cycle:     this.CollectInterval,
-				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "hostname": this.Hostname, "ifName": i.Name},
+				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "host": this.Hostname, "ifName": i.Name},
 			}
 		}
 		if flag != 0 {
@@ -286,7 +329,27 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 				Value:     1,
 				Timestamp: ts,
 				Cycle:     this.CollectInterval,
-				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "hostname": this.Hostname},
+				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "host": this.Hostname},
+			}
+		}
+		for idx, val := range this.Mem {
+			buffer <- &TimeSeriesData{
+				Metric:    "sw.mem.used.percent",
+				DataType:  "GAUGE",
+				Value:     float64(val),
+				Timestamp: ts,
+				Cycle:     this.CollectInterval,
+				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "host": this.Hostname, "index": idx},
+			}
+		}
+		for idx, val := range this.Cpu {
+			buffer <- &TimeSeriesData{
+				Metric:    "sw.cpu.used.percent",
+				DataType:  "GAUGE",
+				Value:     float64(val),
+				Timestamp: ts,
+				Cycle:     this.CollectInterval,
+				Tags:      map[string]string{"uuid": this.ID, "ip": this.IP, "host": this.Hostname, "index": idx},
 			}
 		}
 		time.Sleep(time.Second * time.Duration(this.CollectInterval))
@@ -335,6 +398,79 @@ func (this *Switch) CollectInterfaceName() error {
 	}
 	return nil
 }
+func (this *Switch) collectCpu() error {
+	if this.Cpu == nil {
+		this.Cpu = make(map[string]uint64)
+	}
+	var cpuOID string
+	switch this.Vendor {
+	case "cisco":
+		cpuOID = CISCO_CPU_OID
+	case "h3c":
+		cpuOID = H3C_CPU_OID
+	case "huawei":
+		cpuOID = HUAWEI_CPU_OID
+	default:
+		return fmt.Errorf("unsupport vendor")
+	}
+	output, err := this.walk(cpuOID)
+	if err != nil {
+		return err
+	}
+	buf := bytes.NewBuffer(output)
+	for {
+		line, err := buf.ReadString('\n')
+		if err == io.EOF {
+			break
+		}
+		fields := parseLine(line, " ")
+		indexField := parseLine(fields[0], ".")
+		index := indexField[len(indexField)-1]
+		val, err := strconv.ParseUint(fields[len(fields)-1], 10, 64)
+		if err != nil || val == 0 {
+			continue
+		}
+		this.Cpu[index] = val
+	}
+	return nil
+}
+
+func (this *Switch) collectMem() error {
+	if this.Mem == nil {
+		this.Mem = make(map[string]uint64)
+	}
+	var memOID string
+	switch this.Vendor {
+	case "cisco":
+		memOID = CISCO_MEM_OID
+	case "h3c":
+		memOID = H3C_MEM_OID
+	case "huawei":
+		memOID = HUAWEI_MEM_OID
+	default:
+		return fmt.Errorf("unsupport vendor")
+	}
+	output, err := this.walk(memOID)
+	if err != nil {
+		return err
+	}
+	buf := bytes.NewBuffer(output)
+	for {
+		line, err := buf.ReadString('\n')
+		if err == io.EOF {
+			break
+		}
+		fields := parseLine(line, " ")
+		indexField := parseLine(fields[0], ".")
+		index := indexField[len(indexField)-1]
+		val, err := strconv.ParseUint(fields[len(fields)-1], 10, 64)
+		if err != nil || val == 0 {
+			continue
+		}
+		this.Mem[index] = val
+	}
+	return nil
+}
 
 func (this *Switch) CollectIfaceSpeed() error {
 	output, err := this.walk("ifSpeed")
@@ -371,6 +507,16 @@ func (this *Switch) CollectTraffic() {
 			wg.Done()
 		}(oid)
 	}
+	wg.Add(2)
+	go func() {
+		this.collectCpu()
+		wg.Done()
+	}()
+	go func() {
+		this.collectMem()
+		wg.Done()
+	}()
+
 	wg.Wait()
 }
 func parseLine(s string, sep string) []string {
@@ -460,6 +606,24 @@ func (this *Switch) getHostname() {
 	}
 	fields := parseLine(string(output), " ")
 	this.Hostname = fields[len(fields)-1]
+}
+
+func (this *Switch) getVendor() {
+	output, err := this.walk("1.3.6.1.2.1.1.1.0")
+	if err != nil {
+		fmt.Println("get sysdesc error ", err.Error())
+		return
+	}
+	sysDescLowerString := strings.ToLower(string(output))
+	if strings.Contains(sysDescLowerString, "cisco") {
+		this.Vendor = "cisco"
+	} else if strings.Contains(sysDescLowerString, "h3c") {
+		this.Vendor = "h3c"
+	} else if strings.Contains(sysDescLowerString, "huawei") {
+		this.Vendor = "huawei"
+	} else {
+		this.Vendor = "Unknown"
+	}
 }
 
 func (this *Switch) initAllInterfaceData() {

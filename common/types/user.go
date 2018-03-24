@@ -12,14 +12,10 @@ type User struct {
 	Role     int    `json:"role"`
 	Phone    string `json:"phone"`
 	Mail     string `json:"mail"`
-	Weixin   string `json:"weixin"`
+	Wechat   string `json:"wechat"`
 	Status   int    `json:"status"`
 }
 
 func (this *User) IsAdmin() bool {
 	return this.Role == ADMIN
-}
-
-func (User) TableName() string {
-	return "user"
 }

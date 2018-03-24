@@ -31,34 +31,25 @@ func (this *ControllerHandle) Handle(sess *tcp.Session, data []byte) {
 			lg.Error(err.Error())
 			return
 		}
-		controller.refreshNode(heartbeat)
+		controller.receiveHearbeat(heartbeat)
 	case types.ALAR_MESS_INSPECTOR_TASK_REQUEST:
-		tasks_resp := getInspectorTask()
-		sess.Send(types.AlarmPack(types.ALAR_MESS_INSPECTOR_TASKS, tasks_resp))
-	case types.ALAR_MESS_INSPECTOR_RESULT:
+		tasks := GetAlarmTasks()
+		sess.Send(types.AlarmPack(types.ALAR_MESS_INSPECTOR_TASKS, tasks))
+	case types.ALAR_MESS_INSPECTOR_RESULTS:
 		lg.Info("Receive %v %v", types.AlarmMessageTypeText[mt], string(data[1:]))
-		result := &types.StrategyResult{}
-		if err := result.Decode(data[1:]); err != nil {
+		results := &types.AlarmResults{}
+		if err := results.Decode(data[1:]); err != nil {
 			lg.Error(err.Error())
 			return
 		}
-		switch result.Priority {
-		case types.PRIORITY_HIGH_LEVEL:
-			controller.highResultPool.PutResult(result)
-		case types.PRIORITY_MIDDLE_LEVEL:
-			controller.lowResultPool.PutResult(result)
-		case types.PRIORITY_LOW_LEVEL:
-			controller.lowResultPool.PutResult(result)
-		default:
-			lg.Error("Unknown priority: %v", result.Priority)
-		}
+		controller.resultPool.PutResults(results)
 	default:
 		lg.Error("Unknown option: %v", mt)
 	}
 }
 
-func getInspectorTask() *types.GetTasksResp {
+func GetAlarmTasks() *types.AlarmTasks {
 	tasks := controller.taskPool.GetTasks(GlobalConfig.TASK_SIZE)
-	tasks_resp := &types.GetTasksResp{tasks}
+	tasks_resp := &types.AlarmTasks{tasks}
 	return tasks_resp
 }

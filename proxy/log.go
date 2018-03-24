@@ -15,10 +15,10 @@ func InitLog() error {
 	lg.EnableFuncCallDepth(true)
 	lg.SetLogger("console", "")
 	param := fmt.Sprintf(`{"filename":"%s","rotate":true,"maxdays":%d}`,
-		GlobalConfig.LOG_FILE, GlobalConfig.LOG_EXPIRE_DAYS)
+		GlobalConfig.LogFile, GlobalConfig.LogExpireDays)
 	if err := lg.SetLogger("file", param); err != nil {
 		return err
 	}
-	lg.SetLevel(GlobalConfig.LOG_LEVEL)
+	lg.SetLevel(GlobalConfig.LogLevel)
 	return nil
 }

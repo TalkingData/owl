@@ -19,23 +19,23 @@ func (this *InspectorHandle) LostSession(sess *tcp.Session) {
 func (this *InspectorHandle) Handle(sess *tcp.Session, data []byte) {
 	defer func() {
 		if err := recover(); err != nil {
-			lg.Error("Recovered in HandleMessage", err)
+			lg.Error("recovered in HandleMessage", err)
 		}
 	}()
 	mt := types.AlarmMessageType(data[0])
 	switch mt {
 	case types.ALAR_MESS_INSPECTOR_TASKS:
-		get_task_resp := &types.GetTasksResp{}
-		if err := get_task_resp.Decode(data[1:]); err != nil {
+		at := &types.AlarmTasks{}
+		if err := at.Decode(data[1:]); err != nil {
 			lg.Error(err.Error())
 			return
 		}
-		if len(get_task_resp.AlarmTasks) == 0 {
+		if len(at.Tasks) == 0 {
 			return
 		}
-		lg.Info("Receive %v %v", types.AlarmMessageTypeText[mt], string(data[1:]))
-		inspector.taskPool.PutTasks(get_task_resp.AlarmTasks)
+		lg.Info("receive %v %v", types.AlarmMessageTypeText[mt], string(data[1:]))
+		inspector.taskPool.PutTasks(at.Tasks)
 	default:
-		lg.Error("Unknown option: %v", mt)
+		lg.Error("unknown option: %v", mt)
 	}
 }

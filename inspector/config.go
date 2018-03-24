@@ -6,14 +6,16 @@ const (
 	CONFIG_FILE_PATH          = "./conf/inspector.conf"
 	DEFAULT_LOG_PATH          = "./logs/inspector.log"
 	DEFAULT_CONTROLER_ADDR    = "127.0.0.1:10050"
-	DEFAULT_MAX_PACKET_SIZE   = 40960
+	DEFAULT_MAX_PACKET_SIZE   = 409600
 	DEFAULT_LOG_EXPIRE_DAYS   = 7
 	DEFAULT_LOG_LEVEL         = 3
 	DEFAULT_MAX_TASK_BUFFER   = 4096
 	DEFAULT_MAX_RESULT_BUFFER = 4096
-	DEFAULT_WORKER_COUNT      = 5 //the worker for process tasks
+	DEFAULT_WORKER_COUNT      = 20 //the worker for process tasks
 	DEFAULT_TSDB_ADDR         = "127.0.0.1:4242"
 	DEFAULT_TSDB_TIMEOUT      = 30
+	DEFAULT_RESULT_BUFFER     = 10
+	DEFAULT_BACKEND_TSDB      = "opentsdb"
 )
 
 var GlobalConfig *Config
@@ -29,6 +31,8 @@ type Config struct {
 	WORKER_COUNT      int
 	TSDB_ADDR         string
 	TSDB_TIMEOUT      int
+	RESULT_BUFFER     int
+	BACKEND_TSDB      string
 }
 
 func InitGlobalConfig() error {
@@ -47,6 +51,8 @@ func InitGlobalConfig() error {
 		WORKER_COUNT:      cfg.MustInt(goconfig.DEFAULT_SECTION, "worker_count", DEFAULT_WORKER_COUNT),
 		TSDB_ADDR:         cfg.MustValue(goconfig.DEFAULT_SECTION, "tsdb_addr", DEFAULT_TSDB_ADDR),
 		TSDB_TIMEOUT:      cfg.MustInt(goconfig.DEFAULT_SECTION, "tsdb_timeout", DEFAULT_TSDB_TIMEOUT),
+		RESULT_BUFFER:     cfg.MustInt(goconfig.DEFAULT_SECTION, "result_buffer", DEFAULT_RESULT_BUFFER),
+		BACKEND_TSDB:      cfg.MustValue(goconfig.DEFAULT_SECTION, "backend_tsdb", DEFAULT_BACKEND_TSDB),
 	}
 	return nil
 }

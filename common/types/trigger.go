@@ -6,8 +6,7 @@ type Trigger struct {
 	Metric      string  `form:"metric" json:"metric"`
 	Tags        string  `form:"tags" json:"tags"`
 	Number      int     `form:"number" json:"number"`
-	Index       string  `form:"index" json:"index" `
-	Name        string  `form:"name" json:"name"`
+	Index       string  `form:"index" json:"index"`
 	Method      string  `form:"method" json:"method" `
 	Symbol      string  `form:"symbol" json:"symbol" `
 	Threshold   float64 `form:"threshold" json:"threshold" `

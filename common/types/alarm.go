@@ -5,8 +5,8 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -17,7 +17,7 @@ const (
 	ALAR_MESS_INSPECTOR_HEARTBEAT AlarmMessageType = iota + 1
 	ALAR_MESS_INSPECTOR_TASK_REQUEST
 	ALAR_MESS_INSPECTOR_TASKS
-	ALAR_MESS_INSPECTOR_RESULT
+	ALAR_MESS_INSPECTOR_RESULTS
 )
 
 //报警服务消息类型可读映射
@@ -25,7 +25,7 @@ var AlarmMessageTypeText map[AlarmMessageType]string = map[AlarmMessageType]stri
 	ALAR_MESS_INSPECTOR_HEARTBEAT:    "inspector heartbeat",
 	ALAR_MESS_INSPECTOR_TASK_REQUEST: "inspector task request",
 	ALAR_MESS_INSPECTOR_TASKS:        "inspector tasks",
-	ALAR_MESS_INSPECTOR_RESULT:       "inspector result",
+	ALAR_MESS_INSPECTOR_RESULTS:      "inspector results",
 }
 
 //报警服务消息接口
@@ -36,13 +36,16 @@ type AlarmMessage interface {
 func AlarmPack(t AlarmMessageType, m AlarmMessage) []byte {
 	var buf bytes.Buffer
 	binary.Write(&buf, binary.BigEndian, t)
-	binary.Write(&buf, binary.BigEndian, m.Encode())
+	if m != nil {
+		binary.Write(&buf, binary.BigEndian, m.Encode())
+	}
+	binary.Write(&buf, binary.BigEndian, make([]byte, 0))
 	return buf.Bytes()
 }
 
 type AlarmTask struct {
 	ID       string
-	Host     *Host
+	Host     *Host `json:"-"`
 	Strategy *Strategy
 	Triggers map[string]*Trigger
 }
@@ -52,11 +55,11 @@ func NewAlarmTask(host *Host, strategy *Strategy, triggers map[string]*Trigger) 
 	return &AlarmTask{id, host, strategy, triggers}
 }
 
-type GetTasksResp struct {
-	AlarmTasks []*AlarmTask
+type AlarmTasks struct {
+	Tasks []*AlarmTask
 }
 
-func (this *GetTasksResp) Encode() []byte {
+func (this *AlarmTasks) Encode() []byte {
 	data, err := json.Marshal(this)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -64,27 +67,32 @@ func (this *GetTasksResp) Encode() []byte {
 	return data
 }
 
-func (this *GetTasksResp) Decode(data []byte) error {
+func (this *AlarmTasks) Decode(data []byte) error {
 	return json.Unmarshal(data, this)
 }
 
-type NodePool struct {
-	Nodes map[string]*Node
-	Lock  *sync.Mutex
-}
-
-func NewNodePool() *NodePool {
-	return &NodePool{make(map[string]*Node), &sync.Mutex{}}
-}
-
 type Node struct {
-	IP       string
-	Hostname string
-	Update   time.Time
+	IP       string    `json:"ip"`
+	Hostname string    `json:"hostname"`
+	Update   time.Time `json:"update"`
+}
+
+func (this Node) MarshalJSON() ([]byte, error) {
+	type Alias Node
+	return json.Marshal(&struct {
+		Alias
+		Update string `json:"update"`
+	}{
+		Alias:  (Alias)(this),
+		Update: this.Update.Format("2006-01-02 15:04:05"),
+	})
 }
 
 func (this *Node) Encode() []byte {
-	data, _ := json.Marshal(this)
+	data, err := json.Marshal(this)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 	return data
 }
 
@@ -98,12 +106,19 @@ func NewHeartBeat(ip, hostname string) *HeartBeat {
 }
 
 func (this *HeartBeat) Encode() []byte {
-	data, _ := json.Marshal(this)
+	data, err := json.Marshal(this)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 	return data
 }
 
 func (this *HeartBeat) Decode(data []byte) error {
 	return json.Unmarshal(data, &this)
+}
+
+type AlarmResults struct {
+	Results []*StrategyResult
 }
 
 type StrategyResult struct {
@@ -115,12 +130,15 @@ type StrategyResult struct {
 	CreateTime        time.Time
 }
 
-func (this *StrategyResult) Encode() []byte {
-	data, _ := json.Marshal(this)
+func (this *AlarmResults) Encode() []byte {
+	data, err := json.Marshal(this)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 	return data
 }
 
-func (this *StrategyResult) Decode(data []byte) error {
+func (this *AlarmResults) Decode(data []byte) error {
 	return json.Unmarshal(data, &this)
 }
 
@@ -142,42 +160,13 @@ func NewStrategyResult(task_id string, priority int, trigger_results map[string]
 }
 
 func NewTriggerResult(index string, tags map[string]string, aggregate_tags []string, current_threshold float64, triggered bool) *TriggerResult {
-	tags_string := ""
-	aggregate_tags_string := ""
-	tags_limiter := ""
-	aggregate_tags_limiter := ""
-
-	if _, ok := tags["hostname"]; ok {
-		delete(tags, "hostname")
-	}
-
-	if _, ok := tags["uuid"]; ok {
-		delete(tags, "uuid")
-	}
-
-	if len(tags) > 1 {
-		tags_limiter = ","
-	}
-
-	if len(aggregate_tags) > 1 {
-		aggregate_tags_limiter = ","
-	}
-
+	merged_tags := make([]string, 0)
 	for tagk, tagv := range tags {
-		tags_string += fmt.Sprintf("%s=%s%s", tagk, tagv, tags_limiter)
+		if tagk == "host" || tagk == "uuid" {
+			continue
+		}
+		merged_tags = append(merged_tags, tagk+"="+tagv)
 	}
-
-	for _, aggregate_tag := range aggregate_tags {
-		aggregate_tags_string += fmt.Sprintf("%s%s", aggregate_tag, aggregate_tags_limiter)
-	}
-
-	if strings.HasSuffix(tags_string, ",") {
-		tags_string = strings.TrimSuffix(tags_string, ",")
-	}
-
-	if strings.HasSuffix(aggregate_tags_string, ",") {
-		aggregate_tags_string = strings.TrimSuffix(aggregate_tags_string, ",")
-	}
-
-	return &TriggerResult{index, tags_string, aggregate_tags_string, current_threshold, triggered}
+	sort.Strings(merged_tags)
+	return &TriggerResult{index, strings.Join(merged_tags, ","), strings.Join(aggregate_tags, ","), current_threshold, triggered}
 }

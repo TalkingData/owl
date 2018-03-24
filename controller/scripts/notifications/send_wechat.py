@@ -70,10 +70,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     token_status, token = get_access_token()
-
+    receiver = json.loads(args.receiver)
     retry = 3
     while retry:
-        status, response = send(args.receiver, args.content, token)
+        status, response = send(receiver["wechat"], args.content, token)
         if status:
             break
         retry -= 1

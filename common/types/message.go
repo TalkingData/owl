@@ -1,9 +1,9 @@
 package types
 
 import (
-	"bytes"
-	"encoding/binary"
 	"encoding/json"
+
+	"github.com/wuyingsong/tcp"
 )
 
 type MessageType byte
@@ -21,43 +21,49 @@ const (
 	MESS_POST_HOST_ALIVE
 )
 
-//消息类型可读映射
-var MessageTypeText map[MessageType]string = map[MessageType]string{
-	MESS_POST_HOST_CONFIG:          "post host config",
-	MESS_POST_METRIC:               "post metric",
-	MESS_POST_TSD:                  "post time series data",
-	MESS_GET_HOST_PLUGIN_LIST:      "get host plugin list",
-	MESS_GET_HOST_PLUGIN_LIST_RESP: "get host plugin list response",
-	MESS_GET_ALL_PLUGIN_MD5:        "get all plugin md5 list",
-	MESS_GET_ALL_PLUGIN_MD5_RESP:   "get all plugin md5 list response",
-	MESS_PULL_PLUGIN:               "pull plugin file",
-	MESS_POST_HOST_ALIVE:           "post host alive",
+const (
+	// Agent
+	MsgAgentRegister tcp.PacketType = iota
+	MsgAgentSendMetricInfo
+	MsgAgentSendTimeSeriesData
+	MsgAgentGetPluginsList
+	MsgAgentRequestSyncPlugins
+	MsgAgentSendHeartbeat
+
+	// CFC
+	MsgCFCSendPluginsList
+	MsgCFCSendPlugin
+	MsgCFCSendReconnect
+
+	// Repeater
+	MsgRepeaterPostTimeSeriesData
+)
+
+var MsgTextMap map[tcp.PacketType]string = map[tcp.PacketType]string{
+	MsgAgentRegister:              "MsgAgentRegister",
+	MsgAgentSendMetricInfo:        "MsgAgentSendMetricInfo",
+	MsgAgentSendTimeSeriesData:    "MsgAgentSendTimeSeriesData",
+	MsgAgentGetPluginsList:        "MsgAgentGetPluginList",
+	MsgAgentRequestSyncPlugins:    "MsgAgentRequestSyncPlugins",
+	MsgAgentSendHeartbeat:         "MsgAgentSendHeartbeat",
+	MsgCFCSendPluginsList:         "MsgCFCSendPluginsList",
+	MsgCFCSendPlugin:              "MsgCFCSendPlugin",
+	MsgCFCSendReconnect:           "MsgCFCSendReconnect",
+	MsgRepeaterPostTimeSeriesData: "MsgRepeaterPostTimeSeriesData",
 }
 
-//消息接口
-type Message interface {
-	Encode() []byte
-}
-
-func Pack(t MessageType, m Message) []byte {
-	var buf bytes.Buffer
-	binary.Write(&buf, binary.BigEndian, t)
-	binary.Write(&buf, binary.BigEndian, m.Encode())
-	return buf.Bytes()
-}
-
-type PostMetric struct {
+type AgentPostMetricRequest struct {
 	HostID  string           `json:"host_id"`
 	Metrics []TimeSeriesData `json:"metrics"` // cpu.idle/ip=10.10.32.10,cpu=1
 }
 
-func (this *PostMetric) Encode() []byte {
+func (this *AgentPostMetricRequest) Encode() []byte {
 	data, _ := json.Marshal(this)
 	return data
 }
 
 type GetPluginResp struct {
-	HostID  string   `json:"host_id"`
+	HostID  string   `json:"host_id"` // 当agent通过proxy连接，需要通过hostid来查找映射表
 	Plugins []Plugin `json:"plugins"`
 }
 
@@ -68,4 +74,47 @@ func (this *GetPluginResp) Encode() []byte {
 
 func (this *GetPluginResp) Decode(data []byte) error {
 	return json.Unmarshal(data, this)
+}
+
+type SyncPluginResponse struct {
+	HostID string
+	Path   string
+	Body   []byte
+}
+
+func (sp *SyncPluginResponse) Encode() []byte {
+	data, _ := json.Marshal(sp)
+	return data
+}
+
+func (sp *SyncPluginResponse) Decode(data []byte) error {
+	return json.Unmarshal(data, sp)
+}
+
+type SyncPluginRequest struct {
+	HostID string
+	Plugin
+}
+
+func (spr *SyncPluginRequest) Encode() []byte {
+	data, _ := json.Marshal(spr)
+	return data
+}
+
+func (spr *SyncPluginRequest) Decode(data []byte) error {
+	return json.Unmarshal(data, spr)
+}
+
+type MetricConfig struct {
+	HostID     string         `json:"host_id"`
+	SeriesData TimeSeriesData `json:"time_series_data"`
+}
+
+func (tsd *MetricConfig) Encode() []byte {
+	data, _ := json.Marshal(tsd)
+	return data
+}
+
+func (tsd *MetricConfig) Decode(data []byte) error {
+	return json.Unmarshal(data, &tsd)
 }

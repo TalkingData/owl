@@ -1,179 +1,334 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net/http"
-	"owl/common/types"
-	"owl/common/utils"
 	"strconv"
+	"strings"
+	"time"
 
+	"github.com/wuyingsong/utils"
+
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 )
 
 type User struct {
-	types.User
-	Groups []types.UserGroup `gorm:"many2many:user_user_group;" json:"groups"`
+	ID           int    `json:"id"`
+	Username     string `json:"username" db:"username"`
+	Password     string `json:"-" db:"password"`
+	DisplayName  string `json:"display_name" db:"display_name"`
+	EmailAddress string `json:"email_address" db:"mail"`
+	PhoneNum     string `json:"phone_number" db:"phone"`
+	Wechat       string `json:"wechat" db:"wechat"`
+	Role         int    `json:"role" db:"role"` // 1:admin 0:user
+	Status       int    `json:"status" db:"status"`
+	CreateAt     string `json:"created_date" db:"create_at"`
+	UpdateAt     string `json:"updated_date" db:"update_at"`
 }
 
-func userList(c *gin.Context) {
-	group_id, _ := strconv.Atoi(c.DefaultQuery("group_id", "0"))
-	status, _ := strconv.Atoi(c.DefaultQuery("status", "-1"))
-	q := c.DefaultQuery("q", "")
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", DefaultPageSize))
-	hasNull, _ := strconv.Atoi(c.DefaultQuery("hasNull", "0"))
-
-	users := []*User{}
-	db := mydb.Table("user").Order("create_at desc")
-	if group_id != 0 {
-		db = db.Joins("JOIN user_user_group ON user.id = user_user_group.user_id").
-			Where("user_user_group.user_group_id = ?", group_id)
-	}
-	if status != -1 {
-		db = db.Where("status = ?", status)
-	}
-	if hasNull != 0 {
-		db = db.Where("phone = '' or mail = '' or weixin=''")
-	}
-	if len(q) > 0 {
-		q = fmt.Sprintf("%%%s%%", q)
-		db = db.Where("username like ? or phone like ? or weixin like ? or mail like ?", q, q, q, q)
-	}
-	var cnt int
-	db.Count(&cnt)
-	if page != 0 {
-		offset := (page - 1) * pageSize
-		db = db.Offset(offset).Limit(pageSize)
-	}
-	db.Find(&users)
-	for _, user := range users {
-		mydb.Model(&user).Association("Groups").Find(&user.Groups)
-	}
-
-	c.JSON(http.StatusOK, gin.H{"code": http.StatusOK, "users": users, "total": cnt})
+func (u *User) isAdmin() bool {
+	return u.Role == 1
 }
 
-func userCreate(c *gin.Context) {
-	user := User{}
-	response := gin.H{}
+func (u *User) isDisabled() bool {
+	return u.Status == 0
+}
+
+func SyncUsers(c *gin.Context) {
+	client := http.Client{}
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/sync_users", config.IamURL), nil)
+	if err != nil {
+		panic(err)
+	}
+	req.Header.Add("App-ID", config.AppID)
+	req.Header.Add("Api-Key", config.AppKey)
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	buf, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+	s := struct {
+		Code    int    `json:"code"`
+		Message []User `json:"message"`
+	}{}
+	fmt.Println(string(buf))
+	fmt.Println(json.Unmarshal(buf, &s))
+	for _, user := range s.Message {
+		if user.Username == "" {
+			continue
+		}
+		mydb.Exec("insert into user(username, mail, display_name) values(?,?,?)", user.Username, user.EmailAddress, strings.TrimSpace(user.DisplayName))
+	}
+	c.JSON(http.StatusOK, gin.H{"users": s})
+}
+
+func listAllUsers(c *gin.Context) {
+	response := gin.H{"code": http.StatusOK}
 	defer c.JSON(http.StatusOK, response)
-	if err := c.BindJSON(&user); err != nil {
+	total, users := mydb.getAllUsers(
+		c.GetBool("paging"),
+		c.Query("query"),
+		c.GetString("order"),
+		c.GetInt("offset"),
+		c.GetInt("limit"),
+	)
+	response["code"] = http.StatusOK
+	response["total"] = total
+	response["users"] = users
+}
+
+/*
+1. 获取用户token
+2.
+*/
+
+func getUserProfile(c *gin.Context) {
+	response := gin.H{"code": http.StatusOK}
+	defer c.JSON(http.StatusOK, response)
+	var user *User
+	if user = mydb.getUserProfile(c.GetString("username")); user == nil {
+		response["code"] = http.StatusBadRequest
+		response["message"] = "user not found"
+		return
+	}
+	response["result"] = user
+}
+
+func createUser(c *gin.Context) {
+	response := gin.H{"code": http.StatusOK}
+	defer c.JSON(http.StatusOK, response)
+	var (
+		user *User
+		err  error
+	)
+	if err = c.BindJSON(&user); err != nil {
 		response["code"] = http.StatusBadRequest
 		response["message"] = err.Error()
 		return
 	}
-	if user.Username == "" || user.Phone == "" {
+	if user.Username == "" {
 		response["code"] = http.StatusBadRequest
-		response["message"] = "The username and phone number are not allowed to be empty"
+		response["message"] = "username is empty"
 		return
 	}
-	cnt := 0
-	mydb.Table("user").Where("username=?", user.Username).Count(&cnt)
-	if cnt > 0 {
+	if user := mydb.getUserProfile(user.Username); user != nil {
 		response["code"] = http.StatusBadRequest
-		response["message"] = "username already exists"
+		response["message"] = "user is exsits"
 		return
 	}
 	user.Password = utils.Md5(user.Username)
-	if err := mydb.Set("gorm:save_associations", false).Save(&user).Error; err != nil {
+	if user, err = mydb.createUser(user); err != nil {
 		response["code"] = http.StatusInternalServerError
-		response["message"] = err.Error()
 		return
 	}
-	mydb.Model(&user).Association("Groups").Replace(user.Groups).Find(&user.Groups)
-
 	response["code"] = http.StatusOK
-	response["message"] = "user create successful"
 	response["user"] = user
 }
 
-func userDelete(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
-	user := types.User{}
-	response := gin.H{}
+func deleteUser(c *gin.Context) {
+	response := gin.H{"code": http.StatusOK}
 	defer c.JSON(http.StatusOK, response)
-	if mydb.Table("user").Where("id = ?", id).Find(&user).RecordNotFound() {
-		response["code"] = http.StatusNotFound
-		response["message"] = "The user not found"
+	userID, err := strconv.Atoi(c.Param("user_id"))
+	if err != nil {
+		response["code"] = http.StatusBadRequest
 		return
 	}
-	if err := mydb.Delete(&user).Error; err != nil {
+	if err := mydb.deleteUser(userID); err != nil {
 		response["code"] = http.StatusInternalServerError
-		response["message"] = err.Error()
 		return
-
 	}
-	response["code"] = http.StatusOK
-	response["message"] = fmt.Sprintf("%s delete successful", user.Username)
 }
 
-func userUpdate(c *gin.Context) {
-	user := User{}
-	response := gin.H{}
+func resetUserPassword(c *gin.Context) {
+	response := gin.H{"code": http.StatusOK}
 	defer c.JSON(http.StatusOK, response)
-
+	var user *User
 	if err := c.BindJSON(&user); err != nil {
 		response["code"] = http.StatusBadRequest
-		response["message"] = err.Error()
+		log.Println(err)
 		return
 	}
-	currentUser := GetUser(c)
-	if !currentUser.IsAdmin() && currentUser.ID != user.ID {
-		response["code"] = 403
-		response["message"] = "You don't have permission to access."
+	username := user.Username
+	if user = mydb.getUserProfile(username); user == nil {
+		response["code"] = http.StatusBadRequest
 		return
 	}
-	if err := mydb.Set("gorm:save_associations", false).Table("user").
-		Select("username", "role", "phone", "mail", "weixin", "status").Save(&user).
-		Association("Groups").Replace(user.Groups).Error; err != nil {
+	user.Password = utils.Md5(user.Username)
+	if err := mydb.updateUserProfile(user); err != nil {
+		response["code"] = http.StatusInternalServerError
+		return
+	}
+	response["user"] = user
+}
+
+func updateUserProfile(c *gin.Context) {
+	response := gin.H{"code": http.StatusOK}
+	defer c.JSON(http.StatusOK, response)
+	var user User
+	if err := c.BindJSON(&user); err != nil {
+		response["code"] = http.StatusBadRequest
+		log.Println(err)
+		return
+	}
+	if user.ID == 0 {
+		response["code"] = http.StatusBadRequest
+		return
+	}
+	currUser := mydb.getUserProfile(c.GetString("username"))
+	if user.ID != currUser.ID {
+		if !currUser.isAdmin() {
+			response["code"] = http.StatusForbidden
+			return
+		}
+	}
+	user.Password = currUser.Password
+	if err := mydb.updateUserProfile(&user); err != nil {
+		response["code"] = http.StatusInternalServerError
+		return
+	}
+	response["user"] = mydb.getUserProfile(user.Username)
+}
+
+func changeUserRole(c *gin.Context) {
+	response := gin.H{"code": http.StatusOK}
+	defer c.JSON(http.StatusOK, response)
+	var user User
+	if err := c.BindJSON(&user); err != nil {
+		response["code"] = http.StatusBadRequest
+		log.Println(err)
+		return
+	}
+	if user.ID == 0 {
+		response["code"] = http.StatusBadRequest
+		response["message"] = "user id is Illegal"
+		return
+	}
+	if err := mydb.setUserRole(user.ID, user.Role); err != nil {
+		response["code"] = http.StatusInternalServerError
+		return
+	}
+	response["user"] = user
+}
+
+func changeUserPassword(c *gin.Context) {
+	response := gin.H{"code": http.StatusOK}
+	defer c.JSON(http.StatusOK, response)
+	username, _ := c.GetPostForm("username")
+	password, _ := c.GetPostForm("password")
+	newPassword, _ := c.GetPostForm("new_password")
+	user := mydb.getUserProfile(username)
+	if user == nil {
+		response["code"] = http.StatusBadRequest
+		return
+	}
+	if user.Password != password {
+		response["code"] = http.StatusBadRequest
+		response["message"] = "password wrong"
+		return
+	}
+	user.Password = newPassword
+	if err := mydb.updateUserProfile(user); err != nil {
 		response["code"] = http.StatusInternalServerError
 		response["message"] = err.Error()
 		return
 	}
-	response["code"] = http.StatusOK
-	response["message"] = "user update successful"
+	c.SetCookie("token", "", -1, "/", "", false, true)
 }
 
-func changePassword(c *gin.Context) {
-	request := struct {
-		ID              int    `json:"id"`
-		CurrentPassword string `json:"current_password"`
-		NewPassword     string `json:"new_password"`
-	}{}
-	response := gin.H{}
+func Login(c *gin.Context) {
+	response := gin.H{"code": http.StatusOK}
 	defer c.JSON(http.StatusOK, response)
-	if err := c.BindJSON(&request); err != nil {
-		response["code"] = http.StatusBadRequest
-		response["message"] = err.Error()
-		return
+	var (
+		tokenString string
+		err         error
+	)
+	switch c.Request.Method {
+	case "GET", "get":
+		tokenString = c.DefaultQuery("token", "")
+		if _, err = ValidateToken(tokenString); err != nil {
+			fmt.Println("validateToken error:", err.Error())
+			response["code"] = http.StatusBadRequest
+			response["message"] = err.Error()
+			return
+		}
+
+	case "POST", "post":
+		username, _ := c.GetPostForm("username")
+		password, _ := c.GetPostForm("password")
+		username, password = strings.TrimSpace(username), strings.TrimSpace(password)
+		user := mydb.getUserProfile(username)
+		if user == nil {
+			response["code"] = http.StatusUnauthorized
+			response["message"] = "user not found"
+			return
+		}
+		if user.Password != password || user.Username != username {
+			response["code"] = http.StatusUnauthorized
+			response["message"] = "username or password is wrong"
+			return
+		}
+		tokenString, err = GenerateToken(username, user)
+		if err != nil {
+			response["code"] = http.StatusInternalServerError
+			response["message"] = "generate token failed"
+			return
+		}
+		response["token"] = tokenString
 	}
-	currentUser := GetUser(c)
-	if !currentUser.IsAdmin() && currentUser.ID != request.ID {
-		response["code"] = 403
-		response["message"] = "You don't have permission to access."
-		return
-	}
-	if request.CurrentPassword == request.NewPassword {
-		response["code"] = http.StatusNotModified
-		response["message"] = "new password equal current password"
-		return
-	}
-	user := types.User{}
-	mydb.Table("user").Where("id = ?", request.ID).Find(&user)
-	if user.Password != utils.Md5(request.CurrentPassword) {
-		response["code"] = http.StatusNotModified
-		response["message"] = "current password is incorrect"
-		return
-	}
-	mydb.Table("user").Where("id = ?", request.ID).Update("password", utils.Md5(request.NewPassword))
-	response["code"] = http.StatusOK
-	response["message"] = "change password success"
+	c.SetCookie("token", tokenString, 86400, "/", "", false, true)
+	response["code"] = http.StatusTemporaryRedirect
+	response["link"] = "/"
 }
 
-func userInfo(c *gin.Context) {
-	user := GetUser(c)
-	if user == nil {
-		c.JSON(http.StatusNotFound, gin.H{"code": http.StatusNotFound, "message": "user not found"})
+func Logout(c *gin.Context) {
+	tokenString, err := c.Cookie("token")
+	if err != nil || len(tokenString) == 0 {
+		c.JSON(http.StatusOK, gin.H{"code": http.StatusUnauthorized})
+		return
 	}
-	c.JSON(http.StatusOK, gin.H{"code": http.StatusOK, "user": user})
+	token, err := ValidateToken(tokenString)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": http.StatusBadRequest, "message": "token is valied"})
+		return
+	}
+	if config.AuthType == "iam" {
+		if err = iamLogout(token); err != nil {
+			log.Println("iam logout failed", err)
+			c.JSON(http.StatusOK, gin.H{"code": http.StatusInternalServerError, "message": "iam logout failed"})
+			return
+		}
+	}
+	c.SetCookie("token", "", -1, "/", "", false, true)
+	c.JSON(http.StatusOK, gin.H{"code": http.StatusUnauthorized, "link": "/", "message": "logout sucessfully"})
+}
+
+func iamLogout(token *jwt.Token) error {
+	claims := token.Claims.(jwt.MapClaims)
+	username := claims["email"].(string)
+	url := fmt.Sprintf("%s/logout", strings.TrimRight(config.IamURL, "/"))
+	jsonStr := fmt.Sprintf(`{"email":"%s"}`, username)
+	req, err := http.NewRequest("POST", url, strings.NewReader(jsonStr))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Api-Key", config.AppKey)
+	req.Header.Set("App-Id", config.AppID)
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	res, _ := ioutil.ReadAll(resp.Body)
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("%s", res)
+	}
+	return nil
 }

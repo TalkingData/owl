@@ -3,10 +3,12 @@ package types
 import (
 	"encoding/json"
 	"fmt"
-	"owl/common/utils"
+	"regexp"
 	"sort"
 	"strings"
 )
+
+var reg = regexp.MustCompile(`^[a-zA-Z_.]+$`)
 
 type TimeSeriesData struct {
 	Metric    string            `json:"metric"`    //sys.cpu.idle
@@ -17,69 +19,77 @@ type TimeSeriesData struct {
 	Tags      map[string]string `json:"tags"` //{"product":"app01", "group":"dev02"}
 }
 
-func (this *TimeSeriesData) Encode() []byte {
-	data, _ := json.Marshal(this)
+func (m *TimeSeriesData) Validate() bool {
+	if !reg.MatchString(m.Metric) || m.Metric == "" {
+		return false
+	}
+	switch strings.ToLower(m.DataType) {
+	case "gauge", "counter", "derive":
+	default:
+		return false
+	}
+	return true
+}
+
+func (tsd *TimeSeriesData) Encode() []byte {
+	data, _ := json.Marshal(tsd)
 	return data
 }
 
-func (this *TimeSeriesData) Decode(data []byte) error {
-	return json.Unmarshal(data, &this)
+func (tsd *TimeSeriesData) Decode(data []byte) error {
+	return json.Unmarshal(data, &tsd)
 }
 
-func (this TimeSeriesData) String() string {
+func (tsd TimeSeriesData) String() string {
 	return fmt.Sprintf("{metric:%s, data_type:%s, value:%.2f, time:%d, cycle:%d, tags:%s}",
-		this.Metric,
-		this.DataType,
-		this.Value,
-		this.Timestamp,
-		this.Cycle,
-		this.Tags2String(),
+		tsd.Metric,
+		tsd.DataType,
+		tsd.Value,
+		tsd.Timestamp,
+		tsd.Cycle,
+		tsd.Tags2String(),
 	)
 }
 
-func (this *TimeSeriesData) Tags2String() string {
-	if len(this.Tags) == 0 {
+func (tsd *TimeSeriesData) Tags2String() string {
+	if len(tsd.Tags) == 0 {
 		return ""
 	}
-	taglen := len(this.Tags)
+	taglen := len(tsd.Tags)
 	keys := make([]string, taglen)
 	i := 0
-	for k := range this.Tags {
+	for k := range tsd.Tags {
 		keys[i] = k
 		i++
 	}
 	sort.Strings(keys)
 	ret := ""
 	for _, k := range keys {
-		ret += fmt.Sprintf("%s=%s,", strings.TrimSpace(k), strings.TrimSpace(this.Tags[k]))
+		ret += fmt.Sprintf("%s=%s,", strings.TrimSpace(k), strings.TrimSpace(tsd.Tags[k]))
 	}
 	return strings.Trim(ret, ",")
 }
 
-func (this *TimeSeriesData) PK() string {
-	return utils.Md5(fmt.Sprintf("%s.%s", this.Metric, this.Tags2String()))
+func (tsd *TimeSeriesData) PK() string {
+	return fmt.Sprintf("%s.%s", tsd.Metric, tsd.Tags2String())
 }
 
-func (this *TimeSeriesData) GetMetric() string {
-	metric := this.Metric
-	if len(this.Tags2String()) > 0 {
-		metric = fmt.Sprintf("%s/%s", metric, this.Tags2String())
+func (tsd *TimeSeriesData) GetMetric() string {
+	metric := tsd.Metric
+	if len(tsd.Tags2String()) > 0 {
+		metric = fmt.Sprintf("%s/%s", metric, tsd.Tags2String())
 	}
 	return metric
 }
 
-type MetricConfig struct {
-	HostID     string         `json:"host_id"`
-	SeriesData TimeSeriesData `json:"time_series_data"`
-}
-
-func (this *MetricConfig) Encode() []byte {
-	data, _ := json.Marshal(this)
-	return data
-}
-
-func (this *MetricConfig) Decode(data []byte) error {
-	return json.Unmarshal(data, &this)
+func (tsd *TimeSeriesData) AddTags(tags map[string]string) {
+	if tsd.Tags == nil {
+		tsd.Tags = tags
+		return
+	}
+	for k, v := range tags {
+		tsd.Tags[k] = v
+	}
 }
 
 //tag1=v1,tag2=v2,tag3=v3

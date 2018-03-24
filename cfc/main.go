@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -20,19 +22,22 @@ func main() {
 		return
 	}
 	if err = InitLog(); err != nil {
-		fmt.Println("failed to init log.")
+		fmt.Println("InitLog ", err)
 		return
 	}
-
+	go func() {
+		fmt.Printf("start metric interface %s\n", GlobalConfig.MetricBind)
+		fmt.Printf("%s\n", http.ListenAndServe(GlobalConfig.MetricBind, nil))
+	}()
 	if err = InitMysqlConnPool(); err != nil {
-		lg.Error("init mysql error: %s", err.Error())
+		fmt.Println("init mysql error: ", err.Error())
 		return
 	}
-
-	if err = InitCfc(); err != nil {
+	if err = InitCFC(); err != nil {
 		fmt.Println(err)
 		return
 	}
-	UpdatHostAive()
+	lg.Info("start cfc on %s ", GlobalConfig.TCPBind)
+	go updatHostStatus()
 	select {}
 }

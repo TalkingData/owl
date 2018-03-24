@@ -1,0 +1,148 @@
+#!/bin/sh
+#
+# owl_client      This shell script takes care of starting and stopping owl_client.
+#
+# chkconfig: 35 99 01
+# description: OWL is a distributed, scalable monitor system 
+#
+### BEGIN INIT INFO
+# Provides: owl_client
+# Required-Start: $network
+# Required-Stop: $network
+# Short-Description: start and stop owl_client
+# Description: 
+### END INIT INFO
+# Source init functions
+. /etc/init.d/functions
+
+if [ ~/.bash_profile ];then
+    . ~/.bash_profile
+fi
+
+# Maximum number of open files
+MAX_OPEN_FILES=65535
+
+# Default program options
+USER=root
+NAME=client
+BASE_DIR=/usr/local/owl-${NAME}
+PROG=$BASE_DIR/$NAME
+
+LOG_DIR=$BASE_DIR/logs
+LOCK_DIR=/var/lock/subsys
+PID_DIR=/var/run/owl
+
+
+
+# Set file names
+LOCK_FILE=$LOCK_DIR/$NAME
+PID_FILE=$PID_DIR/$NAME.pid
+
+# Create dirs if they don't exist
+[ -e $LOG_DIR ] || (mkdir -p $LOG_DIR && chown $USER: $LOG_DIR)
+[ -e $PID_DIR ] || mkdir -p $PID_DIR
+
+start(){
+    echo -n "Starting ${PROC_NAME}:"
+    curid="`id -u -n`"
+    if [ "$curid" != root ] && [ "$curid" != "$USER" ] ; then
+        echo "Must be run as root or $USER, but was run as $curid"
+        return 1
+    fi
+
+    # Sets the maximum number of open file descriptors allowed.
+    ulimit -n $MAX_OPEN_FILES
+    curulimit="`ulimit -n`"
+    if [ "$curulimit" -lt $MAX_OPEN_FILES ] ; then
+        echo "'ulimit -n' must be greater than or equal to $MAX_OPEN_FILES, is $curulimit"
+        return 1
+    fi
+    
+    if [ "`id -u -n`" == root ] ; then
+        # daemons to create and rename log files.
+        chown $USER: $LOG_DIR > /dev/null 2>&1
+        chown $USER: ${LOG_DIR}/*.log > /dev/null 2>&1
+
+        # Changes the owner of the lock, and the pid files to allow
+        touch $LOCK_FILE && chown $USER: $LOCK_FILE
+        touch $PID_FILE && chown $USER: $PID_FILE
+        daemon --user $USER --pidfile $PID_FILE "$PROG 1>/dev/null 2>> ${LOG_DIR}/${NAME}.err &"
+    else
+        # Don't have to change user.
+        daemon --pidfile $PID_FILE "$PROG $PROG_OPTS 1>/dev/null 2>> ${LOG_DIR}/${NAME}.err &"
+    fi
+
+    retval=$?
+    sleep 2
+    echo
+    [ $retval -eq 0 ] && (findproc > $PID_FILE && touch $LOCK_FILE)
+    return $retval
+}
+
+
+stop() {
+  echo -n "Stopping ${NAME}: "
+  killproc -p $PID_FILE $NAME
+  retval=$?
+  echo
+  # Makes the pid file empty.
+  echo > $PID_FILE
+  [ $retval -eq 0 ] && (rm -f $PID_FILE && rm -f $LOCK_FILE)
+  return $retval
+}
+
+restart() {
+    stop
+    start
+}
+
+reload() {
+    restart
+}
+
+findproc() {
+    pgrep -f "${BASE_DIR}.*${NAME}"
+}
+
+rh_status() {
+    # run checks to determine if the service is running or use generic status
+    status -p $PID_FILE -l $LOCK_FILE $NAME
+}
+
+rh_status_q() {
+    rh_status >/dev/null 2>&1
+}
+
+
+case "$1" in
+    start)
+        rh_status_q && exit 0
+        $1
+        ;;
+    stop)
+        rh_status_q || exit 0
+        $1
+        ;;
+    restart)
+        $1
+        ;;
+    reload)
+        rh_status_q || exit 7
+        $1
+        ;;
+    force-reload)
+        force_reload
+        ;;
+    status)
+        rh_status
+        ;;
+    condrestart|try-restart)
+        rh_status_q || exit 0
+        restart
+        ;;
+    *)
+        echo $"Usage: $0 {start|stop|status|restart|condrestart|try-restart|reload|force-reload}"
+        exit 2
+esac
+exit $?
+

@@ -1,86 +1,83 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
-type Operations struct {
-	OperationTime   time.Time `json:"operation_time"`
-	IP              string    `json:"ip"`
-	Operator        string    `json:"operator"`
-	Content         string    `json:"content"`
-	OperationResult bool      `json:"operation_result"`
+// Operation 操作日志的结构体
+type Operation struct {
+	IP       string    `json:"ip"`
+	Operator string    `json:"operator"`
+	Method   string    `json:"method"`
+	API      string    `json:"api"`
+	Body     string    `json:"body"`
+	Result   int       `json:"result"`
+	Time     time.Time `json:"time"`
 }
 
-func (o Operations) MarshalJSON() ([]byte, error) {
-	type Alias Operations
+// MarshalJSON 时间格式转换
+func (o Operation) MarshalJSON() ([]byte, error) {
+	type Alias Operation
 	return json.Marshal(&struct {
-		OperationTime string `json:"operation_time"`
+		Time string `json:"time"`
 		Alias
 	}{
-		OperationTime: o.OperationTime.Format("2006-01-02 15:04:05"),
-		Alias:         (Alias)(o),
+		Time:  o.Time.Format("2006-01-02 15:04:05"),
+		Alias: (Alias)(o),
 	})
 }
 
-func operationsList(c *gin.Context) {
-	var operations []Operations
-	var fail int
-	var success int
-	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
-	page_size, err := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
-	operation_result, err := strconv.Atoi(c.DefaultQuery("operation_result", "-1"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": http.StatusBadRequest, "message": err.Error()})
+// OperationRecord 操作记录中间件
+func OperationRecord() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if strings.ToLower(c.Request.Method) == "get" {
+			c.Next()
+			return
+		}
+		operation := &Operation{}
+		operation.Result = 1
+		operation.Time = time.Now()
+		operation.IP = strings.Split(c.Request.RemoteAddr, ":")[0]
+		rip := c.Request.Header.Get("X-Real-Ip")
+		if len(rip) > 0 {
+			operation.IP = rip
+		}
+		operation.Operator = c.GetString("username")
+		body, _ := ioutil.ReadAll(c.Request.Body)
+		c.Request.Body = ioutil.NopCloser(bytes.NewReader(body))
+		operation.Method = c.Request.Method
+		operation.API = c.Request.URL.String()
+		operation.Body = string(body)
+
+		c.Next()
+
+		if strings.Contains(c.Request.URL.String(), "/operations") != true {
+			if c.Writer.Status() <= 599 && c.Writer.Status() >= 400 {
+				operation.Result = 0
+			}
+			mydb.CreateOperation(operation)
+		}
 	}
-	key := c.DefaultQuery("key", "")
-	cycle := c.DefaultQuery("cycle", "now")
-	year := 0
-	month := 0
-	day := 0
-	switch cycle {
-	case "all":
-		year = -10
-	case "now":
-		day = 0
-	case "1d":
-		day = -1
-	case "3d":
-		day = -3
-	case "7d":
-		day = -7
-	case "1m":
-		month = -1
-	case "3m":
-		month = -3
+}
+
+func operationList(c *gin.Context) {
+	startTime := c.DefaultQuery("start_time", time.Now().Add(-time.Hour).Format("2006-01-02 15:04:05"))
+	endTime := c.DefaultQuery("end_time", time.Now().Format("2006-01-02 15:04:05"))
+	query := c.DefaultQuery("query", "")
+	where := fmt.Sprintf("(time BETWEEN '%s' AND '%s')", startTime, endTime)
+	if query != "" {
+		where += fmt.Sprintf("AND (ip LIKE '%%%s%%' OR method LIKE '%%%s%%' OR operator LIKE '%%%s%%' OR api LIKE '%%%s%%')", query, query, query, query)
 	}
-	start := c.DefaultQuery("start", time.Now().AddDate(year, month, day).Format("2006-01-02 00:00:00"))
-	end := c.DefaultQuery("end", time.Now().Format("2006-01-02 15:04:05"))
-
-	offset := (page - 1) * page_size
-	sort := "operation_time desc"
-
-	where := fmt.Sprintf("`operation_time` BETWEEN '%s' AND '%s'", start, end)
-	if key != "" {
-		key = strings.TrimSpace(key)
-		where += fmt.Sprintf(" AND (`operator` LIKE '%%%s%%' OR `content` LIKE '%%%s%%')", key, key)
-	}
-
-	mydb.Table("operations").Where(where).Where("operation_result = ?", 0).Count(&fail)
-	mydb.Table("operations").Where(where).Where("operation_result = ?", 1).Count(&success)
-
-	if operation_result != -1 {
-		where += fmt.Sprintf(" AND `operation_result` = %d", operation_result)
-	}
-
-	mydb.Where(where).Order(sort).Offset(offset).Limit(page_size).Find(&operations)
-
-	c.JSON(http.StatusOK, gin.H{"code": http.StatusOK, "operations": &operations, "success": success, "fail": fail})
+	limit := fmt.Sprintf("%d, %d", c.GetInt("offset"), c.GetInt("limit"))
+	operations := mydb.GetOperations(where, limit)
+	total := mydb.GetOperationsCount(where)
+	c.JSON(http.StatusOK, gin.H{"code": http.StatusOK, "operations": operations, "total": total})
 }

@@ -3,262 +3,255 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"owl/common/types"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-
-	"owl/common/types"
 )
 
-type Action struct {
-	types.Action
-	Users      []types.ActionUser      `form:"users" json:"users"`
-	UserGroups []types.ActionUserGroup `form:"user_groups" json:"user_groups" binding:"required"`
-}
-
+// Strategy 报警策略结构体
 type Strategy struct {
-	types.Strategy
-	Hosts    []types.StrategyHost  `form:"hosts" json:"hosts"`
-	Groups   []types.StrategyGroup `form:"groups" json:"groups"`
-	Triggers []types.Trigger       `form:"triggers" json:"triggers" binding:"required"`
-	Actions  []Action              `form:"actions" json:"actions" binding:"required"`
+	ID          int64  `json:"id"`
+	ProductID   int    `json:"product_id" db:"product_id"`
+	Name        string `json:"name"`
+	Priority    int    `json:"priority"`
+	AlarmCount  int    `json:"alarm_count" db:"alarm_count"`
+	Cycle       int    `json:"cycle"`
+	Expression  string `json:"expression"`
+	Description string `json:"description"`
+	UserID      int    `json:"user_id" db:"user_id"`
+	Enable      int    `json:"enable"`
 }
 
-type ActionInfo struct {
-	types.Action
-	Users      []types.User      `json:"users"`
-	UserGroups []types.UserGroup `json:"user_groups"`
+// Trigger 报警策略逻辑表达式结构体
+type Trigger struct {
+	ID          int64   `form:"id" json:"-" `
+	StrategyID  int     `form:"strategy_id" json:"strategy_id" db:"strategy_id"`
+	Metric      string  `form:"metric" json:"metric"`
+	Tags        string  `form:"tags" json:"tags"`
+	Number      int     `form:"number" json:"number"`
+	Index       string  `form:"index" json:"index" `
+	Name        string  `form:"name" json:"name"`
+	Method      string  `form:"method" json:"method" `
+	Symbol      string  `form:"symbol" json:"symbol" `
+	Threshold   float64 `form:"threshold" json:"threshold" `
+	Description string  `form:"description" json:"description"`
 }
 
+// StrategyGroup 报警策略与主机组结构体
+type StrategyGroup struct {
+	ID         int64 `json:"-"`
+	StrategyID int   `json:"-"`
+	GroupID    int   `json:"group_id"`
+}
+
+//StrategySimple 简单的策略结构体
+type StrategySimple struct {
+	Strategy
+	UserName string `json:"user_name" db:"user_name"`
+}
+
+//StrategySummary 查询策略的结构体
+type StrategySummary struct {
+	StrategySimple
+	AlertCount  int `json:"alert_count" db:"alert_count"`
+	NodataCount int `json:"nodata_count" db:"nodata_count"`
+	UnknowCount int `json:"unknow_count" db:"unknow_count"`
+}
+
+//StrategyDetail 创建策略的结构体
+type StrategyDetail struct {
+	Strategy
+	ExcludeHosts []*AlarmHost     `form:"exclude_hosts" json:"exclude_hosts"`
+	Groups       []*StrategyGroup `form:"groups" json:"groups"`
+	Triggers     []*Trigger       `form:"triggers" json:"triggers" binding:"required"`
+	Actions      []*ActionDetail  `form:"actions" json:"actions" binding:"required"`
+}
+
+//StrategyInfo 单个策略详细信息的结构体
 type StrategyInfo struct {
-	types.Strategy
-	Hosts    []types.Host    `json:"hosts"`
-	Groups   []types.Group   `json:"groups"`
-	Triggers []types.Trigger `json:"triggers"`
-	Actions  []*ActionInfo   `json:"actions"`
+	Strategy
+	ExcludeHosts []*AlarmHost   `json:"exclude_hosts"`
+	Groups       []*types.Group `json:"groups"`
+	Triggers     []*Trigger     `json:"triggers"`
+	Actions      []*ActionInfo  `json:"actions"`
 }
 
-type StrategyWithName struct {
-	types.Strategy
-	UserName   string `json:"user_name"`
-	ParentName string `json:"parent_name"`
+// Action 报警动作结构体
+type Action struct {
+	ID              int
+	StrategyID      int    `form:"strategy_id" db:"strategy_id" json:"strategy_id" binding:"required"`
+	Type            int    `form:"type" json:"type" binding:"required"`
+	Kind            int    `form:"kind" json:"kind" binding:"required"`
+	ScriptID        int    `form:"script_id" db:"script_id" json:"script_id"`
+	AlarmSubject    string `form:"alarm_subject" json:"alarm_subject" db:"alarm_subject"`
+	AlarmTemplate   string `form:"alarm_template" json:"alarm_template" db:"alarm_template"`
+	RestoreSubject  string `form:"restore_subject" json:"restore_subject" db:"restore_subject"`
+	RestoreTemplate string `form:"restore_template" json:"restore_template" db:"restore_template"`
+	BeginTime       string `form:"begin_time" db:"begin_time" json:"begin_time" binding:"require"`
+	EndTime         string `form:"end_time" db:"end_time" json:"end_time" binding:"require"`
+	TimePeriod      int    `form:"time_period" db:"time_period" json:"time_period" binding:"require"`
 }
 
-func strategiesList(c *gin.Context) {
-	var strategies []StrategyWithName
-	var total int
-	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
-	page_size, err := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": http.StatusBadRequest, "message": err.Error()})
-	}
-	key := c.DefaultQuery("key", "")
+// ActionUserGroup 报警执行动作的通知人员组
+type ActionUserGroup struct {
+	ID          int `json:"-"`
+	ActionID    int `json:"-"`
+	UserGroupID int `form:"user_group_id" json:"user_group_id"`
+}
+
+// ActionDetail 执行动作详细信息
+type ActionDetail struct {
+	Action
+	UserGroups []ActionUserGroup `form:"user_groups" json:"user_groups" binding:"required"`
+}
+
+// ActionInfo 执行动作信息
+type ActionInfo struct {
+	Action
+	Script     *Script            `json:"script"`
+	UserGroups []*types.UserGroup `json:"user_groups"`
+}
+
+// AlarmHost 需要排除的报警主机
+type AlarmHost struct {
+	ID       string `json:"id"`
+	IP       string `json:"ip"`
+	Hostname string `json:"hostname"`
+}
+
+func strategyList(c *gin.Context) {
+	productID := c.GetInt("product_id")
+	query := c.DefaultQuery("query", "")
 	my := c.DefaultQuery("my", "false")
-
-	offset := (page - 1) * page_size
-
-	where := ""
-	if my == "false" {
-		where = fmt.Sprintf("s.name LIKE '%%%s%%'", key)
-	} else {
-		where = fmt.Sprintf("s.name LIKE '%%%s%%' and s.user_id = %d", key, GetUser(c).ID)
+	status := c.DefaultQuery("status", "all")
+	where := fmt.Sprintf("s.product_id=%d", productID)
+	order := c.GetString("order")
+	if query != "" {
+		where += fmt.Sprintf(" and s.name LIKE '%%%s%%'", query)
 	}
+	if my == "true" {
+		if user := mydb.getUserProfile(c.GetString("username")); user != nil {
+			where += fmt.Sprintf(" and s.user_id = %d", user.ID)
+		}
+	}
+	if status == "ok" {
+		where += " and alert_count = 0 and nodata_count = 0 and unknow_count = 0"
+	} else if status == "problem" {
+		where += " and alert_count != 0 or nodata_count != 0 or unknow_count != 0"
+	}
+	total := mydb.GetStrategiesCount(where)
+	limit := fmt.Sprintf("%d, %d", c.GetInt("offset"), c.GetInt("limit"))
+	strategies := mydb.GetStrategies(where, order, limit)
+	c.JSON(http.StatusOK, gin.H{"code": http.StatusOK, "strategies": strategies, "total": total})
+}
 
-	mydb.Where(where).Table("strategy s").Count(&total)
+func strategyHostGroup(c *gin.Context) {
+	hostGroupID, err := strconv.Atoi(c.Param("host_group_id"))
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusOK, gin.H{"code": http.StatusBadRequest, "message": "params is invalid"})
+		return
+	}
+	query := c.DefaultQuery("query", "")
+	where := fmt.Sprintf("sg.group_id = %d", hostGroupID)
+	if query != "" {
+		where += fmt.Sprintf(" AND (s.name LIKE '%%%s%%' OR u.username LIKE '%%%s%%')", query, query)
 
-	mydb.Table("strategy s").Select("s.*, user.username user_name, ps.name parent_name").
-		Joins("Left Join user ON s.user_id = user.id").
-		Joins("Left Join strategy ps ON s.pid = ps.id").Where(where).Offset(offset).Limit(page_size).Find(&strategies)
-
-	c.JSON(http.StatusOK, gin.H{"code": http.StatusOK, "strategies": &strategies, "total": total})
+	}
+	limit := fmt.Sprintf("%d, %d", c.GetInt("offset"), c.GetInt("limit"))
+	strategies := mydb.GetStrategiesByHostGroupID(where, limit)
+	total := mydb.GetStrategiesByHostGroupIDCount(where)
+	c.JSON(http.StatusOK, gin.H{"code": http.StatusOK, "strategies": strategies, "total": total})
 }
 
 func strategyCreate(c *gin.Context) {
-	var strategy Strategy
+	productID := c.GetInt("product_id")
+	var strategy StrategyDetail
 	if err := c.BindJSON(&strategy); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": http.StatusBadRequest, "message": err.Error()})
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"code": http.StatusBadRequest, "message": err.Error()})
 		return
 	}
-
-	strategy.UserID = GetUser(c).ID
-
-	if strategy.Pid != 0 {
-		var parent_strategy types.Strategy
-		if err := mydb.Where("id = ?", strategy.Pid).First(&parent_strategy).Error; err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"code": http.StatusNotFound, "message": err.Error()})
-			return
-		}
-
-		if parent_strategy.Pid != 0 {
-			c.JSON(http.StatusNotAcceptable, gin.H{"code": http.StatusForbidden, "message": "not allow"})
-			return
-		}
-	}
-
-	if err := mydb.Create(&strategy).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": http.StatusInternalServerError, "message": err.Error()})
+	user := mydb.getUserProfile(c.GetString("username"))
+	if user == nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"code": http.StatusInternalServerError, "message": "user not found"})
 		return
 	}
-
-	c.JSON(http.StatusOK, gin.H{"code": http.StatusOK, "form": &strategy})
-}
-
-func strategyDelete(c *gin.Context) {
-	strategy_id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": http.StatusBadRequest, "message": err.Error()})
-	}
-
-	var strategy types.Strategy
-	if err := mydb.Where("id = ?", strategy_id).First(&strategy).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"code": http.StatusNotFound, "message": err.Error()})
+	strategy.UserID = user.ID
+	strategy.ProductID = productID
+	if err := mydb.CreateStrategy(&strategy); err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"code": http.StatusInternalServerError, "message": err.Error()})
 		return
 	}
-
-	if !GetUser(c).IsAdmin() && GetUser(c).ID != strategy.UserID {
-		c.JSON(http.StatusNotFound, gin.H{"code": http.StatusForbidden, "message": "not allow"})
-		return
-	}
-
-	tx := mydb.Begin()
-
-	if err := tx.Where("id = ?", strategy_id).Delete(Strategy{}).Error; err != nil {
-		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"code": http.StatusInternalServerError, "message": err.Error()})
-		return
-	}
-
-	if err := tx.Where("pid = ?", strategy_id).Delete(Strategy{}).Error; err != nil {
-		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"code": http.StatusInternalServerError, "message": err.Error()})
-		return
-	}
-
-	tx.Commit()
-
-	c.JSON(http.StatusOK, gin.H{"code": http.StatusOK, "message": "delete"})
+	c.JSON(http.StatusOK, gin.H{"code": http.StatusOK, "message": "success"})
 }
 
 func strategyInfo(c *gin.Context) {
-	strategy_id := c.Param("id")
-
-	var strategy StrategyInfo
-	var hosts []types.Host
-	var groups []types.Group
-	var triggers []types.Trigger
-	var actions []*ActionInfo
-	var users []types.User
-	var user_groups []types.UserGroup
-
-	if len(strategy_id) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"code": http.StatusBadRequest, "message": "strategy_id should be applied"})
+	productID := c.GetInt("product_id")
+	strategyID, err := strconv.ParseInt(c.Param("strategy_id"), 10, 64)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"code": http.StatusBadRequest, "message": "params value is invalid"})
 		return
 	}
-
-	if err := mydb.Where("id = ?", strategy_id).First(&strategy).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"code": http.StatusNotFound, "message": err.Error()})
+	strategy := mydb.GetStrategy(strategyID, productID)
+	if strategy == nil {
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"code": http.StatusNotFound, "message": "strategy not found"})
 		return
 	}
-
-	mydb.Select("`host`.*").Joins("Join strategy_host ON strategy_host.host_id = host.id").Where("strategy_id = ?", strategy_id).Find(&hosts)
-	mydb.Select("`group`.*").Joins("Join strategy_group ON strategy_group.group_id = group.id").Where("strategy_id = ?", strategy_id).Find(&groups)
-	mydb.Where("strategy_id = ?", strategy_id).Order("`index` asc").Find(&triggers)
-	mydb.Where("strategy_id = ?", strategy_id).Find(&actions)
+	hostGroups := mydb.GetHostGroupsByStrategyID(strategyID)
+	triggers := mydb.GetTriggersByStrategyID(strategyID)
+	actions := mydb.GetActionsByStrategyID(strategyID)
+	hosts := mydb.GetHostsExByStrategyID(strategyID)
 	for _, action := range actions {
-		mydb.Select("`user`.*").Joins("Join action_user ON action_user.user_id = user.id").Where("action_id = ?", action.ID).Find(&users)
-		mydb.Select("`user_group`.*").Joins("Join action_user_group ON action_user_group.user_group_id = user_group.id").Where("action_id = ?", action.ID).Find(&user_groups)
-		action.Users = users
-		action.UserGroups = user_groups
+		action.Script = mydb.GetScriptByScriptID(action.ScriptID)
+		action.UserGroups = mydb.GetUserGroupsByActionID(action.ID)
 	}
-	strategy.Hosts = hosts
-	strategy.Groups = groups
-	strategy.Triggers = triggers
-	strategy.Actions = actions
-
-	c.JSON(http.StatusOK, gin.H{"code": http.StatusOK, "strategy": &strategy})
+	strategyInfo := &StrategyInfo{*strategy, hosts, hostGroups, triggers, actions}
+	c.JSON(http.StatusOK, gin.H{"code": http.StatusOK, "strategy": &strategyInfo})
 }
 
 func strategyUpdate(c *gin.Context) {
-	var strategy Strategy
-	var strategy_db types.Strategy
+	productID := c.GetInt("product_id")
+	var strategy StrategyDetail
 	if err := c.BindJSON(&strategy); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": http.StatusBadRequest, "message": err.Error()})
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"code": http.StatusBadRequest, "message": err.Error()})
 		return
 	}
-
-	if err := mydb.Where("id = ?", strategy.ID).First(&strategy_db).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"code": http.StatusNotFound, "message": err.Error()})
+	if s := mydb.GetStrategy(strategy.ID, productID); s == nil {
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"code": http.StatusNotFound, "message": "strategy not found"})
 		return
 	}
-
-	if !GetUser(c).IsAdmin() && GetUser(c).ID != strategy_db.UserID {
-		c.JSON(http.StatusNotFound, gin.H{"code": http.StatusForbidden, "message": "not allow"})
+	if err := mydb.UpdateStrategy(&strategy); err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"code": http.StatusInternalServerError, "message": err.Error()})
 		return
 	}
-
-	tx := mydb.Begin()
-
-	if err := tx.Where("strategy_id = ?", strategy.ID).Delete(&strategy.Hosts).Error; err != nil {
-		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"code": http.StatusInternalServerError, "message": err.Error()})
-		return
-	}
-	if err := mydb.Where("strategy_id = ?", strategy.ID).Delete(&strategy.Groups).Error; err != nil {
-		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"code": http.StatusInternalServerError, "message": err.Error()})
-		return
-	}
-	if err := mydb.Where("strategy_id = ?", strategy.ID).Delete(&strategy.Triggers).Error; err != nil {
-		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"code": http.StatusInternalServerError, "message": err.Error()})
-		return
-	}
-	if err := mydb.Where("strategy_id = ?", strategy.ID).Delete(&strategy.Actions).Error; err != nil {
-		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"code": http.StatusInternalServerError, "message": err.Error()})
-		return
-	}
-	if err := tx.Save(&strategy).Error; err != nil {
-		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"code": http.StatusInternalServerError, "message": err.Error()})
-		return
-	}
-
-	tx.Commit()
-
-	c.JSON(http.StatusOK, gin.H{"code": http.StatusOK, "strategy": &strategy})
+	c.JSON(http.StatusOK, gin.H{"code": http.StatusOK, "message": "success"})
 }
 
 func strategySwitch(c *gin.Context) {
-	strategy_id := c.Param("id")
-	enable, err := strconv.Atoi(c.DefaultQuery("enable", "0"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": http.StatusBadRequest, "message": err.Error()})
+	productID := c.GetInt("product_id")
+	strategyIDs := c.QueryArray("strategy_id")
+	enable := c.Query("enable")
+	if len(strategyIDs) == 0 || enable == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"code": http.StatusBadRequest, "message": "params not be applied"})
 		return
 	}
-	var strategy StrategyWithName
-	if len(strategy_id) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"code": http.StatusBadRequest, "message": "strategy_id should be applied"})
+	if err := mydb.UpdateStrategiesStatus(strategyIDs, productID, enable); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"code": http.StatusBadRequest, "message": err.Error()})
 		return
 	}
+	c.JSON(http.StatusOK, gin.H{"code": http.StatusOK, "message": "success"})
+}
 
-	if err := mydb.Table("strategy s").Select("s.*, user.username user_name, ps.name parent_name").
-		Joins("Left Join user ON s.user_id = user.id").
-		Joins("Left Join strategy ps ON s.pid = ps.id").Where("s.id = ?", strategy_id).Find(&strategy).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"code": http.StatusNotFound, "message": err.Error()})
+func strategyDelete(c *gin.Context) {
+	productID := c.GetInt("product_id")
+	strategyIDs := c.QueryArray("strategy_id")
+	if len(strategyIDs) == 0 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"code": http.StatusBadRequest, "message": "params not be applied"})
 		return
 	}
-
-	if !GetUser(c).IsAdmin() && GetUser(c).ID != strategy.UserID {
-		c.JSON(http.StatusNotFound, gin.H{"code": http.StatusForbidden, "message": "not allow"})
+	if err := mydb.DeleteStrategies(strategyIDs, productID); err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"code": http.StatusInternalServerError, "message": err.Error()})
 		return
 	}
-
-	strategy.Enable = enable != 0
-	if err := mydb.Select("enable").Save(&strategy).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": http.StatusInternalServerError, "message": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"code": http.StatusOK, "strategy": &strategy})
+	c.JSON(http.StatusOK, gin.H{"code": http.StatusOK, "message": "success"})
 }

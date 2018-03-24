@@ -3,112 +3,90 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
-	. "owl/common/types"
+	"owl/common/types"
 	"time"
+
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/jmoiron/sqlx"
 )
 
-var mydb *db
+var mydb *Storage
 
-type db struct {
-	*sql.DB
+type Storage struct {
+	*sqlx.DB
 }
 
 func InitMysqlConnPool() error {
-	conn, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8",
-		GlobalConfig.MYSQL_USER, GlobalConfig.MYSQL_PASSWORD, GlobalConfig.MYSQL_ADDR, GlobalConfig.MYSQL_DBNAME))
+	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8&parseTime=true&loc=Local",
+		GlobalConfig.MySQLUser, GlobalConfig.MySQLPassword, GlobalConfig.MySQLAddr, GlobalConfig.MySQLDBName)
+	db, err := sqlx.Open("mysql", dsn)
 	if err != nil {
 		return err
 	}
-	row, err := conn.Query("select 1")
-	if err != nil {
-		return err
-	}
-	defer row.Close()
-	conn.SetMaxIdleConns(GlobalConfig.MYSQL_MAX_IDLE_CONN)
-	conn.SetMaxOpenConns(GlobalConfig.MYSQL_MAX_CONN)
-	mydb = &db{conn}
+	db.SetMaxIdleConns(GlobalConfig.MySQLMaxIdleConn)
+	db.SetMaxOpenConns(GlobalConfig.MySQLMaxConn)
+	mydb = &Storage{db}
 	return nil
 }
 
-func (this *db) CreateHost(id, sn, ip, hostname, agent_version string) error {
-	now := time.Now().Format("2006-01-02 15:04:05")
-	_, err := this.Exec("INSERT INTO `host`(`id`, `sn`, `ip`, `hostname`, `agent_version`,`create_at`, `update_at`) values(?,?,?,?,?,?,?)",
-		id, sn, ip, hostname, agent_version, now, now)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (this *db) UpdateHost(host *Host) {
-	_, err := this.Exec("UPDATE `host` SET `ip`=?, `hostname`=?, `agent_version`=?, `update_at`=? WHERE id=?",
-		host.IP, host.Hostname, host.AgentVersion, time.Now().Format("2006-01-02 15:04:05"), host.ID)
-	if err != nil {
-		lg.Error("update host error %s", err)
-	}
-}
-
-func (this *db) DeleteHost(host *Host) error {
-	_, err := this.Exec("DELETE FROM `host` WHERE ip=? and hostname=?", host.IP, host.Hostname)
+func (s *Storage) createHost(host *types.Host) error {
+	now := time.Now().Format(timeFomart)
+	sqlString := fmt.Sprintf("insert into `host`(`id`, `ip`, `hostname`, `uptime`, `idle_pct`, `agent_version`, `create_at`, `update_at`) "+
+		" values('%s', '%s', '%s', %0.2f, %0.2f, '%s','%s','%s')", host.ID, host.IP, host.Hostname, host.Uptime, host.IdlePct, host.AgentVersion, now, now)
+	lg.Debug("create host:%s", sqlString)
+	_, err := s.Exec(sqlString)
 	return err
 }
 
-func (this *db) GetHost(host_id string) *Host {
-	host := &Host{ID: host_id}
-	if err := this.QueryRow("SELECT `ip`, `hostname`, `agent_version`, `sn` FROM `host` WHERE id=?",
-		host_id).Scan(&host.IP, &host.Hostname, &host.AgentVersion, &host.SN); err != nil {
-		if err == sql.ErrNoRows {
-			return nil
-		}
-	}
-	return host
+func (s *Storage) updateHost(host *types.Host) error {
+	sqlString := fmt.Sprintf("update `host` set `ip`='%s', `uptime`=%0.2f, `idle_pct`=%0.2f, `hostname`='%s', `agent_version`='%s', `update_at`='%s' where id='%s'",
+		host.IP, host.Uptime, host.IdlePct, host.Hostname, host.AgentVersion, time.Now().Format(timeFomart), host.ID)
+	lg.Debug("update host:%s", sqlString)
+	_, err := s.Exec(sqlString)
+	return err
 }
 
-func (this *db) GetNoMaintainHost() []*Host {
-	var (
-		tm    time.Time
-		err   error
-		hosts []*Host
-	)
-	rows, err := this.Query("SELECT `id`, `ip`, `hostname`, `status`, `update_at` FROM `host` WHERE `status` != '2'")
-	if err != nil {
-		return nil
+func (s *Storage) getHost(hostID string) (*types.Host, error) {
+	host := &types.Host{}
+	sqlString := fmt.Sprintf("select id, ip, hostname, agent_version,status,create_at, update_at  from `host` where id='%s'", hostID)
+	lg.Debug("getHost:%s", sqlString)
+	err := s.Get(host, sqlString)
+	if err == sql.ErrNoRows {
+		return nil, nil
 	}
-	defer rows.Close()
-	for rows.Next() {
-		h := &Host{}
-		var update_at string
-		if err := rows.Scan(&h.ID, &h.IP, &h.Hostname, &h.Status, &update_at); err != nil {
-			continue
-		}
-		tm, err = time.ParseInLocation("2006-01-02 15:04:05", update_at, time.Local)
-		if err != nil {
-			continue
-		}
-		h.UpdateAt = tm
-		hosts = append(hosts, h)
+	return host, err
+}
+
+func (s *Storage) getAllHosts() []*types.Host {
+	hosts := []*types.Host{}
+	sqlString := fmt.Sprintf("select id, ip, hostname, agent_version,status,create_at, update_at  from `host`")
+	if err := s.Select(&hosts, sqlString); err != nil {
+		lg.Error("getNoMaintainHost %s", err)
+		return nil
 	}
 	return hosts
 }
 
-func (this *db) SetHostAlive(id string, st string) {
-	this.Exec("UPDATE `host` SET `status` = ? WHERE `id`=?", st, id)
+func (s *Storage) setHostAlive(hostID string, status string) {
+	sqlString := fmt.Sprintf("update `host` set `status` = '%s' where `id`='%s'", status, hostID)
+	lg.Debug("setHostAlive:%s", sqlString)
+	s.Exec(sqlString)
 }
 
-func (this *db) GetPlugins(host_id string) []Plugin {
-	plugins := []Plugin{}
+func (s *Storage) getHostPlugins(hostID string) ([]types.Plugin, error) {
+	plugins := []types.Plugin{}
 	idMap := make(map[int]struct{})
-	rows, err := this.Query("SELECT `id`, `name`, `args`, `interval`, `timeout` FROM `plugin` WHERE "+
-		" id in(SELECT `plugin_id` FROM `host_plugin` WHERE `host_id`=?)", host_id)
+	sqlString := fmt.Sprintf("select `id`, `name`, `path`, `args`, `checksum`, `interval`, `timeout` from `plugin` where"+
+		" id in (select `plugin_id` from `host_plugin` where `host_id`='%s')", hostID)
+	lg.Debug("getHostPlugins:%s", sqlString)
+	rows, err := s.Query(sqlString)
 	if err != nil {
-		fmt.Println(err)
-		return nil
+		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		plugin := Plugin{}
-		if err := rows.Scan(&plugin.ID, &plugin.Name, &plugin.Args, &plugin.Interval, &plugin.Timeout); err != nil {
+		plugin := types.Plugin{}
+		if err := rows.Scan(&plugin.ID, &plugin.Name, &plugin.Path, &plugin.Args, &plugin.Checksum, &plugin.Interval, &plugin.Timeout); err != nil {
 			fmt.Println(err)
 			continue
 		}
@@ -116,17 +94,18 @@ func (this *db) GetPlugins(host_id string) []Plugin {
 		idMap[plugin.ID] = struct{}{}
 	}
 	//获取主机组所有的插件
-	rows, err = this.Query("SELECT `id`, `name`, `args`, `interval`, `timeout` FROM `plugin` WHERE "+
-		"id in (SELECT `plugin_id` FROM `group_plugin` WHERE group_id "+
-		"in(SELECT `group_id` FROM `host_group` WHERE host_id=?))", host_id)
+	sqlString = fmt.Sprintf("select `id`, `name`, `path`, `args`, `checksum`, `interval`, `timeout` from `plugin` where "+
+		"id in (select `plugin_id` from `host_group_plugin` where group_id "+
+		"in(select `host_group_id` from `host_group_host` where host_id='%s'))", hostID)
+	lg.Debug("getHostGroupPlugins:%s", sqlString)
+	rows, err = s.Query(sqlString)
 	if err != nil {
-		fmt.Println(err)
-		return nil
+		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		plugin := Plugin{}
-		if err := rows.Scan(&plugin.ID, &plugin.Name, &plugin.Args, &plugin.Interval, &plugin.Timeout); err != nil {
+		plugin := types.Plugin{}
+		if err := rows.Scan(&plugin.ID, &plugin.Name, &plugin.Path, &plugin.Args, &plugin.Checksum, &plugin.Interval, &plugin.Timeout); err != nil {
 			fmt.Println(err)
 			continue
 		}
@@ -136,20 +115,32 @@ func (this *db) GetPlugins(host_id string) []Plugin {
 		plugins = append(plugins, plugin)
 		idMap[plugin.ID] = struct{}{}
 	}
-	return plugins
+	return plugins, nil
 }
 
-func (this *db) MetricIsExists(host_id, metric string) bool {
+func (s *Storage) metricIsExists(hostID, metric string, tags string) bool {
+	sqlString := fmt.Sprintf("select `id` from `metric` where `host_id`= '%s' and `metric`='%s' and `tags`='%s'", hostID, metric, tags)
+	lg.Debug("metricIsExists:%s", sqlString)
 	var id int
-	err := this.QueryRow("SELECT `id` FROM `metric` WHERE `host_id`=? and `name`=? ", host_id, metric).Scan(&id)
-	if err != nil {
+	if err := s.Get(&id, sqlString); err != nil {
+		if err == sql.ErrNoRows {
+			// no row
+			return false
+		}
+		// error
+		lg.Error("metricIsExists:%s", err)
 		return false
 	}
+	// exists
 	return true
 }
 
-func (this *db) CreateMetric(host_id string, tsd TimeSeriesData) error {
-	_, err := this.Exec("INSERT INTO `metric` (`host_id`, `name`, `dt`, `cycle`) values(?,?,?,?)",
-		host_id, tsd.GetMetric(), tsd.DataType, tsd.Cycle)
+func (s *Storage) createMetric(hostID string, tsd types.TimeSeriesData) error {
+	now := time.Now().Format(timeFomart)
+	sqlString := fmt.Sprintf("insert into `metric` (`host_id`, `metric`, `tags`, `dt`, `cycle`, `create_at`, `update_at`) "+
+		"values('%s', '%s', '%s', '%s', %d, '%s', '%s')",
+		hostID, tsd.Metric, tsd.Tags2String(), tsd.DataType, tsd.Cycle, now, now)
+	lg.Debug("createMetric:%s", sqlString)
+	_, err := s.Exec(sqlString)
 	return err
 }

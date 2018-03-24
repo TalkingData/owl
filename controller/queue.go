@@ -8,9 +8,9 @@ import (
 )
 
 var (
-	// Queue is Empty.
+	// 队列满载.
 	ErrEmptyQueue = errors.New("queue is empty")
-	// Queue is Full.
+	// 队列为空.
 	ErrFullQueue = errors.New("queue is full")
 )
 
@@ -22,15 +22,17 @@ func newWaiter() waiter {
 }
 
 type Queue struct {
-	maxSize int
-	mutex   sync.Mutex
-	items   *list.List // store items
-	putters *list.List // store blocked Put operators
-	getters *list.List // store blocked Get operators
+	maxSize     int
+	mute        bool
+	mutex       sync.Mutex
+	items       *list.List // store items
+	putters     *list.List // store blocked Put operators
+	getters     *list.List // store blocked Get operators
+	update_time time.Time
 }
 
-// New create a new Queue, The maxSize variable sets the max Queue size.
-// If maxSize is zero, Queue will be infinite size, and Put always no wait.
+// maxSize参数可设置队列大小
+// 若maxSize为0，那么队列是无限大，并且向队列中加元素无需等待
 func NewQueue(maxSize int) *Queue {
 	q := new(Queue)
 	q.mutex = sync.Mutex{}
@@ -38,6 +40,7 @@ func NewQueue(maxSize int) *Queue {
 	q.items = list.New()
 	q.putters = list.New()
 	q.getters = list.New()
+	q.update_time = time.Now()
 	return q
 }
 

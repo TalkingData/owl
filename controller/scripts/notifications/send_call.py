@@ -65,7 +65,7 @@ class VoicePromptSender:
         whole_url = self.url + "?sdkappid=" + str(self.appid) + "&random=" + str(rnd)
         result = self.util.send_post_request("yun.tim.qq.com", whole_url, data)
         obj = json.loads(result)
-        if obj["result"] == "0" and obj["errmsg"] == "OK":
+        if obj["result"] == 0 and obj["errmsg"] == "OK":
                 return True, result
         else:
                 return False, result
@@ -133,7 +133,9 @@ if __name__ == "__main__":
     parser.add_argument("content", help="the content of the alarm call")
     parser.add_argument("receiver", help="the phone number who receive the call")
     args = parser.parse_args()
-
+    receiver = json.loads(args.receiver)
     vps = VoicePromptSender(VoicePromptSender.appid, VoicePromptSender.appkey)
-    status, response = vps.send(86, args.receiver, 2, "{0}{1}".format(VoicePromptSender.template, args.content), "")
+    status, response = vps.send(86, receiver["phone"], 2, "{0}{1}".format(VoicePromptSender.template, args.content), "")
+    if not status:
+        sys.exit("{0} {1}".format(status, response))
     print status, response

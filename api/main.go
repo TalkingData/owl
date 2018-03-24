@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -14,16 +16,25 @@ func init() {
 }
 
 func main() {
-	if err := InitGlobalConfig(); err != nil {
+	var err error
+	if err = InitGlobalConfig(); err != nil {
 		fmt.Println("failed to init global config:", err)
 		return
 	}
-	if err := InitMysqlConnPool(); err != nil {
-		fmt.Println("failed to init mysql connection pool:", err)
+	if err = initPublicKeyAndPrivateKey(); err != nil {
+		panic(err)
+	}
+	go func() {
+		fmt.Printf("start metric interface %s\n", config.MetricBind)
+		fmt.Printf("%s\n", http.ListenAndServe(config.MetricBind, nil))
+	}()
+	if err = initTSDB(); err != nil {
+		fmt.Println("failed to init tsdb storage:", err)
 		return
 	}
-	if GlobalConfig.AUTO_BUILD_METRIC_TAG_INDEX {
-		autoBuildMetricAndTagIndex()
+	if err = InitMysqlConnPool(); err != nil {
+		fmt.Println("failed to init mysql connection pool:", err)
+		return
 	}
 	if err := InitServer(); err != nil {
 		fmt.Println("failed to init http server:", err)

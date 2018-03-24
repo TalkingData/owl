@@ -3,6 +3,7 @@
 import argparse
 import sys
 import smtplib
+import json
 from email.mime.text import MIMEText
 
 mail_host = ""
@@ -34,7 +35,8 @@ if __name__ == '__main__':
     parser.add_argument("receiver", help="the alarm to send by mail")
     args = parser.parse_args()
 
-    status, response = send(args.subject, args.content, args.receiver)
+    receiver = json.loads(args.receiver)
+    status, response = send(args.subject, args.content, receiver["mail"])
     if not status:
         sys.exit("{0} {1}".format(status, response))
 

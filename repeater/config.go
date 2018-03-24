@@ -3,36 +3,38 @@ package main
 import "github.com/Unknwon/goconfig"
 
 const (
-	ConfigFilePath          = "./conf/repeater.conf"
-	DEFAULT_BACKEND         = "opentsdb"
-	DEFAULT_TCP_BIND        = "0.0.0.0:10040"
-	DEFAULT_OPENTSDB_ADDR   = "127.0.0.1:4242"
-	DEFAULT_REPEATER_ADDR   = ""
-	DEFAULT_MAX_PACKET_SIZE = 4096
-	DEFAULT_BUFFER_SIZE     = 1 << 20
-	DEFAULT_LOG_FILE        = "./logs/repeater.log"
-	DEFAULT_LOG_EXPIRE_DAYS = 7
-	DEFAULT_LOG_LEVEL       = 3
+	ConfigFilePath       = "./conf/repeater.conf"
+	DefaultBackend       = "opentsdb"
+	DefaultTCPBind       = "0.0.0.0:10040"
+	DefaultMetricBind    = "0.0.0.0:10041"
+	DefaultOpentsdbAddr  = "127.0.0.1:4242"
+	DefaultRepeaterAddr  = ""
+	DefaultMaxPacketSize = 4096
+	DefaultBufferSize    = 1 << 20
+	DefaultLogFile       = "./logs/repeater.log"
+	DefaultLogExpireDays = 7
+	DefaultLogLevel      = 3
 )
 
 var GlobalConfig *Config
 
 type Config struct {
-	BACKEND  string
-	TCP_BIND string
+	Backend    string
+	TCPBind    string
+	MetricBind string
 
-	OPENTSDB_ADDR string
-	KAFKA_BROKERS []string
-	KAFKA_TOPIC   string
+	OpentsdbAddr string
+	KafkaBrokers []string
+	KafkaTopic   string
 
-	REPEATER_ADDR string
+	RepeaterAddr string
 	//LOG CONFIG
-	LOG_FILE        string //日志保存目录
-	LOG_LEVEL       int    //日志级别
-	LOG_EXPIRE_DAYS int    //日志保留天数
+	LogFile       string //日志保存目录
+	LogLevel      int    //日志级别
+	LogExpireDays int    //日志保留天数
 
-	MAX_PACKET_SIZE int
-	BUFFER_SIZE     int64
+	MaxPacketSize int
+	BufferSize    int64
 }
 
 func InitGlobalConfig() error {
@@ -41,18 +43,19 @@ func InitGlobalConfig() error {
 		return err
 	}
 	GlobalConfig = &Config{
-		BACKEND:       cfg.MustValue(goconfig.DEFAULT_SECTION, "backend", DEFAULT_BACKEND),
-		TCP_BIND:      cfg.MustValue(goconfig.DEFAULT_SECTION, "tcp_bind", DEFAULT_TCP_BIND),
-		OPENTSDB_ADDR: cfg.MustValue(goconfig.DEFAULT_SECTION, "opentsdb_addr", DEFAULT_OPENTSDB_ADDR),
-		REPEATER_ADDR: cfg.MustValue(goconfig.DEFAULT_SECTION, "repeater_addr", DEFAULT_REPEATER_ADDR),
-		KAFKA_BROKERS: cfg.MustValueArray(goconfig.DEFAULT_SECTION, "kafka_brokers", ","),
-		KAFKA_TOPIC:   cfg.MustValue(goconfig.DEFAULT_SECTION, "kafka_topic", "owl"),
+		Backend:      cfg.MustValue(goconfig.DEFAULT_SECTION, "backend", DefaultBackend),
+		TCPBind:      cfg.MustValue(goconfig.DEFAULT_SECTION, "tcp_bind", DefaultTCPBind),
+		MetricBind:   cfg.MustValue(goconfig.DEFAULT_SECTION, "metric_bind", DefaultMetricBind),
+		OpentsdbAddr: cfg.MustValue(goconfig.DEFAULT_SECTION, "opentsdb_addr", DefaultOpentsdbAddr),
+		RepeaterAddr: cfg.MustValue(goconfig.DEFAULT_SECTION, "repeater_addr", DefaultRepeaterAddr),
+		KafkaBrokers: cfg.MustValueArray(goconfig.DEFAULT_SECTION, "kafka_brokers", ","),
+		KafkaTopic:   cfg.MustValue(goconfig.DEFAULT_SECTION, "kafka_topic", "owl"),
 
-		MAX_PACKET_SIZE: cfg.MustInt(goconfig.DEFAULT_SECTION, "max_packet_size", DEFAULT_MAX_PACKET_SIZE),
-		BUFFER_SIZE:     cfg.MustInt64(goconfig.DEFAULT_SECTION, "buffer_size", DEFAULT_BUFFER_SIZE),
-		LOG_FILE:        cfg.MustValue(goconfig.DEFAULT_SECTION, "log_file", DEFAULT_LOG_FILE),
-		LOG_EXPIRE_DAYS: cfg.MustInt(goconfig.DEFAULT_SECTION, "log_expire_days", DEFAULT_LOG_EXPIRE_DAYS),
-		LOG_LEVEL:       cfg.MustInt(goconfig.DEFAULT_SECTION, "log_level", DEFAULT_LOG_LEVEL),
+		MaxPacketSize: cfg.MustInt(goconfig.DEFAULT_SECTION, "max_packet_size", DefaultMaxPacketSize),
+		BufferSize:    cfg.MustInt64(goconfig.DEFAULT_SECTION, "buffer_size", DefaultBufferSize),
+		LogFile:       cfg.MustValue(goconfig.DEFAULT_SECTION, "log_file", DefaultLogFile),
+		LogExpireDays: cfg.MustInt(goconfig.DEFAULT_SECTION, "log_expire_days", DefaultLogExpireDays),
+		LogLevel:      cfg.MustInt(goconfig.DEFAULT_SECTION, "log_level", DefaultLogLevel),
 	}
 	return nil
 

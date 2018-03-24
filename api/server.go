@@ -5,19 +5,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/itsjamie/gin-cors"
-
-	"owl/common/types"
-)
-
-const (
-	DefaultPageSize = "10"
 )
 
 var Engine *gin.Engine
-var AdminHandlers = []string{"main.userCreate", "main.userDelete"}
 
 func InitServer() error {
-	InitMiddleware()
 	Engine = gin.Default()
 	Engine.Use(cors.Middleware(cors.Config{
 		Origins:         "*",
@@ -30,150 +22,232 @@ func InitServer() error {
 	}))
 	Engine.GET("/", index)
 	Engine.GET("/apidoc", apiDoc)
-
-	v1 := Engine.Group("/api/v1")
+	v1 := Engine.Group("/api/v1", pagination)
 	{
-		v1.POST("/login", authMiddleware.LoginHandler)
+		v1.GET("/login", Login)
+		v1.POST("/login", Login)
+		v1.GET("/sync_user", SyncUsers)
 
-		authorized := v1.Group("/")
-		authorized.Use(authMiddleware.MiddlewareFunc())
-		authorized.Use(globalMiddleware)
+		switch config.AuthType {
+		case "mysql":
+			v1.Use(AuthMySQL())
+		case "iam":
+			v1.Use(AuthIAM())
+		}
+
+		//操作日志
+		v1.Use(OperationRecord())
+		v1.GET("/query", queryTimeSeriesData)
+		v1.GET("/suggest/metrics", suggestMetrics)
+		v1.GET("/suggest/tags", suggestMetricTagSet)
+		v1.POST("/logout", Logout)
+
+		plugin := v1.Group("/plugins", verifyAdminPermission)
 		{
-			authorized.GET("/refresh_token", authMiddleware.RefreshHandler)
+			plugin.GET("", listPlugins)
+			plugin.POST("", createPlugin)
+			plugin.PUT("", updatePlugin)
+			plugin.DELETE("/:plugin_id", deletePlugin)
+			plugin.PUT("/:plugin_id/host_groups/add", addHostGroups2Plugin)
+			plugin.PUT("/:plugin_id/host_groups/remove", removeHostGroupsFromPlugin)
+			plugin.GET("/:plugin_id/host_groups", listPluginHostGroups)
+			plugin.GET("/:plugin_id/host_groups/not_in", listNotInPluginHostGroups)
+		}
 
-			suggest := authorized.Group("/suggest")
+		// user interface
+		user := v1.Group("/users")
+		{
+			user.GET("", verifyAdminPermission, listAllUsers)
+			if config.AuthType == "mysql" {
+				//创建用户
+				user.POST("", verifyAdminPermission, createUser)
+				//修改密码
+				user.POST("changepassword", changeUserPassword)
+				user.POST("resetpassword", verifyAdminPermission, resetUserPassword)
+			}
+			// 获取用户所在的产品列表
+			user.GET("/products", listUserProducts)
+			//获取用户信息
+			user.GET("/profile", getUserProfile)
+			//更新用户信息
+			user.PUT("/profile", updateUserProfile)
+			//修改角色
+			user.PUT("/change_role", verifyAdminPermission, changeUserRole)
+			//删除用户
+			user.DELETE("/:user_id", deleteUser)
+		}
+
+		hosts := v1.Group("/hosts", verifyAdminPermission)
+		{
+			hosts.GET("", listAllHosts)
+			//host.GET("/noproduct", listNotProductHosts)
+			hosts.DELETE("/:host_id", deleteHost)
+		}
+
+		product := v1.Group("/products")
+		{
+			product.POST("", verifyAdminPermission, createProduct)
+			product.PUT("", verifyAdminPermission, updateProduct)
+			product.GET("", verifyAdminPermission, listAllProducts)
+		}
+
+		// 报警策略模板
+		template := v1.Group("/templates")
+		{
+			template.GET("", templateList)
+			template.GET("/:template_id", templateGet)
+			template.POST("", verifyAdminPermission, templateCreate)
+			template.PUT("", verifyAdminPermission, templateUpdate)
+			template.DELETE("", verifyAdminPermission, templateDelete)
+		}
+
+		// 报警执行脚本
+		script := v1.Group("/scripts")
+		{
+			script.GET("", scriptList)
+			script.POST("", verifyAdminPermission, scriptCreate)
+			script.PUT("", verifyAdminPermission, scriptUpdate)
+			script.DELETE("", verifyAdminPermission, scriptDelete)
+		}
+
+		// 操作日志
+		operation := v1.Group("/operations", verifyAdminPermission)
+		{
+			operation.GET("", operationList)
+		}
+
+		// 健康检查
+		health := v1.Group("/health", verifyAdminPermission)
+		{
+			health.GET("/nodes/status", nodesStatus)
+			health.GET("/queues/status", queuesStatus)
+			health.POST("/queues/:id/clean", queuesClean)
+			health.POST("/queues/:id/mute", queuesMute)
+			health.POST("/queues/:id/unmute", queuesUnMute)
+		}
+
+		productDetail := product.Group("/:product_id", verifyAndInjectProductID)
+		{
+			productDetail.DELETE("", verifyAdminPermission, deleteProduct)
+
+			productPanel := productDetail.Group("/panels")
 			{
-				suggest.GET("/metric", suggestMetric)
-				suggest.GET("/tagk", suggestTagk)
-				suggest.GET("/tagv", suggestTagv)
-				suggest.GET("/buildindex", BuildMetricAndTagIndex)
+				productPanel.GET("", listProductPanel)
+				productPanel.POST("", createProductPanel)
+				productPanel.PUT("", updateProductPanel)
+				productPanel.DELETE("/:panel_id", deleteProductPanel)
+				panelChart := productPanel.Group("/:panel_id/charts", verifyAndInjectPanelID)
+				{
+					panelChart.GET("", listPanelChats)
+					panelChart.POST("", createPanelChart)
+					panelChart.PUT("", updatePanelChart)
+					panelChart.DELETE("/:chart_id", deletePanelChart)
+				}
 			}
 
-			statistics := authorized.Group("/statistics")
+			productHost := productDetail.Group("/hosts")
 			{
-				statistics.GET("/host/info", hostInfo)
-				statistics.GET("/host/status", hostStatus)
-				statistics.GET("/event/count", eventsCount)
-				statistics.GET("/event/status", eventsStatus)
-				statistics.GET("/event/panel", eventsPanel)
+				// 获取产品线下的主机列表
+				productHost.GET("", listProductHosts)
+				//获取产品线下未分组机器
+				//product.GET("/nogroup", listProductNoGroupHosts)
+				// 向产品线中分配主机
+				productHost.PUT("/add", verifyAdminPermission, addHosts2Product)
+				// 从产品线中移除主机
+				productHost.PUT("/remove", verifyAdminPermission, removeHostsFromProduct)
+				// 获取不在产品线中的主机
+				productHost.GET("/not_in", verifyAdminPermission, listNotInProductHosts)
+			}
+			productUser := productDetail.Group("/users")
+			{
+				// 获取产品线下的用户
+				productUser.GET("", listProductUsers)
+				// 向产品线中添加用户
+				productUser.PUT("/add", verifyAdminPermission, addUsers2Product)
+				// 从产品线中移除用户
+				productUser.PUT("/remove", verifyAdminPermission, removeUsersFromProduct)
+				// 获取不在产品线中的用户
+				productUser.GET("/not_in", verifyAdminPermission, listNotInProductUsers)
+			}
+			productHostGroup := productDetail.Group("/host_groups")
+			{
+				// 获取产品线下的主机组
+				productHostGroup.GET("", listProductHostGroups)
+				// 更新产品线下的主机组
+				productHostGroup.PUT("", updateProductHostGroup)
+				// 创建产品线主机组
+				productHostGroup.POST("", createProductHostGroup)
+				//删除产品线主机组
+				productHostGroup.DELETE("/:host_group_id", deleteProductHostGroup)
+
+				productHostGroupHost := productHostGroup.Group("/:host_group_id/hosts", verifyAndInjectHostGroupID)
+				{
+					// 获取主机组下的主机列表
+					productHostGroupHost.GET("", listProductHostGroupHosts)
+					// 向主机组中添加主机
+					productHostGroupHost.PUT("/add", addHosts2ProductHostGroup)
+					// 从主机组中移除主机
+					productHostGroupHost.PUT("/remove", removeHostsFromProductHostGroup)
+					// 获取不在主机组内的主机
+					productHostGroupHost.GET("/not_in", listNotInProductHostGroupHosts)
+				}
+			}
+			productUserGroup := productDetail.Group("/user_groups")
+			{
+				// 获取产品线下的用户组
+				productUserGroup.GET("", listProductUserGroups)
+				// 更新产品线用户组信息
+				productUserGroup.PUT("", updateProductUserGroup)
+				// 创建产品线用户组
+				productUserGroup.POST("", createProductUserGroup)
+				//删除产品线用户组
+				productUserGroup.DELETE("/:user_group_id", deleteProductUserGroup)
+
+				productUserGroupUser := productUserGroup.Group("/:user_group_id/users", verifyAndInjectUserGroupID)
+				{
+					// 获取用户组下的用户列表
+					productUserGroupUser.GET("", listProductUserGroupUsers)
+					// 向用户组中添加用户
+					productUserGroupUser.PUT("/add", addUsers2ProductUserGroup)
+					// 从用户组中移除用户
+					productUserGroupUser.PUT("/remove", removeUsersFromProductUserGroup)
+					// 获取不在用户组内的用户
+					productUserGroupUser.GET("/not_in", listNotInProductUserGroupUsers)
+				}
+			}
+			strategy := productDetail.Group("/strategies")
+			{
+				// 获取报警策略列表
+				strategy.GET("", strategyList)
+				// 创建报警策略
+				strategy.POST("", strategyCreate)
+				// 修改报警策略
+				strategy.PUT("", strategyUpdate)
+				// 删除报警策略
+				strategy.DELETE("", strategyDelete)
+				// 获取单个报警策略详细信息
+				strategy.GET("/info/:strategy_id", strategyInfo)
+				// 禁用报警策略
+				strategy.PUT("/switch", strategySwitch)
+				// 获取主机组下的策略列表
+				strategy.GET("/list/:host_group_id", strategyHostGroup)
 
 			}
-
-			host := authorized.Group("/hosts")
+			event := productDetail.Group("/events")
 			{
-				host.GET("", hostList)
-				host.GET("/:id/strategies", strategiesByHostId)
-				host.GET("/:id/plugins", pluginByHostID)
-				host.GET("/:id/metrics", metricsByHostId)
-				host.POST("/:id/rename", hostRename)
-				host.POST("/:id/enable", hostEnable)
-				host.POST("/:id/disable", hostDisable)
-				host.DELETE("/:id", hostDelete)
-			}
-
-			group := authorized.Group("/groups")
-			{
-				group.GET("", groupList)
-				group.PUT("", groupCreate)
-				group.POST("", groupUpdate)
-				group.DELETE("/:id", groupDelete)
-				group.GET("/:id/hosts", groupHostList)
-			}
-
-			event := authorized.Group("/events")
-			{
+				// 获取报警事件列表
 				event.GET("", eventsList)
-				event.GET("/:id/detail", eventDetail)
-				event.GET("/:id/process", processInfo)
-				event.POST("/:id/inform", eventInform)
-				event.POST("/:id/close", eventClose)
-				event.DELETE("", eventDelete)
-			}
-
-			operation := authorized.Group("/operations")
-			{
-				operation.GET("", operationsList)
-			}
-
-			panel := authorized.Group("/panels")
-			{
-				panel.GET("", panelList)
-				panel.PUT("", panelCreate)
-				panel.POST("", panelUpdate)
-				panel.DELETE("/:id", panelDelete)
-				panel.GET("/:id/charts", getPanelChart)
-				panel.POST("/:id/favor", panelFavor)
-				panel.POST("/:id/unfavor", panelUnFavor)
-			}
-
-			chart := authorized.Group("/charts")
-			{
-				chart.GET("", chartList)
-				chart.GET("/:id", chartDetail)
-				chart.PUT("", chartCreate)
-				chart.POST("", chartUpdate)
-				chart.DELETE("/:id", chartDelete)
-			}
-
-			strategy := authorized.Group("/strategies")
-			{
-				strategy.GET("", strategiesList)
-				strategy.GET("/:id/info", strategyInfo)
-				strategy.PUT("", strategyCreate)
-				strategy.DELETE("/:id", strategyDelete)
-				strategy.POST("", strategyUpdate)
-				strategy.POST("/:id/switch", strategySwitch)
-			}
-
-			user := authorized.Group("/users")
-			{
-				user.GET("", userList)
-				user.POST("/changepassword", changePassword)
-				user.GET("/info", userInfo)
-				user.POST("", userUpdate)
-				user.PUT("", userCreate)
-				user.DELETE("/:id", userDelete)
-			}
-
-			ugroup := authorized.Group("/usergroups")
-			{
-				ugroup.GET("", userGroupList)
-				ugroup.PUT("", userGroupCreate)
-				ugroup.POST("", userGroupUpdate)
-				ugroup.DELETE("/:id", userGroupDelete)
-			}
-
-			plugin := authorized.Group("/plugins")
-			{
-				plugin.GET("", pluginList)
-				plugin.PUT("", pluginCreate)
-				plugin.POST("", pluginUpdate)
-				plugin.DELETE("/:id", pluginDelete)
-			}
-			query := authorized.Group("/query")
-			{
-				query.GET("", data)
+				// 获取失败的报警事件列表
+				event.GET("/failed", eventsFailed)
+				// 知悉报警事
+				event.PUT("/aware", eventAware)
+				// 获取某个报警事件的历史处理记录
+				event.GET("/process/:event_id", eventProcessRecord)
+				// 获取某个报警事件的详细信息
+				event.GET("/detail/:event_id", eventDetail)
 			}
 		}
-
 	}
-	return Engine.Run(GlobalConfig.HTTP_BIND)
-}
 
-func GetUserFromDataBase(c *gin.Context) *types.User {
-	if userID, ok := c.Get("userID"); ok {
-		var user types.User
-		if err := mydb.Table("user").Where("username = ?", userID).First(&user).Error; err != nil {
-			return nil
-		}
-		return &user
-	}
-	return nil
-}
-
-func GetUser(c *gin.Context) *types.User {
-	if user, ok := c.Get("user"); ok {
-		return user.(*types.User)
-	}
-	return nil
+	return Engine.Run(config.HTTPBind)
 }

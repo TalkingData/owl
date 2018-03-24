@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -23,14 +25,17 @@ func main() {
 		fmt.Println("failed to init log.")
 		return
 	}
-
+	go func() {
+		fmt.Printf("start pprof failed %s\n", http.ListenAndServe(":10071", nil))
+	}()
 	if err = InitNetCollect(); err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	go netCollect.Dial("cfc")
-	go netCollect.Dial("repeater")
+	lg.Debug("dial cfc %v", netCollect.dialCFC())
+	lg.Debug("dial repeater %v", netCollect.dialRepeater())
+	go netCollect.watchConnLoop()
 
 	if err = InitIpRange(); err != nil {
 		fmt.Println(err)

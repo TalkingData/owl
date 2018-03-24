@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -23,7 +25,10 @@ func main() {
 		fmt.Println("failed to init log.")
 		return
 	}
-
+	go func() {
+		fmt.Printf("start metric interface %s\n", GlobalConfig.MetricBind)
+		fmt.Printf("%s\n", http.ListenAndServe(":10031", nil))
+	}()
 	if err = InitCfcProxy(); err != nil {
 		fmt.Println(err)
 		return

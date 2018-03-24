@@ -1,11 +1,15 @@
 package main
 
-import "github.com/Unknwon/goconfig"
+import (
+	"fmt"
+
+	"github.com/Unknwon/goconfig"
+)
 
 const (
 	ConfigFilePath           = "./conf/netcollect.conf"
-	DEFAULT_REPEATER_ADDR    = "127.0.0.1:8888"
-	DEFAULT_CFC_ADDR         = "127.0.0.1:8889"
+	DEFAULT_REPEATER_ADDR    = "127.0.0.1:10040"
+	DEFAULT_CFC_ADDR         = "127.0.0.1:10020"
 	DEFAULT_MAX_PACKET_SIZE  = 4096
 	DEFAULT_SNMP_TIMEOUT     = 10
 	DEFAULT_BUFFER_SIZE      = 1 << 20
@@ -65,5 +69,6 @@ func InitGlobalConfig() error {
 		LOG_EXPIRE_DAYS:  cfg.MustInt(goconfig.DEFAULT_SECTION, "log_expire_days", DEFAULT_LOG_EXPIRE_DAYS),
 		LOG_LEVEL:        cfg.MustInt(goconfig.DEFAULT_SECTION, "log_level", DEFAULT_LOG_LEVEL),
 	}
+	fmt.Println("config %v", GlobalConfig)
 	return nil
 }

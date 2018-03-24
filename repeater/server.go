@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"owl/common/tcp"
 	"owl/common/types"
 	"owl/repeater/backend"
 	"time"
+
+	"github.com/wuyingsong/tcp"
 )
 
 var (
@@ -13,29 +14,31 @@ var (
 )
 
 type Repeater struct {
-	srv     *tcp.Server
+	srv     *tcp.AsyncTCPServer
 	buffer  chan []byte
 	backend Backend
 }
 
 func InitRepeater() error {
-	s := tcp.NewServer(GlobalConfig.TCP_BIND, &handle{})
+	protocol := &tcp.DefaultProtocol{}
+	protocol.SetMaxPacketSize(uint32(GlobalConfig.MaxPacketSize))
+	s := tcp.NewAsyncTCPServer(GlobalConfig.TCPBind, &callback{}, protocol)
 	repeater = &Repeater{}
 	repeater.srv = s
-	repeater.buffer = make(chan []byte, GlobalConfig.BUFFER_SIZE)
+	repeater.buffer = make(chan []byte, GlobalConfig.BufferSize)
 	var err error
-	switch GlobalConfig.BACKEND {
-	case "opentsdb":
-		repeater.backend, err = backend.NewOpentsdbBackend(GlobalConfig.OPENTSDB_ADDR)
+	switch GlobalConfig.Backend {
+	case "opentsdb", "kairosdb":
+		repeater.backend, err = backend.NewOpentsdbBackend(GlobalConfig.OpentsdbAddr)
 	case "repeater":
-		repeater.backend, err = backend.NewRepeaterBackend(GlobalConfig.REPEATER_ADDR)
+		repeater.backend, err = backend.NewRepeaterBackend(GlobalConfig.RepeaterAddr)
 	case "kafka":
-		repeater.backend, err = backend.NewKafkaBackend(GlobalConfig.KAFKA_BROKERS, GlobalConfig.KAFKA_TOPIC)
+		repeater.backend, err = backend.NewKafkaBackend(GlobalConfig.KafkaBrokers, GlobalConfig.KafkaTopic)
 	default:
-		err = fmt.Errorf("unsupported backend %s", GlobalConfig.BACKEND)
+		err = fmt.Errorf("unsupported backend %s", GlobalConfig.Backend)
 	}
 	if err != nil {
-		return fmt.Errorf("%s error:%s", GlobalConfig.BACKEND, err)
+		return fmt.Errorf("%s error:%s", GlobalConfig.Backend, err)
 	}
 	return repeater.srv.ListenAndServe()
 }
@@ -47,14 +50,18 @@ func (this *Repeater) Forward() {
 		case data := <-this.buffer:
 			tsd := &types.TimeSeriesData{}
 			if err = tsd.Decode(data); err != nil {
+				lg.Error("decode error %s ", err)
 				continue
 			}
-			if err = this.backend.Write(tsd); err != nil {
-				this.buffer <- data
-				time.Sleep(time.Second * 1)
-			} else {
-				lg.Notice("forward to %s %v", GlobalConfig.BACKEND, *tsd)
+			for {
+				err = this.backend.Write(tsd)
+				if err == nil {
+					break
+				}
+				lg.Error("forward to %s error(%s)", GlobalConfig.Backend, err)
+				time.Sleep(time.Second * 5)
 			}
+			lg.Notice("forward to %s %v", GlobalConfig.Backend, *tsd)
 		}
 	}
 }

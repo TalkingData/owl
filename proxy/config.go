@@ -3,28 +3,32 @@ package main
 import "github.com/Unknwon/goconfig"
 
 const (
-	ConfigFilePath          = "./conf/proxy.conf"
-	DEFAULT_TCP_BIND        = "0.0.0.0:10030"
-	DEFAULT_CFC_ADDR        = ""
-	DEFAULT_MAX_PACKET_SIZE = 4096
-	DEFAULT_LOG_FILE        = "./logs/proxy.log"
-	DEFAULT_LOG_EXPIRE_DAYS = 7
-	DEFAULT_LOG_LEVEL       = 3
+	ConfigFilePath       = "./conf/proxy.conf"
+	DefaultTCPBind       = "0.0.0.0:10030"
+	DefaultMetricBind    = "0.0.0.0:10031"
+	DefaultCFCAddr       = "127.0.0.1:10020"
+	DefaultMaxPacketSize = 4096
+	DefaultLogFile       = "./logs/proxy.log"
+	DefaultLogExipreDays = 7
+	DefaultLogLevel      = 7
+	DefaultPluginDir     = "./plugins"
 )
 
 var GlobalConfig *Config
 
 type Config struct {
-	CFC_ADDR string
+	CFCAddr string
 
-	TCP_BIND string //tcp监听地址和端口
+	TCPBind    string //tcp监听地址和端口
+	MetricBind string
 
 	//LOG CONFIG
-	LOG_FILE        string //日志保存目录
-	LOG_LEVEL       int    //日志级别
-	LOG_EXPIRE_DAYS int    //日志保留天数
+	LogFile       string //日志保存目录
+	LogLevel      int    //日志级别
+	LogExpireDays int    //日志保留天数
 
-	MAX_PACKET_SIZE int
+	MaxPacketSize int
+	PluginDir     string
 }
 
 func InitGlobalConfig() error {
@@ -33,13 +37,15 @@ func InitGlobalConfig() error {
 		return err
 	}
 	GlobalConfig = &Config{
-		TCP_BIND: cfg.MustValue(goconfig.DEFAULT_SECTION, "tcp_bind", DEFAULT_TCP_BIND),
-		CFC_ADDR: cfg.MustValue(goconfig.DEFAULT_SECTION, "cfc_addr", DEFAULT_CFC_ADDR),
+		TCPBind:    cfg.MustValue(goconfig.DEFAULT_SECTION, "tcp_bind", DefaultTCPBind),
+		CFCAddr:    cfg.MustValue(goconfig.DEFAULT_SECTION, "cfc_addr", DefaultCFCAddr),
+		MetricBind: cfg.MustValue(goconfig.DEFAULT_SECTION, "metric_bind", DefaultMetricBind),
 
-		MAX_PACKET_SIZE: cfg.MustInt(goconfig.DEFAULT_SECTION, "max_packet_size", DEFAULT_MAX_PACKET_SIZE),
-		LOG_FILE:        cfg.MustValue(goconfig.DEFAULT_SECTION, "log_file", DEFAULT_LOG_FILE),
-		LOG_EXPIRE_DAYS: cfg.MustInt(goconfig.DEFAULT_SECTION, "log_expire_days", DEFAULT_LOG_EXPIRE_DAYS),
-		LOG_LEVEL:       cfg.MustInt(goconfig.DEFAULT_SECTION, "log_level", DEFAULT_LOG_LEVEL),
+		MaxPacketSize: cfg.MustInt(goconfig.DEFAULT_SECTION, "max_packet_size", DefaultMaxPacketSize),
+		LogFile:       cfg.MustValue(goconfig.DEFAULT_SECTION, "log_file", DefaultLogFile),
+		LogExpireDays: cfg.MustInt(goconfig.DEFAULT_SECTION, "log_expire_days", DefaultLogExipreDays),
+		LogLevel:      cfg.MustInt(goconfig.DEFAULT_SECTION, "log_level", DefaultLogLevel),
+		PluginDir:     cfg.MustValue(goconfig.DEFAULT_SECTION, "plugin_dir", DefaultPluginDir),
 	}
 	return nil
 

@@ -1,65 +1,138 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/Unknwon/goconfig"
 )
 
 const (
-	CONFIG_FILE_PATH                    = "./conf/api.conf"
-	DEFAULT_HTTP_BIND                   = ":10060"
-	DEFAULT_MYSQL_ADDR                  = "127.0.0.1:3306"
-	DEFAULT_MYSQL_USER                  = "root"
-	DEFAULT_MYSQL_DBNAME                = "owl"
-	DEFAULT_MYSQL_PASSWORD              = ""
-	DEFAULT_MAX_CONN                    = 20
-	DEFAULT_MAX_IDLE_CONN               = 5
-	DEFAULT_SECRET_KEY                  = "b690dfddeb13156b6b88946708210a90a3df1d285576e843c8870a2090226329"
-	DEFAULT_OPENTSDB_ADDR               = "127.0.0.1:4242"
-	DEFAULT_OPENTSDB_TIMEOUT            = 5
-	DEFAULT_AUTO_BUILD_METRIC_TAG_INDEX = false
-	DEFAULT_AUTO_BUILD_INTERVAL         = 10 //minute
+
+	//配置文件路径
+	configFilePath        = "./conf/api.conf"
+	defaultHTTPBind       = "0.0.0.0:10060"
+	defaultMetricBind     = "0.0.0.0:10061"
+	defaultAuthType       = "mysql"
+	defaultPublicKeyFile  = "./certs/owl-api.key.pub"
+	defaultPrivateKeyFile = "./certs/owl-api.key"
+	defaultTokenExpired   = 7
+
+	defaultMySQLAddr        = "127.0.0.1:3306"
+	defaultMySQLDBName      = "owl"
+	defaultMySQLUser        = "root"
+	defaultMySQLPassword    = ""
+	defaultMySQLMaxConn     = 20
+	defaultMySQLMaxIdleConn = 5
+
+	defaultLogFile       = "./logs/api.log"
+	defaultLogExpireDays = 7
+	defaultLogLevel      = 7
+
+	defaultTimeSeriesStorage   = "opentsdb"
+	defaultKairosdbAddr        = "127.0.0.1:8080"
+	defaultOpentsdbAddr        = "127.0.0.1:4242"
+	defaultOpentsdbReadTimeout = 10
+
+	defaultAlarmHealthCheckURL = "http://127.0.0.1:10051"
 )
 
-var GlobalConfig *Config
+var config *Config
 
+// Config 配置
 type Config struct {
-	//MYSQL CONFIG
-	MYSQL_ADDR          string //mysql ip地址
-	MYSQL_USER          string //mysql 登陆用户名
-	MYSQL_PASSWORD      string //mysql 登陆密码
-	MYSQL_DBNAME        string //mysql 数据库名称
-	MYSQL_MAX_IDLE_CONN int    //mysql 最大空闲连接数
-	MYSQL_MAX_CONN      int    //mysql 最大连接数
-	//SERVER CONFIG
-	HTTP_BIND string //http 监听地址和端口
-	//AUTH CONFIG
-	SECRET_KEY string //秘钥
+	HTTPBind   string //api 服务局监听的本地地址和端口
+	MetricBind string
 
-	OPENTSDB_ADDR    string
-	OPENTSDB_TIMEOUT int
+	MySQLAddr        string //mysql ip地址
+	MySQLUser        string //mysql 登陆用户名
+	MySQLPassword    string //mysql 登陆密码
+	MySQLDBName      string //mysql 数据库名称
+	MySQLMaxIdleConn int    //mysql 最大空闲连接数
+	MySQLMaxConn     int    //mysql 最大连接数
 
-	AUTO_BUILD_METRIC_TAG_INDEX bool
-	AUTO_BUILD_INTERVAL         int
+	TimeSeriesStorage string //目前仅支持 opentsdb, kairosdb
+
+	OpentsdbAddr         string //opentsdb rest api 地址
+	OpenttsdbReadTimeout int    //opentsdb 请求超时时间,单位秒
+
+	KairosdbAddr string //kairosdb rest api 接口地址
+
+	LogFile       string //日志保存目录
+	LogLevel      int    //日志级别
+	LogExpireDays int    //日志保留天数
+
+	AuthType string //目前支持mysql, iam
+	IamURL   string //iam 地址
+	AppID    string //iam 中注册的 app id
+	AppKey   string //iam 中注册的 app key
+
+	PublicKeyFile  string //公钥文件路径
+	PrivateKeyFile string //私钥文件路径
+	TokenExpired   int    //token 超时时间,仅在 AuthType 为 mysql 时有效
+
+	AlarmHealthCheckURL string //报警服务状态检查路径
 }
 
+func (c *Config) validate() error {
+	switch c.AuthType {
+	case "mysql":
+	case "iam":
+		if c.IamURL == "" {
+			return fmt.Errorf("iam url must specified")
+		}
+		if c.AppID == "" {
+			return fmt.Errorf("app id must specified")
+		}
+		if c.AppKey == "" {
+			return fmt.Errorf("app key must specified")
+		}
+	default:
+		return fmt.Errorf("auth type %s not support", c.AuthType)
+	}
+
+	switch c.TimeSeriesStorage {
+	case "opentsdb", "kairosdb":
+	default:
+		return fmt.Errorf("timeseries storage %s not support", c.TimeSeriesStorage)
+	}
+	return nil
+}
+
+// InitGlobalConfig 初始化配置
 func InitGlobalConfig() error {
-	cfg, err := goconfig.LoadConfigFile(CONFIG_FILE_PATH)
+	cfg, err := goconfig.LoadConfigFile(configFilePath)
 	if err != nil {
 		return err
 	}
-	GlobalConfig = &Config{
-		HTTP_BIND:                   cfg.MustValue(goconfig.DEFAULT_SECTION, "http_bind", DEFAULT_HTTP_BIND),
-		MYSQL_ADDR:                  cfg.MustValue(goconfig.DEFAULT_SECTION, "mysql_addr", DEFAULT_MYSQL_ADDR),
-		MYSQL_USER:                  cfg.MustValue(goconfig.DEFAULT_SECTION, "mysql_user", DEFAULT_MYSQL_USER),
-		MYSQL_DBNAME:                cfg.MustValue(goconfig.DEFAULT_SECTION, "mysql_dbname", DEFAULT_MYSQL_DBNAME),
-		MYSQL_PASSWORD:              cfg.MustValue(goconfig.DEFAULT_SECTION, "mysql_password", DEFAULT_MYSQL_PASSWORD),
-		MYSQL_MAX_CONN:              cfg.MustInt(goconfig.DEFAULT_SECTION, "mysql_max_conn", DEFAULT_MAX_CONN),
-		MYSQL_MAX_IDLE_CONN:         cfg.MustInt(goconfig.DEFAULT_SECTION, "mysql_max_idle_conn", DEFAULT_MAX_IDLE_CONN),
-		SECRET_KEY:                  cfg.MustValue(goconfig.DEFAULT_SECTION, "secret_key", DEFAULT_SECRET_KEY),
-		OPENTSDB_ADDR:               cfg.MustValue(goconfig.DEFAULT_SECTION, "opentsdb_addr", DEFAULT_OPENTSDB_ADDR),
-		OPENTSDB_TIMEOUT:            cfg.MustInt(goconfig.DEFAULT_SECTION, "opentsdb_timeout", DEFAULT_OPENTSDB_TIMEOUT),
-		AUTO_BUILD_METRIC_TAG_INDEX: cfg.MustBool(goconfig.DEFAULT_SECTION, "auto_build_metric_tag_index", DEFAULT_AUTO_BUILD_METRIC_TAG_INDEX),
-		AUTO_BUILD_INTERVAL:         cfg.MustInt(goconfig.DEFAULT_SECTION, "auto_build_interval", DEFAULT_AUTO_BUILD_INTERVAL),
+	config = &Config{
+		HTTPBind:       cfg.MustValue(goconfig.DEFAULT_SECTION, "http_bind", defaultHTTPBind),
+		MetricBind:     cfg.MustValue(goconfig.DEFAULT_SECTION, "metric_bind", defaultMetricBind),
+		PublicKeyFile:  cfg.MustValue(goconfig.DEFAULT_SECTION, "public_key", defaultPublicKeyFile),
+		PrivateKeyFile: cfg.MustValue(goconfig.DEFAULT_SECTION, "private_key", defaultPrivateKeyFile),
+
+		AuthType:     cfg.MustValue(goconfig.DEFAULT_SECTION, "auth_type", defaultAuthType),
+		IamURL:       cfg.MustValue(goconfig.DEFAULT_SECTION, "iam_url", ""),
+		AppID:        cfg.MustValue(goconfig.DEFAULT_SECTION, "app_id", ""),
+		AppKey:       cfg.MustValue(goconfig.DEFAULT_SECTION, "api_key", ""),
+		TokenExpired: cfg.MustInt(goconfig.DEFAULT_SECTION, "token_expired", defaultTokenExpired),
+
+		TimeSeriesStorage:    cfg.MustValue(goconfig.DEFAULT_SECTION, "timeseirs_storage", defaultTimeSeriesStorage),
+		KairosdbAddr:         cfg.MustValue(goconfig.DEFAULT_SECTION, "kairosdb_addr", defaultKairosdbAddr),
+		OpentsdbAddr:         cfg.MustValue(goconfig.DEFAULT_SECTION, "opentsdb_addr", defaultOpentsdbAddr),
+		OpenttsdbReadTimeout: cfg.MustInt(goconfig.DEFAULT_SECTION, "opentsdb_timeout", defaultOpentsdbReadTimeout),
+
+		MySQLAddr:        cfg.MustValue(goconfig.DEFAULT_SECTION, "mysql_addr", defaultMySQLAddr),
+		MySQLUser:        cfg.MustValue(goconfig.DEFAULT_SECTION, "mysql_user", defaultMySQLUser),
+		MySQLDBName:      cfg.MustValue(goconfig.DEFAULT_SECTION, "mysql_dbname", defaultMySQLDBName),
+		MySQLPassword:    cfg.MustValue(goconfig.DEFAULT_SECTION, "mysql_password", defaultMySQLPassword),
+		MySQLMaxConn:     cfg.MustInt(goconfig.DEFAULT_SECTION, "mysql_max_conn", defaultMySQLMaxConn),
+		MySQLMaxIdleConn: cfg.MustInt(goconfig.DEFAULT_SECTION, "mysql_max_idle_conn", defaultMySQLMaxIdleConn),
+
+		LogFile:       cfg.MustValue(goconfig.DEFAULT_SECTION, "log_file", defaultLogFile),
+		LogExpireDays: cfg.MustInt(goconfig.DEFAULT_SECTION, "log_expire_days", defaultLogExpireDays),
+		LogLevel:      cfg.MustInt(goconfig.DEFAULT_SECTION, "log_level", defaultLogLevel),
+
+		AlarmHealthCheckURL: cfg.MustValue(goconfig.DEFAULT_SECTION, "alarm_health_check_url", defaultAlarmHealthCheckURL),
 	}
-	return nil
+	return config.validate()
 }

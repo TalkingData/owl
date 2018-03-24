@@ -63,7 +63,7 @@ func (this *OpentsdbBackend) Write(data *types.TimeSeriesData) error {
 	if this.session.IsClosed() {
 		return errors.New("backend session is closed.")
 	}
-	content := []byte(fmt.Sprintf("put %s %v %v %s\n",
+	content := []byte(fmt.Sprintf("put %s %d %f %s\n",
 		data.Metric,
 		data.Timestamp,
 		data.Value,

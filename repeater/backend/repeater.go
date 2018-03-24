@@ -7,6 +7,8 @@ import (
 	"net"
 	"owl/common/types"
 	"time"
+
+	"github.com/wuyingsong/tcp"
 )
 
 type repeaterBackend struct {
@@ -63,12 +65,13 @@ func (this *repeaterBackend) Write(data *types.TimeSeriesData) error {
 	if this.session.IsClosed() {
 		return errors.New("backend session is closed.")
 	}
+	pkt := tcp.NewDefaultPacket(types.MsgRepeaterPostTimeSeriesData, data.Encode())
 	head := make([]byte, 4)
 	var buf bytes.Buffer
-	b := types.Pack(types.MESS_POST_TSD, data)
-	binary.BigEndian.PutUint32(head, uint32(len(b)))
+	pktBytes := pkt.Bytes()
+	binary.BigEndian.PutUint32(head, uint32(len(pktBytes)))
 	binary.Write(&buf, binary.BigEndian, head)
-	binary.Write(&buf, binary.BigEndian, b)
+	binary.Write(&buf, binary.BigEndian, pktBytes)
 	if _, err := this.session.Write(buf.Bytes()); err != nil {
 		this.session.Close()
 		return err
