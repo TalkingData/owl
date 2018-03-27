@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -47,4 +48,36 @@ func deleteHost(c *gin.Context) {
 		response["code"] = http.StatusInternalServerError
 		return
 	}
+}
+
+func listHostMetrics(c *gin.Context) {
+	response := gin.H{"code": http.StatusOK}
+	defer c.JSON(http.StatusOK, response)
+	var (
+		hostID string
+		host   *Host
+	)
+	hostID = c.Param("host_id")
+	if host = mydb.getHostByID(hostID); host.ID == "" {
+		response["code"] = http.StatusBadRequest
+		response["message"] = fmt.Sprintf("host [%s] is not exists", hostID)
+		return
+	}
+	total, metrics := mydb.getHostMetrics(
+		hostID,
+		c.GetBool("paging"),
+		c.Query("query"),
+		"metric asc",
+		c.GetInt("offset"),
+		c.GetInt("limit"),
+	)
+	for _, metric := range metrics {
+		if metric.Tags != "" {
+			metric.Tags = fmt.Sprintf("host=%s,%s", host.Hostname, metric.Tags)
+		} else {
+			metric.Tags = fmt.Sprintf("host=%s", host.Hostname)
+		}
+	}
+	response["metrics"] = metrics
+	response["total"] = total
 }

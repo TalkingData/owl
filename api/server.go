@@ -79,8 +79,10 @@ func InitServer() error {
 
 		hosts := v1.Group("/hosts", verifyAdminPermission)
 		{
+			//获取所有主机列表
 			hosts.GET("", listAllHosts)
-			//host.GET("/noproduct", listNotProductHosts)
+			// 获取主机的metric列表
+			hosts.GET("/:host_id/metrics", listHostMetrics)
 			hosts.DELETE("/:host_id", deleteHost)
 		}
 
@@ -149,8 +151,6 @@ func InitServer() error {
 			{
 				// 获取产品线下的主机列表
 				productHost.GET("", listProductHosts)
-				//获取产品线下未分组机器
-				//product.GET("/nogroup", listProductNoGroupHosts)
 				// 向产品线中分配主机
 				productHost.PUT("/add", verifyAdminPermission, addHosts2Product)
 				// 从产品线中移除主机

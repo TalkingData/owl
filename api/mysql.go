@@ -1156,6 +1156,20 @@ func (d *db) getAllHosts(paging bool, query string, order string, offset, limit 
 	return cnt, hosts
 }
 
+func (d *db) getHostByID(hostID string) *Host {
+	host := &Host{}
+	rawSQL := fmt.Sprintf("select id, ip, name, hostname, agent_version, status, "+
+		"DATE_FORMAT(create_at,'%s') as create_at, DATE_FORMAT(update_at,'%s') as update_at,"+
+		"mute_time, uptime, idle_pct from host where id='%s'", dbDateFormat, dbDateFormat, hostID)
+	log.Println(rawSQL)
+	if err := d.Get(host, rawSQL); err != nil {
+		if err != sql.ErrNoRows {
+			log.Println(err)
+		}
+	}
+	return host
+}
+
 //删除主机
 func (d *db) deleteHost(hostID string) error {
 	rawSQL := fmt.Sprintf("delete from host where id='%s'", hostID)
@@ -1165,6 +1179,40 @@ func (d *db) deleteHost(hostID string) error {
 		return err
 	}
 	return nil
+}
+
+//获取主机metrics
+
+func (d *db) getHostMetrics(hostID string, paging bool, query string, order string, offset, limit int) (int, []*ChartElement) {
+	elements := make([]*ChartElement, 0)
+	cnt := 0
+	rawSQL := fmt.Sprintf("select metric, tags from metric where host_id='%s'", hostID)
+	cntSQL := fmt.Sprintf("select count(*) from metric where host_id='%s'", hostID)
+	if len(query) != 0 {
+		queryArr := strings.Split(query, "/")
+		if len(queryArr) > 1 {
+			rawSQL = fmt.Sprintf("%s and (metric like '%%%s%%' and tags like '%%%s%%')", rawSQL, queryArr[0], queryArr[1])
+			cntSQL = fmt.Sprintf("%s and (metric like '%%%s%%' and tags like '%%%s%%')", cntSQL, queryArr[0], queryArr[1])
+		} else {
+			rawSQL = fmt.Sprintf("%s and metric like '%%%s%%' ", rawSQL, queryArr[0])
+			cntSQL = fmt.Sprintf("%s and metric like '%%%s%%' ", cntSQL, queryArr[0])
+		}
+	}
+	if len(order) > 0 {
+		rawSQL = fmt.Sprintf("%s order by %s", rawSQL, order)
+	}
+	if paging {
+		rawSQL = fmt.Sprintf("%s limit %d, %d", rawSQL, offset, limit)
+	}
+	log.Println(rawSQL)
+	log.Println(cntSQL)
+	if err := d.Select(&elements, rawSQL); err != nil {
+		log.Println(err)
+	}
+	if err := d.Get(&cnt, cntSQL); err != nil {
+		log.Println(err)
+	}
+	return cnt, elements
 }
 
 // 获取产品下的主机
