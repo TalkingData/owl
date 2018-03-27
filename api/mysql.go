@@ -377,7 +377,7 @@ func (d *db) GetStrategyEventsFailed(where, order, limit string) []*StrategyEven
 // GetStrategyEventsFailedCount 获取失败的报警事件总数
 func (d *db) GetStrategyEventsFailedCount(where string) int {
 	var total int
-	rawSQL := "SELECT count(*) FROM strategy_event_failed sef"
+	rawSQL := "SELECT count(*) FROM strategy_event_failed sef LEFT JOIN host h ON sef.host_id = h.id"
 	rawSQL = fmt.Sprintf("%s WHERE %s", rawSQL, where)
 	if err := d.Get(&total, rawSQL); err != nil {
 		log.Println(err)

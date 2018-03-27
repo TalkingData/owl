@@ -227,7 +227,7 @@ func eventsFailed(c *gin.Context) {
 	}
 	if query != "" {
 		query = strings.TrimSpace(query)
-		where += fmt.Sprintf(" AND (`host_name` LIKE '%%%s%%' OR `ip` LIKE '%%%s%%')", query, query)
+		where += fmt.Sprintf(" AND (`hostname` LIKE '%%%s%%' OR `ip` LIKE '%%%s%%')", query, query)
 	}
 	limit := fmt.Sprintf("%d, %d", c.GetInt("offset"), c.GetInt("limit"))
 	eventsFailed := mydb.GetStrategyEventsFailed(where, order, limit)
