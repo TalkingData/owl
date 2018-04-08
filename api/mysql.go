@@ -1192,10 +1192,6 @@ func (d *db) getHostMetrics(hostID string, paging bool, prefix string, query str
 	if len(prefix) != 0 {
 		rawSQL = fmt.Sprintf("%s and metric like '%s%%'", rawSQL, prefix)
 		cntSQL = fmt.Sprintf("%s and metric like '%s%%'", cntSQL, prefix)
-		if prefix == "system" {
-			genMetric := `'systemc.mem.used_pct', 'system.net.bytes', 'system.cpu.idle', 'system.swap.used_pct', 'system.load.1min', 'system.fd.used_pct'`
-			rawSQL = fmt.Sprintf("%s and (metric in (%s) and tags not regexp 'cpu=cpu[0-9]+')", rawSQL, genMetric)
-		}
 	}
 	if len(query) != 0 {
 		queryArr := strings.Split(query, "/")
