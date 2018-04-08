@@ -83,12 +83,26 @@
 			"Rev": "a197e5d40516f2e9f74dcee085a5f2d4604e94df"
 		},
 		{
+			"ImportPath": "github.com/golang/glog",
+			"Rev": "23def4e6c14b4da8ac2ed8007337bc5eb5007998"
+		},
+		{
 			"ImportPath": "github.com/golang/protobuf/proto",
 			"Rev": "6a1fa9404c0aebf36c879bc50152edcc953910d2"
 		},
 		{
 			"ImportPath": "github.com/golang/snappy",
 			"Rev": "553a641470496b2327abcac10b36396bd98e45c9"
+		},
+		{
+			"ImportPath": "github.com/google/cadvisor/client",
+			"Comment": "v0.25.0-25-g516c2e5",
+			"Rev": "516c2e552a1cd266082ede0b56b3495ad0e068a1"
+		},
+		{
+			"ImportPath": "github.com/google/cadvisor/info/v1",
+			"Comment": "v0.25.0-25-g516c2e5",
+			"Rev": "516c2e552a1cd266082ede0b56b3495ad0e068a1"
 		},
 		{
 			"ImportPath": "github.com/itsjamie/gin-cors",
@@ -168,6 +182,11 @@
 			"Rev": "5efa3251c7f7d05e5d9704a69a984ec9f1386a40"
 		},
 		{
+			"ImportPath": "github.com/urfave/cli",
+			"Comment": "v1.19.1",
+			"Rev": "0bdeddeeb0f650497d603c4ad7b20cfe685682f6"
+		},
+		{
 			"ImportPath": "github.com/wuyingsong/tcp",
 			"Rev": "ddc86fbe0a611ff16a055f3f4af00b72b62c6262"
 		},
@@ -185,23 +204,47 @@
 			"Rev": "c01858abb625b73a3af51d0798e4ad42c8147093"
 		},
 		{
+			"ImportPath": "gopkg.in/bsm/ratelimit.v1",
+			"Rev": "db14e161995a5177acef654cb0dd785e8ee8bc22"
+		},
+		{
 			"ImportPath": "gopkg.in/go-playground/validator.v8",
 			"Comment": "v8.18.1",
 			"Rev": "5f57d2222ad794d0dffb07e664ea05e2ee07d60c"
 		},
 		{
+			"ImportPath": "gopkg.in/redis.v5",
+			"Comment": "v5.0.1",
+			"Rev": "80cf5d1652d5590c35edc6c2dc1aa354790e3010"
+		},
+		{
+			"ImportPath": "gopkg.in/redis.v5/internal",
+			"Comment": "v5.0.1",
+			"Rev": "80cf5d1652d5590c35edc6c2dc1aa354790e3010"
+		},
+		{
+			"ImportPath": "gopkg.in/redis.v5/internal/consistenthash",
+			"Comment": "v5.0.1",
+			"Rev": "80cf5d1652d5590c35edc6c2dc1aa354790e3010"
+		},
+		{
+			"ImportPath": "gopkg.in/redis.v5/internal/hashtag",
+			"Comment": "v5.0.1",
+			"Rev": "80cf5d1652d5590c35edc6c2dc1aa354790e3010"
+		},
+		{
+			"ImportPath": "gopkg.in/redis.v5/internal/pool",
+			"Comment": "v5.0.1",
+			"Rev": "80cf5d1652d5590c35edc6c2dc1aa354790e3010"
+		},
+		{
+			"ImportPath": "gopkg.in/redis.v5/internal/proto",
+			"Comment": "v5.0.1",
+			"Rev": "80cf5d1652d5590c35edc6c2dc1aa354790e3010"
+		},
+		{
 			"ImportPath": "gopkg.in/yaml.v2",
 			"Rev": "cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b"
-		},
-		{
-			"ImportPath": "github.com/stretchr/testify/vendor/github.com/davecgh/go-spew/spew",
-			"Comment": "v1.1.3-16-g6cb3b85",
-			"Rev": "6cb3b85ef5a0efef77caef88363ec4d4b5c0976d"
-		},
-		{
-			"ImportPath": "github.com/stretchr/testify/vendor/github.com/pmezard/go-difflib/difflib",
-			"Comment": "v1.1.3-16-g6cb3b85",
-			"Rev": "6cb3b85ef5a0efef77caef88363ec4d4b5c0976d"
 		}
 	]
 }
