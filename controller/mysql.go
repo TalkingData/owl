@@ -126,6 +126,7 @@ func (this *db) GetAllActions(strategy_id int) []*types.Action {
 
 func (this *db) CreateStrategyEvent(strategy_event *types.StrategyEvent, trigger_events map[string]*types.TriggerEvent) (int64, error) {
 	tx, err := this.Begin()
+	defer tx.Rollback()
 	if err != nil {
 		lg.Error(err.Error())
 		return -1, err
@@ -186,7 +187,6 @@ func (this *db) CreateStrategyEvent(strategy_event *types.StrategyEvent, trigger
 		}
 
 	}
-	defer tx.Rollback()
 	tx.Commit()
 
 	return last_id, nil
@@ -203,6 +203,7 @@ func (this *db) CreateStrategyEventFailed(strategyID int, hostID string, status 
 
 func (this *db) UpdateStrategyEvent(strategy_event *types.StrategyEvent, trigger_events map[string]*types.TriggerEvent) error {
 	tx, err := this.Begin()
+	defer tx.Rollback()
 	if err != nil {
 		lg.Error(err.Error())
 		return err
@@ -262,7 +263,6 @@ func (this *db) UpdateStrategyEvent(strategy_event *types.StrategyEvent, trigger
 		}
 
 	}
-	defer tx.Rollback()
 
 	tx.Commit()
 
@@ -339,6 +339,7 @@ func (this *db) CreateActionResult(action_result *types.ActionResult) error {
 
 func (this *db) CreateStrategyEventRecord(strategy_event *types.StrategyEvent, trigger_events map[string]*types.TriggerEvent) error {
 	tx, err := this.Begin()
+	defer tx.Rollback()
 	if err != nil {
 		lg.Error(err.Error())
 		return err
@@ -394,7 +395,6 @@ func (this *db) CreateStrategyEventRecord(strategy_event *types.StrategyEvent, t
 		}
 
 	}
-	defer tx.Rollback()
 
 	tx.Commit()
 

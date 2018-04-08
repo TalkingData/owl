@@ -149,6 +149,7 @@ func removeNoUsePlugin(pls []types.Plugin) {
 			}
 		}
 		if del {
+			lg.Info("remove no used plugin:%v", t.Plugin)
 			tasklist.removeTask(t.ID)
 		}
 	}
@@ -162,6 +163,7 @@ func mergePlugin(pls []types.Plugin) {
 			if p.Equal(t.Plugin) {
 				goto sync
 			}
+			lg.Info("plugin change, old:%v, new:%v, removed", t.Plugin, p)
 			tasklist.removeTask(t.ID)
 		}
 		tasklist.addTask(newTask(p))
@@ -170,11 +172,13 @@ func mergePlugin(pls []types.Plugin) {
 		if checksum, err := utils.GetFileMD5(filepath.Join(GlobalConfig.PluginDir, p.Path)); err == nil {
 			// 插件存在并且获取到checksum
 			if checksum == p.Checksum {
+				lg.Info("plugin %s checksum change, new:%s, curr:%s", p.Path, p.Checksum, checksum)
 				canSync = false
 			}
 		}
 		if canSync {
 			if _, ok := syncMap[p.Path]; ok {
+				lg.Info("plugin %s already in sync queue, skiped", p.Path)
 				continue
 			}
 			syncMap[p.Path] = struct{}{}

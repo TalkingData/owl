@@ -11,7 +11,7 @@ const (
 	//DefaultPageSize  设置默认每页返回条数
 	DefaultPageSize = 10
 	//MaxPageSize 设置每页最大条数
-	MaxPageSize = 100
+	MaxPageSize = 500
 )
 
 func pagination(c *gin.Context) {

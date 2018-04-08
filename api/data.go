@@ -27,8 +27,8 @@ func initTSDB() error {
 func queryTimeSeriesData(c *gin.Context) {
 	metric := c.Query("metric")
 	tags := c.Query("tags")
-	start := c.DefaultQuery("start", "1h-ago")
-	end := c.Query("end")
+	start := c.DefaultQuery("start", time.Now().Add(-time.Hour).Format("2006/01/02-15:04:05"))
+	end := c.DefaultQuery("end", time.Now().Format("2006/01/02-15:04:05"))
 	response := gin.H{}
 	defer c.JSON(http.StatusOK, response)
 	result, err := tsdbClient.Query(start, end, tags, "sum", metric, false)

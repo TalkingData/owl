@@ -46,10 +46,13 @@ func getHostID() string {
 	var id string
 	if data, err := ioutil.ReadFile(uuid_file); err == nil {
 		if len(data) > 0 {
-			id = utils.Md5(string(data))
+			dataStr := strings.TrimSpace(string(data))
+			id = utils.Md5(dataStr)
+			lg.Info("generate id from %s:%s, result:%s", uuid_file, dataStr, id)
 		}
 	} else {
 		id = utils.Md5(getHostname())
+		lg.Info("generate id from hostname:%s, result:%s", getHostname(), id)
 	}
 	if len(id) > 16 {
 		return id[:16]

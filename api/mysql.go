@@ -324,7 +324,7 @@ func (d *db) GetStrategiesEventsCount(where string) int {
 
 // UpdateStrategyEventsStatus 修改报警事件状态
 func (d *db) UpdateStrategyEventsStatus(ids []string, awareEndTime string, productID, status int) (err error) {
-	rawSQL := fmt.Sprintf("UPDATE strategy_event SET status=%d, aware_end_time='%s' WHERE id in (%s) AND product_id=%d", status, awareEndTime, strings.Join(ids, ","), productID)
+	rawSQL := fmt.Sprintf("UPDATE strategy_event SET status=%d, aware_end_time='%s' WHERE id in (%s) AND product_id=%d AND status != %d", status, awareEndTime, strings.Join(ids, ","), productID, types.EVENT_CLOSED)
 	if _, err := d.Exec(rawSQL); err != nil {
 		log.Println(err)
 		return err
@@ -1183,11 +1183,20 @@ func (d *db) deleteHost(hostID string) error {
 
 //获取主机metrics
 
-func (d *db) getHostMetrics(hostID string, paging bool, query string, order string, offset, limit int) (int, []*ChartElement) {
+func (d *db) getHostMetrics(hostID string, paging bool, prefix string, query string, order string, offset, limit int) (int, []*ChartElement) {
 	elements := make([]*ChartElement, 0)
 	cnt := 0
 	rawSQL := fmt.Sprintf("select metric, tags from metric where host_id='%s'", hostID)
 	cntSQL := fmt.Sprintf("select count(*) from metric where host_id='%s'", hostID)
+
+	if len(prefix) != 0 {
+		rawSQL = fmt.Sprintf("%s and metric like '%s%%'", rawSQL, prefix)
+		cntSQL = fmt.Sprintf("%s and metric like '%s%%'", cntSQL, prefix)
+		if prefix == "system" {
+			genMetric := `'systemc.mem.used_pct', 'system.net.bytes', 'system.cpu.idle', 'system.swap.used_pct', 'system.load.1min', 'system.fd.used_pct'`
+			rawSQL = fmt.Sprintf("%s and (metric in (%s) and tags not regexp 'cpu=cpu[0-9]+')", rawSQL, genMetric)
+		}
+	}
 	if len(query) != 0 {
 		queryArr := strings.Split(query, "/")
 		if len(queryArr) > 1 {
@@ -1213,6 +1222,27 @@ func (d *db) getHostMetrics(hostID string, paging bool, query string, order stri
 		log.Println(err)
 	}
 	return cnt, elements
+}
+
+func (d *db) getHostAppNames(hostID string) []string {
+	metrics := []string{}
+	appNames := []string{}
+	appMap := make(map[string]struct{})
+	rawSQL := fmt.Sprintf("select distinct metric from metric where host_id='%s'", hostID)
+	log.Println(rawSQL)
+	if err := d.Select(&metrics, rawSQL); err != nil {
+		log.Println(err)
+		return nil
+	}
+	for _, metric := range metrics {
+		appName := strings.Split(metric, ".")[0]
+		if _, ok := appMap[appName]; ok {
+			continue
+		}
+		appMap[appName] = struct{}{}
+		appNames = append(appNames, appName)
+	}
+	return appNames
 }
 
 // 获取产品下的主机

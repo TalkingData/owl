@@ -489,7 +489,7 @@ DROP TABLE IF EXISTS `trigger_event`;
 CREATE TABLE `trigger_event` (
   `strategy_event_id` bigint(20) unsigned NOT NULL,
   `index` char(10) COLLATE utf8_unicode_ci NOT NULL,
-  `metric` varchar(32) COLLATE utf8_unicode_ci NOT NULL,
+  `metric` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `tags` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
   `number` int(10) unsigned NOT NULL DEFAULT '0',
   `aggregate_tags` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
@@ -510,7 +510,7 @@ CREATE TABLE `trigger_event_record` (
   `strategy_event_id` bigint(20) unsigned NOT NULL,
   `count` int(4) unsigned NOT NULL DEFAULT '1',
   `index` char(10) COLLATE utf8_unicode_ci NOT NULL,
-  `metric` varchar(32) COLLATE utf8_unicode_ci NOT NULL,
+  `metric` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `tags` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
   `number` int(10) unsigned NOT NULL DEFAULT '0',
   `aggregate_tags` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,

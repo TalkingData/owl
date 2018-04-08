@@ -170,7 +170,7 @@ func broadcast(event *types.StrategyEvent, subject, content string, action *type
 		users[user.ID] = user
 	}
 	for _, user := range users {
-		go func() {
+		go func(user *types.User) {
 			defer func() {
 				if r := recover(); r != nil {
 					lg.Error("when send notify to user %s occur error %s", user.Username, r)
@@ -211,7 +211,7 @@ func broadcast(event *types.StrategyEvent, subject, content string, action *type
 				success,
 			)
 			mydb.CreateActionResult(action_result)
-		}()
+		}(user)
 	}
 }
 

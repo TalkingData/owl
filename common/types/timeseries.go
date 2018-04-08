@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-var reg = regexp.MustCompile(`^[a-zA-Z_.]+$`)
+var reg = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_.]+$`)
 
 type TimeSeriesData struct {
 	Metric    string            `json:"metric"`    //sys.cpu.idle

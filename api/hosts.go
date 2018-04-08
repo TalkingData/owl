@@ -21,6 +21,11 @@ type Host struct {
 	MuteTime     string  `json:"mute_time" db:"mute_time"`
 }
 
+type WarpHost struct {
+	Host
+	Apps []string `json:"apps"`
+}
+
 func listAllHosts(c *gin.Context) {
 	response := gin.H{"code": http.StatusOK}
 	defer c.JSON(http.StatusOK, response)
@@ -28,7 +33,7 @@ func listAllHosts(c *gin.Context) {
 	if order == "" {
 		order = "status asc"
 	}
-	total, plugins := mydb.getAllHosts(
+	total, hosts := mydb.getAllHosts(
 		c.GetBool("paging"),
 		c.Query("query"),
 		order,
@@ -37,7 +42,7 @@ func listAllHosts(c *gin.Context) {
 	)
 	response["code"] = http.StatusOK
 	response["total"] = total
-	response["hosts"] = plugins
+	response["hosts"] = warpHosts(hosts)
 }
 
 func deleteHost(c *gin.Context) {
@@ -66,6 +71,7 @@ func listHostMetrics(c *gin.Context) {
 	total, metrics := mydb.getHostMetrics(
 		hostID,
 		c.GetBool("paging"),
+		c.Query("prefix"),
 		c.Query("query"),
 		"metric asc",
 		c.GetInt("offset"),
@@ -80,4 +86,28 @@ func listHostMetrics(c *gin.Context) {
 	}
 	response["metrics"] = metrics
 	response["total"] = total
+}
+
+func listHostApps(c *gin.Context) {
+	response := gin.H{"code": http.StatusOK}
+	defer c.JSON(http.StatusOK, response)
+	var (
+		hostID string
+		host   *Host
+	)
+	hostID = c.Param("host_id")
+	if host = mydb.getHostByID(hostID); host.ID == "" {
+		response["code"] = http.StatusBadRequest
+		response["message"] = fmt.Sprintf("host [%s] is not exists", hostID)
+		return
+	}
+
+}
+
+func warpHosts(hosts []Host) []WarpHost {
+	warpHosts := []WarpHost{}
+	for _, host := range hosts {
+		warpHosts = append(warpHosts, WarpHost{host, mydb.getHostAppNames(host.ID)})
+	}
+	return warpHosts
 }
