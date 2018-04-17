@@ -146,13 +146,13 @@ func (c *TCPConn) AsyncWritePacket(p Packet) error {
 
 func (c *TCPConn) Close() {
 	c.closeOnce.Do(func() {
+		atomic.StoreInt32(&c.exitFlag, 0)
 		close(c.exitChan)
 		close(c.writeChan)
 		close(c.readChan)
 		if c.callback != nil {
 			c.callback.OnDisconnected(c)
 		}
-		atomic.StoreInt32(&c.exitFlag, 0)
 		c.conn.Close()
 	})
 }
