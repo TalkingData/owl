@@ -30,8 +30,6 @@ http://54.223.127.87/
 管理员：admin/111111 </br>
 注: demo 环境数据库每隔 1 个小时会自动恢复
 
-![demo](./doc/demo_1.png)
-
 ## rpm包地址
 https://pan.baidu.com/s/1UTYOOB8YE8nng0guXOXkmg#list/path=%2Fowl
 
