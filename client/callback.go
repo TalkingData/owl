@@ -54,8 +54,19 @@ func (cb *callback) OnMessage(conn *tcp.TCPConn, p tcp.Packet) {
 			return
 		}
 		lg.Debug("recive message, %s %s", types.MsgTextMap[pkt.Type], sp.Path)
-		fd, err := os.OpenFile(filepath.Join(GlobalConfig.PluginDir, sp.Path), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+		filename := filepath.Join(GlobalConfig.PluginDir, sp.Path)
+	retry:
+		fd, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 		if err != nil {
+			if os.IsNotExist(err) {
+				dir := filepath.Dir(filename)
+				lg.Warn("plugin dir(%s) is not exists, create", dir)
+				if err = os.MkdirAll(filepath.Dir(dir), 0755); err != nil {
+					lg.Warn("mkdir %s failed, error:%s", dir, err.Error())
+					return
+				}
+				goto retry
+			}
 			lg.Error("%s", err)
 			return
 		}
