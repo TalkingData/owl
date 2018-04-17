@@ -26,6 +26,12 @@ type WarpHost struct {
 	Apps []string `json:"apps"`
 }
 
+func getHost(c *gin.Context) {
+	response := gin.H{"code": http.StatusOK}
+	defer c.JSON(http.StatusOK, response)
+	response["host"] = warpHost(*mydb.getHostByID(c.Param("host_id")))
+}
+
 func listAllHosts(c *gin.Context) {
 	response := gin.H{"code": http.StatusOK}
 	defer c.JSON(http.StatusOK, response)
@@ -107,7 +113,11 @@ func listHostApps(c *gin.Context) {
 func warpHosts(hosts []Host) []WarpHost {
 	warpHosts := []WarpHost{}
 	for _, host := range hosts {
-		warpHosts = append(warpHosts, WarpHost{host, mydb.getHostAppNames(host.ID)})
+		warpHosts = append(warpHosts, warpHost(host))
 	}
 	return warpHosts
+}
+
+func warpHost(host Host) WarpHost {
+	return WarpHost{host, mydb.getHostAppNames(host.ID)}
 }

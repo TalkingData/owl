@@ -77,13 +77,16 @@ func InitServer() error {
 			user.DELETE("/:user_id", deleteUser)
 		}
 
-		hosts := v1.Group("/hosts", verifyAdminPermission)
+		hosts := v1.Group("/hosts")
 		{
 			//获取所有主机列表
-			hosts.GET("", listAllHosts)
+			hosts.GET("", verifyAdminPermission, listAllHosts)
 			// 获取主机的metric列表
 			hosts.GET("/:host_id/metrics", listHostMetrics)
-			hosts.DELETE("/:host_id", deleteHost)
+
+			hosts.GET("/:host_id", getHost)
+
+			hosts.DELETE("/:host_id", verifyAdminPermission, deleteHost)
 		}
 
 		product := v1.Group("/products")
