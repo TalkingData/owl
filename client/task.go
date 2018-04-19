@@ -172,7 +172,6 @@ func mergePlugin(pls []types.Plugin) {
 		if checksum, err := utils.GetFileMD5(filepath.Join(GlobalConfig.PluginDir, p.Path)); err == nil {
 			// 插件存在并且获取到checksum
 			if checksum == p.Checksum {
-				lg.Info("plugin %s checksum change, new:%s, curr:%s", p.Path, p.Checksum, checksum)
 				canSync = false
 			}
 		}
