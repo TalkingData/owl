@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"owl/common/types"
+	"sort"
 	"strings"
 	"time"
 
@@ -1238,6 +1239,7 @@ func (d *db) getHostAppNames(hostID string) []string {
 		appMap[appName] = struct{}{}
 		appNames = append(appNames, appName)
 	}
+	sort.Strings(appNames)
 	return appNames
 }
 
