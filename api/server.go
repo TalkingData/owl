@@ -74,7 +74,7 @@ func InitServer() error {
 			//修改角色
 			user.PUT("/change_role", verifyAdminPermission, changeUserRole)
 			//删除用户
-			user.DELETE("/:user_id", deleteUser)
+			user.DELETE("/:user_id", verifyAdminPermission, deleteUser)
 		}
 
 		hosts := v1.Group("/hosts")
