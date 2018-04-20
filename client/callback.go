@@ -60,8 +60,8 @@ func (cb *callback) OnMessage(conn *tcp.TCPConn, p tcp.Packet) {
 		if err != nil {
 			if os.IsNotExist(err) {
 				dir := filepath.Dir(filename)
-				lg.Warn("plugin dir(%s) is not exists, create", dir)
-				if err = os.MkdirAll(filepath.Dir(dir), 0755); err != nil {
+				lg.Warn("create plugin failed, dir(%s) is not exists, create", dir)
+				if err = os.MkdirAll(dir, 0755); err != nil {
 					lg.Warn("mkdir %s failed, error:%s", dir, err.Error())
 					return
 				}
