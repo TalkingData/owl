@@ -2,7 +2,17 @@ package types
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"sort"
+	"strings"
+
+	"github.com/wuyingsong/utils"
+)
+
+var (
+	ErrPluginPathIsBlank    = errors.New("plugin path is blank")
+	ErrPluginIntervalIsZero = errors.New("plugin interval is zore")
 )
 
 type Plugin struct {
@@ -12,14 +22,14 @@ type Plugin struct {
 	Name string `json:"name"`
 	// plugin 在磁盘上的路径
 	Path string `json:"path"`
+	// 校验和，用于插件同步比对
+	Checksum string `json:"checksum"`
 	// 执行参数
 	Args string `json:"args"`
 	// 执行间隔
 	Interval int `json:"interval"`
 	// 执行超时时间
 	Timeout int `json:"timeout"`
-	// 校验和，用于插件同步比对
-	Checksum string `json:"checksum"`
 }
 
 func (plugin *Plugin) Encode() []byte {
@@ -55,6 +65,19 @@ func (plugin *Plugin) Equal(p Plugin) bool {
 	return true
 }
 
-func (Plugin) TableName() string {
-	return "plugin"
+func (plugin *Plugin) Validate() error {
+	if plugin.Path == "" {
+		return ErrPluginPathIsBlank
+	}
+	if plugin.Interval == 0 {
+		return ErrPluginIntervalIsZero
+	}
+	return nil
+}
+
+func (plugin *Plugin) UniqueKey() string {
+	sortArgSlice := utils.ParseCommandArgs(fmt.Sprintf("%s %s", plugin.Path, plugin.Args))
+	sort.Strings(sortArgSlice)
+	uniqueKey := strings.Join(sortArgSlice, "")
+	return utils.Md5(uniqueKey)
 }
