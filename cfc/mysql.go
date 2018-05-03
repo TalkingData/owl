@@ -75,28 +75,28 @@ func (s *Storage) setHostAlive(hostID string, status string) {
 
 func (s *Storage) getHostPlugins(hostID string) ([]types.Plugin, error) {
 	plugins := []types.Plugin{}
-	idMap := make(map[int]struct{})
-	sqlString := fmt.Sprintf("select `id`, `name`, `path`, `args`, `checksum`, `interval`, `timeout` from `plugin` where"+
-		" id in (select `plugin_id` from `host_plugin` where `host_id`='%s')", hostID)
+	idMap := make(map[string]types.Plugin)
+	sqlString := fmt.Sprintf("select hp.id, p.name, p.path, hp.args, p.checksum, hp.interval, hp.timeout from host_plugin as hp "+
+		" left join plugin as p on hp.plugin_id = p.id where host_id='%s'", hostID)
 	lg.Debug("getHostPlugins:%s", sqlString)
 	rows, err := s.Query(sqlString)
 	if err != nil {
+		lg.Error("getHostPlugins error:%v", err)
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		plugin := types.Plugin{}
 		if err := rows.Scan(&plugin.ID, &plugin.Name, &plugin.Path, &plugin.Args, &plugin.Checksum, &plugin.Interval, &plugin.Timeout); err != nil {
-			fmt.Println(err)
+			lg.Error("getHostPlugins error:%v", err)
 			continue
 		}
 		plugins = append(plugins, plugin)
-		idMap[plugin.ID] = struct{}{}
+		idMap[plugin.UniqueKey()] = plugin
 	}
 	//获取主机组所有的插件
-	sqlString = fmt.Sprintf("select `id`, `name`, `path`, `args`, `checksum`, `interval`, `timeout` from `plugin` where "+
-		"id in (select `plugin_id` from `host_group_plugin` where group_id "+
-		"in(select `host_group_id` from `host_group_host` where host_id='%s'))", hostID)
+	sqlString = fmt.Sprintf("select hgp.id, p.name, p.path, hgp.args, p.checksum, hgp.interval, hgp.timeout from plugin as p "+
+		" left join host_group_plugin as hgp on p.id = hgp.plugin_id where hgp.group_id in (select host_group_id from host_group_host where host_id='%s')", hostID)
 	lg.Debug("getHostGroupPlugins:%s", sqlString)
 	rows, err = s.Query(sqlString)
 	if err != nil {
@@ -106,14 +106,16 @@ func (s *Storage) getHostPlugins(hostID string) ([]types.Plugin, error) {
 	for rows.Next() {
 		plugin := types.Plugin{}
 		if err := rows.Scan(&plugin.ID, &plugin.Name, &plugin.Path, &plugin.Args, &plugin.Checksum, &plugin.Interval, &plugin.Timeout); err != nil {
-			fmt.Println(err)
+			lg.Error("getHostPlugins error:%v", err)
 			continue
 		}
-		if _, ok := idMap[plugin.ID]; ok {
+		uniqueKey := plugin.UniqueKey()
+		if p, ok := idMap[uniqueKey]; ok {
+			lg.Warn("getHostPlugins: duplicate host group plugin (%v, %v)", plugin, p)
 			continue
 		}
 		plugins = append(plugins, plugin)
-		idMap[plugin.ID] = struct{}{}
+		idMap[uniqueKey] = plugin
 	}
 	return plugins, nil
 }
