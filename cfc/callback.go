@@ -53,7 +53,7 @@ func (cb *callback) dispatch(conn *tcp.TCPConn, pkt *tcp.DefaultPacket) {
 			lg.Error("register agent error:%s, host:%v", err, host)
 			return
 		}
-		lg.Debug("register agent:%s", host)
+		lg.Debug("register agent:%v", host)
 		// 客户端上传metric
 
 	case types.MsgAgentSendMetricInfo:
@@ -97,11 +97,6 @@ func (cb *callback) dispatch(conn *tcp.TCPConn, pkt *tcp.DefaultPacket) {
 		plugins, err := mydb.getHostPlugins(host.ID)
 		if err != nil {
 			lg.Error("get host plugin error %s host:%v", err, host)
-			return
-		}
-
-		// no plugin
-		if len(plugins) == 0 {
 			return
 		}
 		resp := types.GetPluginResp{
