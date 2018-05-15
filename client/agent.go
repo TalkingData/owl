@@ -121,7 +121,7 @@ func (agent *Agent) sendSyncPluginRequest(p types.Plugin) error {
 
 // 发送主机配置信息
 func (agent *Agent) register() error {
-	lg.Debug("send host config %v", agent.hostcfg)
+	lg.Debug("send host config %+v", agent.hostcfg)
 	return agent.cfc.AsyncWritePacket(
 		tcp.NewDefaultPacket(
 			types.MsgAgentRegister,

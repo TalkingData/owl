@@ -42,7 +42,7 @@ func (plugin *Plugin) Decode(data []byte) error {
 }
 
 func (plugin Plugin) String() string {
-	return fmt.Sprintf("{id:%d, name:%s, path:%s, args:%s, interval:%d, timeout:%d, checksum:%s}",
+	return fmt.Sprintf(`{"id":%d, "name":"%s", "path":"%s", "args":"%s", "interval":%d, "timeout":%d, "checksum":"%s"}`,
 		plugin.ID,
 		plugin.Name,
 		plugin.Path,
