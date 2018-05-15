@@ -96,7 +96,7 @@ CREATE TABLE `chart` (
   `panel_id` int(10) unsigned NOT NULL,
   PRIMARY KEY (`id`),
   KEY `chart_panel_id_fk` (`panel_id`),
-  CONSTRAINT `chart_panel_id_fk` FOREIGN KEY (`panel_id`) REFERENCES `panel` (`id`)
+  CONSTRAINT `chart_panel_id_fk` FOREIGN KEY (`panel_id`) REFERENCES `panel` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- ----------------------------
@@ -105,7 +105,7 @@ CREATE TABLE `chart` (
 DROP TABLE IF EXISTS `chart_element`;
 CREATE TABLE `chart_element` (
   `metric` varchar(1024) NOT NULL,
-  `tags` varchar(1024) NOT NULL,
+  `tags` varchar(2048) NOT NULL,
   `chart_id` int(10) unsigned NOT NULL,
   KEY `chart_element_chart_id_fk` (`chart_id`),
   CONSTRAINT `chart_element_chart_id_fk` FOREIGN KEY (`chart_id`) REFERENCES `chart` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
@@ -173,6 +173,9 @@ CREATE TABLE `host_group_plugin` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `group_id` int(10) unsigned NOT NULL,
   `plugin_id` int(10) unsigned NOT NULL,
+  `args` varchar(1024) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
+  `interval` int(1) NOT NULL DEFAULT '60',
+  `timeout` int(1) NOT NULL DEFAULT '10',
   PRIMARY KEY (`id`),
   KEY `group_id` (`group_id`),
   KEY `plugin_id` (`plugin_id`),
@@ -188,9 +191,12 @@ CREATE TABLE `host_plugin` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `host_id` char(32) COLLATE utf8_unicode_ci NOT NULL,
   `plugin_id` int(10) unsigned NOT NULL,
+  `args` varchar(1024) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
+  `interval` int(1) NOT NULL DEFAULT '60',
+  `timeout` int(1) NOT NULL DEFAULT '10',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `idx_host_id_plugin_id` (`host_id`,`plugin_id`),
   KEY `fk_host_plugin_plugin_id` (`plugin_id`),
+  KEY `fk_host_plugin_host_id` (`host_id`),
   CONSTRAINT `fk_host_plugin_host_id` FOREIGN KEY (`host_id`) REFERENCES `host` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_host_plugin_plugin_id` FOREIGN KEY (`plugin_id`) REFERENCES `plugin` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
@@ -238,7 +244,9 @@ CREATE TABLE `panel` (
   `product_id` int(10) unsigned NOT NULL,
   `name` varchar(255) NOT NULL,
   `creator` varchar(255) NOT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `fk_panel_product_id` (`product_id`),
+  CONSTRAINT `fk_panel_product_id` FOREIGN KEY (`product_id`) REFERENCES `product` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- ----------------------------
@@ -249,15 +257,15 @@ CREATE TABLE `plugin` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `path` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `args` varchar(255) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
-  `interval` int(1) NOT NULL DEFAULT '30',
+  `args` varchar(1024) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
+  `interval` int(1) NOT NULL DEFAULT '60',
   `timeout` int(1) NOT NULL DEFAULT '10',
   `checksum` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `update_at` datetime NOT NULL,
   `create_at` datetime NOT NULL,
   `creator` varchar(255) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `idx_name_args` (`name`,`args`)
+  UNIQUE KEY `idx_name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- ----------------------------
@@ -289,7 +297,7 @@ CREATE TABLE `product_host` (
   KEY `host_id_fk` (`product_id`),
   CONSTRAINT `product_host_host_id_fk` FOREIGN KEY (`host_id`) REFERENCES `host` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `product_host_product_id_fk` FOREIGN KEY (`product_id`) REFERENCES `product` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=169 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Table structure for product_user
