@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"owl/common/types"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,7 +25,9 @@ type Host struct {
 
 type WarpHost struct {
 	Host
-	Apps []string `json:"apps"`
+	Apps       []string    `json:"apps"`
+	PluginCnt  int         `json:"plugin_cnt"`
+	HostGroups []HostGroup `json:"host_groups"`
 }
 
 func getHost(c *gin.Context) {
@@ -119,5 +123,83 @@ func warpHosts(hosts []Host) []WarpHost {
 }
 
 func warpHost(host Host) WarpHost {
-	return WarpHost{host, mydb.getHostAppNames(host.ID)}
+	pluginCnt, _ := mydb.getHostPlugins(host.ID, false, "", "", 0, 0)
+	_, groups := mydb.getHostHostGroups(host.ID)
+	return WarpHost{host, mydb.getHostAppNames(host.ID), pluginCnt, groups}
+}
+
+func listHostPlugins(c *gin.Context) {
+	response := gin.H{"code": http.StatusOK}
+	defer c.JSON(http.StatusOK, response)
+	total, plugins := mydb.getHostPlugins(
+		c.Param("host_id"),
+		c.GetBool("paging"),
+		c.Query("query"),
+		"metric asc",
+		c.GetInt("offset"),
+		c.GetInt("limit"),
+	)
+	response["plugins"] = plugins
+	response["total"] = total
+}
+
+func createHostPlugin(c *gin.Context) {
+	response := gin.H{"code": http.StatusOK}
+	defer c.JSON(http.StatusOK, response)
+	var err error
+	plugin := &types.Plugin{}
+	if err = c.BindJSON(&plugin); err != nil {
+		response["code"] = http.StatusBadRequest
+		response["message"] = err.Error()
+		return
+	}
+	if err = plugin.Validate(); err != nil {
+		response["code"] = http.StatusBadRequest
+		response["message"] = err.Error()
+		return
+	}
+	hostID := c.Param("host_id")
+	if plugin, err = mydb.createHostPlugin(hostID, plugin); err != nil {
+		response["code"] = http.StatusInternalServerError
+		return
+	}
+	response["plugin"] = plugin
+}
+
+func updateHostPlugin(c *gin.Context) {
+	response := gin.H{"code": http.StatusOK}
+	defer c.JSON(http.StatusOK, response)
+	plugin := &types.Plugin{}
+	var err error
+	if err = c.BindJSON(&plugin); err != nil {
+		response["code"] = http.StatusBadRequest
+		response["message"] = err.Error()
+		return
+	}
+	if err = plugin.Validate(); err != nil {
+		response["code"] = http.StatusBadRequest
+		response["message"] = err.Error()
+		return
+	}
+	if err = mydb.updateHostPlugin(c.Param("host_id"), plugin); err != nil {
+		response["code"] = http.StatusInternalServerError
+		return
+	}
+	response["plugin"] = plugin
+}
+
+func deleteHostPlugin(c *gin.Context) {
+	response := gin.H{"code": http.StatusOK}
+	defer c.JSON(http.StatusOK, response)
+	hostID := c.Param("host_id")
+	pluginID, err := strconv.Atoi(c.Param("plugin_id"))
+	if err != nil {
+		response["code"] = http.StatusBadRequest
+		response["message"] = "plugin id avalied"
+	}
+
+	if err := mydb.deleteHostPlugin(hostID, pluginID); err != nil {
+		response["code"] = http.StatusInternalServerError
+		return
+	}
 }

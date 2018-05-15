@@ -42,16 +42,17 @@ func InitServer() error {
 		v1.GET("/suggest/tags", suggestMetricTagSet)
 		v1.POST("/logout", Logout)
 
-		plugin := v1.Group("/plugins", verifyAdminPermission)
+		plugin := v1.Group("/plugins")
 		{
 			plugin.GET("", listPlugins)
-			plugin.POST("", createPlugin)
-			plugin.PUT("", updatePlugin)
-			plugin.DELETE("/:plugin_id", deletePlugin)
-			plugin.PUT("/:plugin_id/host_groups/add", addHostGroups2Plugin)
-			plugin.PUT("/:plugin_id/host_groups/remove", removeHostGroupsFromPlugin)
-			plugin.GET("/:plugin_id/host_groups", listPluginHostGroups)
-			plugin.GET("/:plugin_id/host_groups/not_in", listNotInPluginHostGroups)
+			plugin.POST("", verifyAdminPermission, createPlugin)
+			plugin.PUT("", verifyAdminPermission, updatePlugin)
+			plugin.DELETE("/:plugin_id", verifyAdminPermission, deletePlugin)
+
+			// plugin.PUT("/:plugin_id/host_groups/add", addHostGroups2Plugin)
+			// plugin.PUT("/:plugin_id/host_groups/remove", removeHostGroupsFromPlugin)
+			// plugin.GET("/:plugin_id/host_groups", listPluginHostGroups)
+			// plugin.GET("/:plugin_id/host_groups/not_in", listNotInPluginHostGroups)
 		}
 
 		// user interface
@@ -85,6 +86,15 @@ func InitServer() error {
 			hosts.GET("/:host_id/metrics", listHostMetrics)
 
 			hosts.GET("/:host_id", getHost)
+
+			// 添加 plugin 到主机
+			hosts.POST("/:host_id/plugins", createHostPlugin)
+
+			hosts.PUT("/:host_id/plugins", updateHostPlugin)
+
+			hosts.GET("/:host_id/plugins", listHostPlugins)
+
+			hosts.DELETE("/:host_id/plugins/:plugin_id", deleteHostPlugin)
 
 			hosts.DELETE("/:host_id", verifyAdminPermission, deleteHost)
 		}
@@ -181,7 +191,15 @@ func InitServer() error {
 				// 创建产品线主机组
 				productHostGroup.POST("", createProductHostGroup)
 				//删除产品线主机组
-				productHostGroup.DELETE("/:host_group_id", deleteProductHostGroup)
+				productHostGroup.DELETE("/:host_group_id", verifyAndInjectHostGroupID, deleteProductHostGroup)
+
+				productHostGroupPlugin := productHostGroup.Group("/:host_group_id/plugins", verifyAndInjectHostGroupID)
+				{
+					productHostGroupPlugin.GET("", listHostGroupPlugins)
+					productHostGroupPlugin.PUT("", updateHostGroupPlugin)
+					productHostGroupPlugin.POST("", createHostGroupPlugin)
+					productHostGroupPlugin.DELETE("/:plugin_id", deleteHostGroupPlugin)
+				}
 
 				productHostGroupHost := productHostGroup.Group("/:host_group_id/hosts", verifyAndInjectHostGroupID)
 				{

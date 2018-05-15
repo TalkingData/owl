@@ -165,7 +165,7 @@ func (d *db) CreateStrategy(strategy *StrategyDetail) (err error) {
 		tx.MustExec("INSERT INTO strategy_host_exclude VALUES (DEFAULT, ?, ?)", strategyID, se.ID)
 	}
 	for _, tr := range strategy.Triggers {
-		tx.MustExec("INSERT INTO owl.trigger VALUES (DEFAULT, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		tx.MustExec("INSERT INTO `trigger` VALUES (DEFAULT, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 			strategyID, tr.Metric, tr.Tags, tr.Number, tr.Index, tr.Method, tr.Symbol, tr.Threshold, tr.Description)
 	}
 	for _, ac := range strategy.Actions {
@@ -208,7 +208,7 @@ func (d *db) GetHostGroupsByStrategyID(id int64) []*types.Group {
 // GetTriggersByStrategyID 获取策略下的逻辑表达式
 func (d *db) GetTriggersByStrategyID(id int64) []*Trigger {
 	triggers := []*Trigger{}
-	if err := d.Select(&triggers, "SELECT * FROM owl.trigger WHERE strategy_id = ? ORDER BY `index` ASC", id); err != nil {
+	if err := d.Select(&triggers, "SELECT * FROM `trigger` WHERE strategy_id = ? ORDER BY `index` ASC", id); err != nil {
 		log.Println(err)
 	}
 	return triggers
@@ -259,9 +259,9 @@ func (d *db) UpdateStrategy(strategy *StrategyDetail) (err error) {
 	for _, se := range strategy.ExcludeHosts {
 		tx.MustExec("INSERT INTO strategy_host_exclude VALUES (0, ?, ?)", strategy.ID, se.ID)
 	}
-	tx.MustExec("DELETE FROM owl.trigger WHERE strategy_id = ?", strategy.ID)
+	tx.MustExec("DELETE FROM `trigger` WHERE strategy_id = ?", strategy.ID)
 	for _, tr := range strategy.Triggers {
-		tx.MustExec("INSERT INTO owl.trigger VALUES (0, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		tx.MustExec("INSERT INTO `trigger` VALUES (0, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 			strategy.ID, tr.Metric, tr.Tags, tr.Number, tr.Index, tr.Method, tr.Symbol, tr.Threshold, tr.Description)
 	}
 	tx.MustExec("DELETE FROM action WHERE strategy_id = ?", strategy.ID)
@@ -369,6 +369,7 @@ func (d *db) GetStrategyEventsFailed(where, order, limit string) []*StrategyEven
 	} else {
 		rawSQL = fmt.Sprintf("%s WHERE %s ORDER BY %s", rawSQL, where, order)
 	}
+	log.Println(rawSQL)
 	if err := d.Select(&eventsFailed, rawSQL); err != nil {
 		log.Println(err)
 	}
@@ -380,6 +381,7 @@ func (d *db) GetStrategyEventsFailedCount(where string) int {
 	var total int
 	rawSQL := "SELECT count(*) FROM strategy_event_failed sef LEFT JOIN host h ON sef.host_id = h.id"
 	rawSQL = fmt.Sprintf("%s WHERE %s", rawSQL, where)
+	log.Println(rawSQL)
 	if err := d.Get(&total, rawSQL); err != nil {
 		log.Println(err)
 	}
@@ -1243,6 +1245,87 @@ func (d *db) getHostAppNames(hostID string) []string {
 	return appNames
 }
 
+func (d *db) getHostHostGroups(hostID string) (int, []HostGroup) {
+	var (
+		hostGroups = make([]HostGroup, 0)
+		cnt        int
+		err        error
+	)
+	rawSQL := fmt.Sprintf("select id, name, description, creator, DATE_FORMAT(create_at,'%s') as create_at,"+
+		"DATE_FORMAT(update_at,'%s') as update_at  from host_group where id in (select host_group_id from host_group_host where host_id='%s')",
+		dbDateFormat, dbDateFormat, hostID)
+	cntSQL := fmt.Sprintf("select count(*) from host_group where id in (select host_group_id from host_group_host where host_id='%s')", hostID)
+	log.Println(rawSQL)
+	log.Println(cntSQL)
+	if err = d.Select(&hostGroups, rawSQL); err != nil {
+		log.Println(err)
+	}
+	if err = d.Get(&cnt, cntSQL); err != nil {
+		log.Println(err)
+	}
+	return cnt, hostGroups
+}
+
+func (d *db) getHostPlugins(hostID string, paging bool, query string, order string, offset, limit int) (int, []*types.Plugin) {
+	plugins := make([]*types.Plugin, 0)
+	cnt := 0
+	rawSQL := fmt.Sprintf("select hp.id, p.name, p.path, p.checksum, hp.args, hp.interval, hp.timeout from host_plugin as hp"+
+		" left join plugin as p on p.id = hp.plugin_id where hp.host_id='%s'", hostID)
+	cntSQL := fmt.Sprintf("select count(*) from host_plugin as hp left join plugin as p on p.id = hp.plugin_id where host_id='%s'", hostID)
+
+	if len(query) != 0 {
+		rawSQL = fmt.Sprintf("%s and (p.name like '%%%s%%' or p.path like '%%%s%%')", rawSQL, query, query)
+		cntSQL = fmt.Sprintf("%s and (p.name like '%%%s%%' and p.path like '%%%s%%')", cntSQL, query, query)
+	}
+	if paging {
+		rawSQL = fmt.Sprintf("%s limit %d, %d", rawSQL, offset, limit)
+	}
+	log.Println(rawSQL)
+	log.Println(cntSQL)
+	if err := d.Select(&plugins, rawSQL); err != nil {
+		log.Println(err)
+	}
+	if err := d.Get(&cnt, cntSQL); err != nil {
+		log.Println(err)
+	}
+	return cnt, plugins
+}
+
+func (d *db) createHostPlugin(hostID string, plugin *types.Plugin) (*types.Plugin, error) {
+	rawSQL := fmt.Sprintf("insert into host_plugin(`host_id`, `plugin_id`, `args`, `interval`, `timeout`) values('%s', %d, '%s', %d, %d)",
+		hostID, plugin.ID, plugin.Args, plugin.Interval, plugin.Timeout)
+	log.Println(rawSQL)
+	res, err := d.Exec(rawSQL)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	id, _ := res.LastInsertId()
+	plugin.ID = int(id)
+	return plugin, nil
+}
+
+func (d *db) updateHostPlugin(hostID string, plugin *types.Plugin) error {
+	rawSQL := fmt.Sprintf("update host_plugin set `args`='%s', `interval`=%d, `timeout`=%d where host_id='%s' and id=%d",
+		plugin.Args, plugin.Interval, plugin.Timeout, hostID, plugin.ID)
+	log.Println(rawSQL)
+	if _, err := d.Exec(rawSQL); err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
+func (d *db) deleteHostPlugin(hostID string, pluginID int) error {
+	rawSQL := fmt.Sprintf("delete from host_plugin where host_id='%s' and id=%d", hostID, pluginID)
+	log.Println(rawSQL)
+	if _, err := d.Exec(rawSQL); err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
 // 获取产品下的主机
 func (d *db) getProductHosts(productID int, paging bool, query string, order string, offset, limit int) (int, []Host) {
 	var (
@@ -1386,6 +1469,68 @@ func (d *db) getProductHostGroups(productID int, paging bool, query string, orde
 		log.Println(err)
 	}
 	return cnt, groups
+}
+
+func (d *db) getHostGroupPlugins(groupID int, paging bool, query string, offset, limit int) (int, []types.Plugin) {
+	var (
+		plugins = make([]types.Plugin, 0)
+		err     error
+		cnt     int
+	)
+	rawSQL := fmt.Sprintf("select hgp.id, p.name, p.path, p.checksum, hgp.args, hgp.interval, hgp.timeout from host_group_plugin as hgp "+
+		" left join plugin as p on p.id = hgp.plugin_id where hgp.group_id=%d", groupID)
+	cntSQL := fmt.Sprintf("select count(*) from host_group_plugin as hgp left join plugin as p on p.id = hgp.plugin_id where hgp.group_id=%d", groupID)
+	if len(query) > 0 {
+		rawSQL = fmt.Sprintf("%s and p.name like '%%%s%%'", rawSQL, query)
+		cntSQL = fmt.Sprintf("%s and p.name like '%%%s%%'", cntSQL, query)
+	}
+	if paging {
+		rawSQL = fmt.Sprintf("%s limit %d,%d", rawSQL, offset, limit)
+	}
+	log.Println(rawSQL)
+	log.Println(cntSQL)
+	if err = d.Select(&plugins, rawSQL); err != nil {
+		log.Println(err)
+	}
+	if err = d.Get(&cnt, cntSQL); err != nil {
+		log.Println(err)
+	}
+	return cnt, plugins
+}
+
+func (d *db) updateHostGroupPlugin(groupID int, plugin *types.Plugin) error {
+	rawSQL := fmt.Sprintf("update host_group_plugin set `args`='%s', `interval`=%d, `timeout`=%d where group_id=%d and id=%d",
+		plugin.Args, plugin.Interval, plugin.Timeout, groupID, plugin.ID)
+	log.Println(rawSQL)
+	if _, err := d.Exec(rawSQL); err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
+func (d *db) createHostGroupPlugin(groupID int, plugin *types.Plugin) (*types.Plugin, error) {
+	rawSQL := fmt.Sprintf("insert into host_group_plugin(`group_id`, `plugin_id`, `args`, `interval`, `timeout`) values(%d, %d, '%s', %d, %d)",
+		groupID, plugin.ID, plugin.Args, plugin.Interval, plugin.Timeout)
+	log.Println(rawSQL)
+	res, err := d.Exec(rawSQL)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	id, _ := res.LastInsertId()
+	plugin.ID = int(id)
+	return plugin, nil
+}
+
+func (d *db) deleteHostGroupPlugin(groupID int, pluginID int) error {
+	rawSQL := fmt.Sprintf("delete from host_group_plugin where group_id=%d and id=%d", groupID, pluginID)
+	log.Println(rawSQL)
+	if _, err := d.Exec(rawSQL); err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
 }
 
 //获取主机组下的主机
@@ -1576,10 +1721,9 @@ func (d *db) getPlugins(query string, paging bool, offset, limit int) (int, []ty
 //创建插件
 func (d *db) createPlugin(plugin *types.Plugin, creator string) (*types.Plugin, error) {
 	now := time.Now().Format(timeFormat)
-	rawSQL := fmt.Sprintf("insert into plugin(`name`, `path`, `args`, `interval`, `timeout`, "+
-		" `checksum`, `create_at`,`update_at`,`creator`)"+
-		"values('%s', '%s', '%s', %d, %d, '%s', '%s', '%s', '%s')",
-		plugin.Name, plugin.Path, plugin.Args, plugin.Interval, plugin.Timeout, plugin.Checksum, now, now, creator)
+	rawSQL := fmt.Sprintf("insert into plugin(`name`, `args` `path`, `checksum`, `create_at`,`update_at`,`creator`)"+
+		"values('%s', '%s', '%s', '%s', '%s', '%s', '%s')",
+		plugin.Name, plugin.Path, plugin.Checksum, now, now, creator)
 	res, err := d.Exec(rawSQL)
 	if err != nil {
 		return nil, err
@@ -1591,8 +1735,8 @@ func (d *db) createPlugin(plugin *types.Plugin, creator string) (*types.Plugin, 
 
 //更新插件
 func (d *db) updatePlugin(plugin types.Plugin) error {
-	rawSQL := fmt.Sprintf("update plugin set `name` ='%s', `path`='%s', `args`='%s', `interval`=%d, `timeout`=%d, `checksum`='%s' "+
-		"where id = %d", plugin.Name, plugin.Path, plugin.Args, plugin.Interval, plugin.Timeout, plugin.Checksum, plugin.ID)
+	rawSQL := fmt.Sprintf("update plugin set `name` ='%s', `args`='%s', `path`='%s', `checksum`='%s' "+
+		"where id = %d", plugin.Name, plugin.Args, plugin.Path, plugin.Checksum, plugin.ID)
 	log.Println(rawSQL)
 	_, err := d.Exec(rawSQL)
 	return err
