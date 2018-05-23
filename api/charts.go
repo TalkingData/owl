@@ -8,14 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// import (
-// 	"fmt"
-// 	"github.com/gin-gonic/gin"
-// 	"net/http"
-// 	"owl/common/types"
-// 	"strconv"
-// )
-
 type Chart struct {
 	ID       int             `json:"id"`
 	Title    string          `json:"title"`

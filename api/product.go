@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -58,7 +59,7 @@ func listAllProducts(c *gin.Context) {
 			0, 0,
 		}
 		product.UserCnt = mydb.getProductUsersCnt(p.ID, "")
-		product.HostCnt = mydb.getProductHostsCnt(p.ID, "")
+		product.HostCnt = mydb.getProductHostsCnt(p.ID, false, "")
 		comProducts = append(comProducts, product)
 	}
 	response["total"] = total
@@ -224,8 +225,18 @@ func listProductHosts(c *gin.Context) {
 	if len(order) == 0 {
 		order = "status asc"
 	}
+	var (
+		noGroup bool
+		err     error
+	)
+	noGroup, err = strconv.ParseBool(c.DefaultQuery("no_group", "false"))
+	if err != nil {
+		noGroup = false
+	}
+
 	total, hosts := mydb.getProductHosts(
 		c.GetInt("product_id"),
+		noGroup,
 		c.GetBool("paging"),
 		c.DefaultQuery("query", ""),
 		order,
@@ -269,6 +280,7 @@ func addHosts2Product(c *gin.Context) {
 	}
 	total, hosts := mydb.getProductHosts(
 		c.GetInt("product_id"),
+		false,
 		c.GetBool("paging"),
 		c.DefaultQuery("query", ""),
 		c.GetString("order"),
@@ -297,6 +309,7 @@ func removeHostsFromProduct(c *gin.Context) {
 	}
 	total, hosts := mydb.getProductHosts(
 		c.GetInt("product_id"),
+		false,
 		c.GetBool("paging"),
 		c.DefaultQuery("query", ""),
 		c.GetString("order"),

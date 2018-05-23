@@ -1128,7 +1128,7 @@ func (d *db) removeUsersFromUserGroup(groupID int, userids []int) error {
 }
 
 //获取所有主机
-func (d *db) getAllHosts(paging bool, query string, order string, offset, limit int) (int, []Host) {
+func (d *db) getAllHosts(paging bool, noProduct bool, query string, order string, offset, limit int) (int, []Host) {
 	var (
 		hosts = make([]Host, 0)
 		cnt   int
@@ -1138,9 +1138,20 @@ func (d *db) getAllHosts(paging bool, query string, order string, offset, limit 
 		"DATE_FORMAT(create_at,'%s') as create_at, DATE_FORMAT(update_at,'%s') as update_at,"+
 		"mute_time, uptime, idle_pct from host", dbDateFormat, dbDateFormat)
 	cntSQL := fmt.Sprintf("select count(*) from host")
+
+	if noProduct {
+		rawSQL = fmt.Sprintf("%s where id not in (select host_id from product_host)", rawSQL)
+		cntSQL = fmt.Sprintf("%s where id not in (select host_id from product_host)", cntSQL)
+	}
+
 	if len(query) > 0 {
-		rawSQL = fmt.Sprintf("%s where ip like '%%%s%%' or hostname like '%%%s%%'", rawSQL, query, query)
-		cntSQL = fmt.Sprintf("%s where ip like '%%%s%%' or hostname like '%%%s%%'", cntSQL, query, query)
+		if noProduct {
+			rawSQL = fmt.Sprintf("%s and (ip like '%%%s%%' or hostname like '%%%s%%')", rawSQL, query, query)
+			cntSQL = fmt.Sprintf("%s and (ip like '%%%s%%' or hostname like '%%%s%%')", cntSQL, query, query)
+		} else {
+			rawSQL = fmt.Sprintf("%s where ip like '%%%s%%' or hostname like '%%%s%%'", rawSQL, query, query)
+			cntSQL = fmt.Sprintf("%s where ip like '%%%s%%' or hostname like '%%%s%%'", cntSQL, query, query)
+		}
 	}
 	if len(order) > 0 {
 		rawSQL = fmt.Sprintf("%s order by %s", rawSQL, order)
@@ -1245,25 +1256,32 @@ func (d *db) getHostAppNames(hostID string) []string {
 	return appNames
 }
 
-func (d *db) getHostHostGroups(hostID string) (int, []HostGroup) {
+func (d *db) getHostHostGroups(hostID string) []HostGroup {
 	var (
 		hostGroups = make([]HostGroup, 0)
-		cnt        int
 		err        error
 	)
 	rawSQL := fmt.Sprintf("select id, name, description, creator, DATE_FORMAT(create_at,'%s') as create_at,"+
 		"DATE_FORMAT(update_at,'%s') as update_at  from host_group where id in (select host_group_id from host_group_host where host_id='%s')",
 		dbDateFormat, dbDateFormat, hostID)
-	cntSQL := fmt.Sprintf("select count(*) from host_group where id in (select host_group_id from host_group_host where host_id='%s')", hostID)
 	log.Println(rawSQL)
-	log.Println(cntSQL)
 	if err = d.Select(&hostGroups, rawSQL); err != nil {
 		log.Println(err)
 	}
-	if err = d.Get(&cnt, cntSQL); err != nil {
+	return hostGroups
+}
+
+func (d *db) getHostProducts(hostID string) []Product {
+	var (
+		products = make([]Product, 0)
+		err      error
+	)
+	rawSQL := fmt.Sprintf("select id, name, description, creator from product where id in (select product_id from product_host where host_id='%s')", hostID)
+	log.Print(rawSQL)
+	if err = d.Select(&products, rawSQL); err != nil {
 		log.Println(err)
 	}
-	return cnt, hostGroups
+	return products
 }
 
 func (d *db) getHostPlugins(hostID string, paging bool, query string, order string, offset, limit int) (int, []*types.Plugin) {
@@ -1327,7 +1345,7 @@ func (d *db) deleteHostPlugin(hostID string, pluginID int) error {
 }
 
 // 获取产品下的主机
-func (d *db) getProductHosts(productID int, paging bool, query string, order string, offset, limit int) (int, []Host) {
+func (d *db) getProductHosts(productID int, noGroup bool, paging bool, query string, order string, offset, limit int) (int, []Host) {
 	var (
 		hosts = make([]Host, 0)
 		err   error
@@ -1336,6 +1354,9 @@ func (d *db) getProductHosts(productID int, paging bool, query string, order str
 		"DATE_FORMAT(h.create_at,'%s') as create_at, DATE_FORMAT(h.update_at,'%s') as update_at,"+
 		" h.mute_time, h.uptime, h.idle_pct from host h inner join product_host ph on h.id = ph.host_id where ph.product_id = %d",
 		dbDateFormat, dbDateFormat, productID)
+	if noGroup {
+		rawSQL = fmt.Sprintf("%s and h.id not in (select host_id from host_group_host where host_group_id in (select id from host_group where product_id= %d))", rawSQL, productID)
+	}
 	if len(query) > 0 {
 		rawSQL = fmt.Sprintf("%s and (h.ip like '%%%s%%' or h.hostname like '%%%s%%')", rawSQL, query, query)
 	}
@@ -1349,13 +1370,16 @@ func (d *db) getProductHosts(productID int, paging bool, query string, order str
 	if err = d.Select(&hosts, rawSQL); err != nil {
 		log.Println(err)
 	}
-	return d.getProductHostsCnt(productID, query), hosts
+	return d.getProductHostsCnt(productID, noGroup, query), hosts
 }
 
 //获取产品线主机数
-func (d *db) getProductHostsCnt(productID int, query string) int {
+func (d *db) getProductHostsCnt(productID int, noGroup bool, query string) int {
 	var cnt int
 	cntSQL := fmt.Sprintf("select count(*) from host h inner join product_host ph on h.id = ph.host_id where ph.product_id = %d", productID)
+	if noGroup {
+		cntSQL = fmt.Sprintf("%s and h.id not in (select host_id from host_group_host where host_group_id in (select id from host_group where product_id= %d))", cntSQL, productID)
+	}
 	if len(query) > 0 {
 		cntSQL = fmt.Sprintf("%s and (h.ip like '%%%s%%' or h.hostname like '%%%s%%')", cntSQL, query, query)
 	}
@@ -1721,11 +1745,13 @@ func (d *db) getPlugins(query string, paging bool, offset, limit int) (int, []ty
 //创建插件
 func (d *db) createPlugin(plugin *types.Plugin, creator string) (*types.Plugin, error) {
 	now := time.Now().Format(timeFormat)
-	rawSQL := fmt.Sprintf("insert into plugin(`name`, `args` `path`, `checksum`, `create_at`,`update_at`,`creator`)"+
+	rawSQL := fmt.Sprintf("insert into plugin(`name`, `args`, `path`, `checksum`, `create_at`,`update_at`,`creator`) "+
 		"values('%s', '%s', '%s', '%s', '%s', '%s', '%s')",
-		plugin.Name, plugin.Path, plugin.Checksum, now, now, creator)
+		plugin.Name, plugin.Args, plugin.Path, plugin.Checksum, now, now, creator)
+	log.Println(rawSQL)
 	res, err := d.Exec(rawSQL)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 	id, _ := res.LastInsertId()

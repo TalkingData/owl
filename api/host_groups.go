@@ -19,6 +19,33 @@ type HostGroup struct {
 	UpdateAt    string `json:"update_at" db:"update_at"`
 }
 
+type WarpHostGroup struct {
+	HostGroup
+	PluginCnt   int `json:"plugin_cnt,omitempty"`
+	HostCnt     int `json:"host_cnt,omitempty"`
+	StrategyCnt int `json:"strategy_cnt,omitempty"`
+}
+
+func warpHosGroups(groups []HostGroup) []WarpHostGroup {
+	hostGroups := []WarpHostGroup{}
+	for _, g := range groups {
+		hostGroups = append(hostGroups, warpHostGroup(g))
+	}
+	return hostGroups
+}
+
+func warpHostGroup(group HostGroup) WarpHostGroup {
+	whg := WarpHostGroup{}
+	whg.HostGroup = group
+	pluginCnt, _ := mydb.getHostGroupPlugins(group.ID, false, "", 0, 0)
+	hostCnt, _ := mydb.getProductHostGroupHosts(group.ID, false, "", "", 0, 0)
+	strategyCnt := mydb.GetStrategiesByHostGroupIDCount(fmt.Sprintf("sg.group_id = %d", group.ID))
+	whg.PluginCnt = pluginCnt
+	whg.HostCnt = hostCnt
+	whg.StrategyCnt = strategyCnt
+	return whg
+}
+
 func listProductHostGroupHosts(c *gin.Context) {
 	response := gin.H{"status": http.StatusOK}
 	defer c.JSON(http.StatusOK, response)
@@ -62,7 +89,7 @@ func listProductHostGroups(c *gin.Context) {
 		c.GetInt("limit"),
 	)
 	response["total"] = total
-	response["host_groups"] = hostGroups
+	response["host_groups"] = warpHosGroups(hostGroups)
 }
 
 func updateProductHostGroup(c *gin.Context) {

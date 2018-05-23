@@ -27,7 +27,8 @@ type WarpHost struct {
 	Host
 	Apps       []string    `json:"apps"`
 	PluginCnt  int         `json:"plugin_cnt"`
-	HostGroups []HostGroup `json:"host_groups"`
+	HostGroups []HostGroup `json:"host_groups,omitempty"`
+	Products   []Product   `json:"products,omitempty"`
 }
 
 func getHost(c *gin.Context) {
@@ -43,8 +44,17 @@ func listAllHosts(c *gin.Context) {
 	if order == "" {
 		order = "status asc"
 	}
+	var (
+		noProduct bool
+		err       error
+	)
+	noProduct, err = strconv.ParseBool(c.DefaultQuery("no_product", "false"))
+	if err != nil {
+		noProduct = false
+	}
 	total, hosts := mydb.getAllHosts(
 		c.GetBool("paging"),
+		noProduct,
 		c.Query("query"),
 		order,
 		c.GetInt("offset"),
@@ -124,8 +134,13 @@ func warpHosts(hosts []Host) []WarpHost {
 
 func warpHost(host Host) WarpHost {
 	pluginCnt, _ := mydb.getHostPlugins(host.ID, false, "", "", 0, 0)
-	_, groups := mydb.getHostHostGroups(host.ID)
-	return WarpHost{host, mydb.getHostAppNames(host.ID), pluginCnt, groups}
+	return WarpHost{
+		host,
+		mydb.getHostAppNames(host.ID),
+		pluginCnt,
+		mydb.getHostHostGroups(host.ID),
+		mydb.getHostProducts(host.ID),
+	}
 }
 
 func listHostPlugins(c *gin.Context) {
