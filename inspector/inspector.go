@@ -3,17 +3,18 @@ package main
 import (
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"strings"
 	"time"
 
-	"owl/common/tcp"
 	"owl/common/types"
+
+	"github.com/wuyingsong/tcp"
 )
 
 type Inspector struct {
-	*tcp.Server
-	session    *tcp.Session
+	controller *tcp.TCPConn
 	taskPool   *TaskPool
 	resultPool *ResultPool
 }
@@ -29,9 +30,11 @@ func GetHostName() string {
 }
 
 func InitInspector() error {
-	server := tcp.NewServer("", &InspectorHandle{})
-	server.SetMaxPacketSize(uint32(GlobalConfig.MAX_PACKET_SIZE))
-	inspector = &Inspector{server, nil, NewTaskPool(GlobalConfig.MAX_TASK_BUFFER), NewResultPool(GlobalConfig.MAX_RESULT_BUFFER)}
+
+	inspector = &Inspector{nil, NewTaskPool(GlobalConfig.MAX_TASK_BUFFER), NewResultPool(GlobalConfig.MAX_RESULT_BUFFER)}
+	if err := inspector.Dial(); err != nil {
+		return err
+	}
 	go inspector.DialForever()
 	go inspector.HeartBeatForever()
 	go inspector.GetInspectorTasksForever()
@@ -40,22 +43,29 @@ func InitInspector() error {
 	return nil
 }
 
-func (this *Inspector) Dial() {
-retry:
-	session, err := this.Connect(GlobalConfig.CONTROLLER_ADDR, nil)
-	if err != nil || session.IsClosed() {
-		lg.Error("can not connect to controller %v, error: %v", GlobalConfig.CONTROLLER_ADDR, err)
-		time.Sleep(time.Second * time.Duration(3))
-		goto retry
+func (this *Inspector) Dial() error {
+	protocol := &tcp.DefaultProtocol{}
+	protocol.SetMaxPacketSize(uint32(GlobalConfig.MAX_PACKET_SIZE))
+	tcpAddr, err := net.ResolveTCPAddr("tcp", GlobalConfig.CONTROLLER_ADDR)
+	if err != nil {
+		return err
 	}
-	this.session = session
-	this.session.Send(types.AlarmPack(types.ALAR_MESS_INSPECTOR_HEARTBEAT, types.NewHeartBeat(this.session.LocalAddr(), GetHostName())))
+	tcpConn, err := net.DialTCP("tcp", nil, tcpAddr)
+	if err != nil {
+		return err
+	}
+	this.controller = tcp.NewTCPConn(tcpConn, &callback{}, protocol)
+	this.controller.AsyncWritePacket(
+		tcp.NewDefaultPacket(types.ALAR_MESS_INSPECTOR_HEARTBEAT, types.NewHeartBeat(this.controller.GetLocalAddr().String(), GetHostName()).Encode()),
+	)
+	// this.session.Send(types.AlarmPack(types.ALAR_MESS_INSPECTOR_HEARTBEAT, types.NewHeartBeat(this.session.LocalAddr(), GetHostName())))
 	lg.Info("inspector connected to controller: %v", GlobalConfig.CONTROLLER_ADDR)
+	return this.controller.Serve()
 }
 
 func (this *Inspector) DialForever() {
 	for {
-		if this.session == nil || this.session.IsClosed() {
+		if this.controller == nil || this.controller.IsClosed() {
 			this.Dial()
 		}
 		time.Sleep(time.Second * time.Duration(3))
@@ -64,8 +74,17 @@ func (this *Inspector) DialForever() {
 
 func (this *Inspector) HeartBeatForever() {
 	for {
-		if this.session != nil {
-			this.session.Send(types.AlarmPack(types.ALAR_MESS_INSPECTOR_HEARTBEAT, types.NewHeartBeat(this.session.LocalAddr(), GetHostName())))
+		if this.controller != nil {
+			heartBeat := types.NewHeartBeat(
+				this.controller.GetLocalAddr().String(),
+				GetHostName(),
+			)
+			this.controller.AsyncWritePacket(
+				tcp.NewDefaultPacket(
+					types.ALAR_MESS_INSPECTOR_HEARTBEAT,
+					heartBeat.Encode(),
+				),
+			)
 		}
 		time.Sleep(time.Second * 5)
 	}
@@ -73,40 +92,63 @@ func (this *Inspector) HeartBeatForever() {
 
 func (this *Inspector) GetInspectorTasksForever() {
 	for {
-		if len(this.taskPool.tasks) == 0 && this.session != nil {
-			this.session.Send(types.AlarmPack(types.ALAR_MESS_INSPECTOR_TASK_REQUEST, nil))
+		if len(this.taskPool.tasks) == 0 && this.controller != nil {
+			this.controller.AsyncWritePacket(
+				tcp.NewDefaultPacket(
+					types.ALAR_MESS_INSPECTOR_TASK_REQUEST,
+					[]byte{},
+				),
+			)
 		}
-		time.Sleep(time.Millisecond * 100)
+		time.Sleep(time.Second * 1)
 	}
 }
 
 func (this *Inspector) SendResultForever() {
-	result_buffer := &types.AlarmResults{}
-	for {
-		select {
-		case result := <-this.resultPool.results:
-			result_buffer.Results = append(result_buffer.Results, result)
-			if len(result_buffer.Results) == GlobalConfig.RESULT_BUFFER {
-				this.session.Send(types.AlarmPack(types.ALAR_MESS_INSPECTOR_RESULTS, result_buffer))
-				lg.Info("Send %d Results to controller", len(result_buffer.Results))
-				result_buffer.Results = result_buffer.Results[:0]
+	var err error
+	for result := range this.resultPool.results {
+		for {
+			if err = this.controller.AsyncWritePacket(
+				tcp.NewDefaultPacket(types.ALAR_MESS_INSPECTOR_RESULT, result.Encode()),
+			); err == nil {
+				break
 			}
-		default:
-			if len(result_buffer.Results) > 0 {
-				this.session.Send(types.AlarmPack(types.ALAR_MESS_INSPECTOR_RESULTS, result_buffer))
-				lg.Info("Send %d Results to controller", len(result_buffer.Results))
-				result_buffer.Results = result_buffer.Results[:0]
-			}
-			time.Sleep(time.Millisecond * 100)
+			lg.Warn("send task result to controller failed error %s", err)
+			time.Sleep(time.Second)
 		}
+		lg.Info("send task result to controller %s result:%s", result.Encode(), GlobalConfig.CONTROLLER_ADDR)
 	}
 }
 
+// for {
+// 	select {
+// 	case result := <-this.resultPool.results:
+// 		result_buffer.Results = append(result_buffer.Results, result)
+// 		if len(result_buffer.Results) == GlobalConfig.RESULT_BUFFER {
+// 			this.controller.AsyncWritePacket(
+// 				tcp.NewDefaultPacket(types.ALAR_MESS_INSPECTOR_RESULT, result_buffer.Encode()),
+// 			)
+// 			lg.Info("Send %d Results to controller", len(result_buffer.Results))
+// 			result_buffer.Results = result_buffer.Results[:0]
+// 		}
+// 	default:
+// 		if len(result_buffer.Results) > 0 {
+// 			this.controller.AsyncWritePacket(
+// 				tcp.NewDefaultPacket(types.ALAR_MESS_INSPECTOR_RESULTS, result_buffer.Encode()),
+// 			)
+// 			// this.session.Send(types.AlarmPack(types.ALAR_MESS_INSPECTOR_RESULTS, result_buffer))
+// 			lg.Info("Send %d Results to controller", len(result_buffer.Results))
+// 			result_buffer.Results = result_buffer.Results[:0]
+// 		}
+// 		time.Sleep(time.Millisecond * 100)
+// 	}
+// }
+// }
+
 func (this *Inspector) ProcessInspectorTasksForever() {
-	worker_count := GlobalConfig.WORKER_COUNT
-	for worker_count > 0 {
+
+	for wc := GlobalConfig.WORKER_COUNT; wc > 0; wc-- {
 		go this.taskWorker()
-		worker_count -= 1
 	}
 }
 

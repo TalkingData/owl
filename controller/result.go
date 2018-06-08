@@ -20,119 +20,149 @@ type QueueEvent struct {
 
 //持续处理报警结果
 func (c *Controller) processStrategyResultForever() {
-	worker_count := GlobalConfig.WORKER_COUNT
-	for worker_count > 0 {
+	for i := 0; i < GlobalConfig.WORKER_COUNT; i++ {
 		go func() {
 			for {
 				select {
 				case result := <-c.resultPool.results:
-					lg.Debug("get result %v from result pool", result.TaskID)
+					lg.Debug("get task result from result pool, taskid:%s", result.TaskID)
 					c.processResult(result)
 				default:
 					time.Sleep(time.Millisecond * 100)
 				}
 			}
 		}()
-		worker_count -= 1
 	}
 }
 
 //处理来自Inspector计算后的结果对象
-func (c *Controller) processResult(strategy_result *types.StrategyResult) {
-	item, ok := c.taskCache.Get(strategy_result.TaskID)
+func (c *Controller) processResult(strategyResult *types.StrategyResult) {
+	item, ok := c.taskCache.Get(strategyResult.TaskID)
 	if !ok {
-		lg.Error(fmt.Sprintf("task %v not in cached task pool", strategy_result.TaskID))
+		lg.Error(fmt.Sprintf("task %v not in cached task pool", strategyResult.TaskID))
 		return
 	}
 	task, _ := item.(*types.AlarmTask)
 
-	if strategy_result.ErrorMessage != "" {
-		event_status := 0
-		if strategy_result.ErrorMessage == "no data" {
-			event_status = types.EVENT_NODATA
-		} else {
-			event_status = types.EVENT_UNKNOW
+	if strategyResult.ErrorMessage != "" {
+		eventStatus := types.EVENT_UNKNOW
+		if strategyResult.ErrorMessage == "no data" {
+			eventStatus = types.EVENT_NODATA
 		}
-		mydb.CreateStrategyEventFailed(task.Strategy.ID, task.Host.ID, event_status, strategy_result.ErrorMessage)
-		lg.Error(fmt.Sprintf("task %v has problem %v", strategy_result.TaskID, strategy_result.ErrorMessage))
+		lg.Warn(fmt.Sprintf("task %v %v strategy:%s hostname:%s ip:%s",
+			strategyResult.TaskID, strategyResult.ErrorMessage, task.Strategy.Name, task.Host.Hostname, task.Host.IP))
+		mydb.CreateStrategyEventFailed(task.Strategy.ID, task.Host.ID, eventStatus, strategyResult.ErrorMessage)
 		return
-	} else {
-		go syncStrategyEventFailed(task.Strategy.ID, task.Host.ID)
 	}
 
-	var aware_strategy_event, old_strategy_event *types.StrategyEvent
+	go syncStrategyEventFailed(task.Strategy.ID, task.Host.ID)
 
-	if aware_strategy_event = mydb.GetStrategyEvent(task.Strategy.ID, types.EVENT_AWARE, task.Host.ID); aware_strategy_event != nil {
-		strategy_event, trigger_events := generateEvent(aware_strategy_event, strategy_result, task)
-		if strategy_result.Triggered == false {
-			triggered_trigger_events := mydb.GetTriggeredTriggerEvents(strategy_event.ID)
-			trigger_events = tagChangedTrigger(triggered_trigger_events, trigger_events)
-			strategy_event.Status = types.EVENT_CLOSED
+	var awareStrategyEvent, oldStrategyEvent *types.StrategyEvent
+
+	//获取知悉
+	if awareStrategyEvent = mydb.GetStrategyEvent(task.Strategy.ID, types.EVENT_AWARE, task.Host.ID); awareStrategyEvent != nil {
+		strategyEvent, triggerEvents := generateEvent(awareStrategyEvent, strategyResult, task)
+		// 告警恢复
+		if strategyResult.Triggered == false {
+			triggeredTriggerEvents := mydb.GetTriggeredTriggerEvents(strategyEvent.ID)
+			triggerEvents = tagChangedTrigger(triggeredTriggerEvents, triggerEvents)
+			strategyEvent.Status = types.EVENT_CLOSED
+			event := &QueueEvent{RESTORE_ALARM, strategyEvent, triggerEvents}
 			c.eventQueuesMutex.RLock()
-			c.eventQueues[strategy_event.ProductID].PutNoWait(&QueueEvent{RESTORE_ALARM, strategy_event, trigger_events})
+			if err := c.eventQueues[strategyEvent.ProductID].putQueueEvent(event); err != nil {
+				lg.Error("put strategy event to event queue failed %s", err)
+			} else {
+				lg.Info("put strategy event to queue %d strategy:%s hostname:%s ip:%s",
+					strategyEvent.ProductID, strategyEvent.StrategyName, strategyEvent.HostName, strategyEvent.IP)
+			}
 			c.eventQueuesMutex.RUnlock()
-			lg.Debug(fmt.Sprintf("put restore event by strategy %s into event queue.", strategy_event.StrategyName))
+			lg.Debug(fmt.Sprintf("put restore event by strategy %s into event queue.", strategyEvent.StrategyName))
 			return
 		}
-		if time.Now().Sub(strategy_event.AwareEndTime) > 0 && strategy_event.AwareEndTime.Sub(types.DEFAULT_TIME) != 0 {
-			strategy_event.Status = types.EVENT_NEW
-			strategy_event.AwareEndTime = types.DEFAULT_TIME
-			if strategy_event.Count < task.Strategy.AlarmCount || task.Strategy.AlarmCount == 0 {
-				strategy_event.Count += 1
+		// 知悉过期
+		if time.Now().Sub(strategyEvent.AwareEndTime) > 0 && strategyEvent.AwareEndTime.Sub(types.DEFAULT_TIME) != 0 {
+			strategyEvent.Status = types.EVENT_NEW
+			strategyEvent.AwareEndTime = types.DEFAULT_TIME
+			// 未达到最大告警次数
+			if strategyEvent.Count < task.Strategy.AlarmCount || task.Strategy.AlarmCount == 0 {
+				strategyEvent.Count++
+				event := &QueueEvent{OLD_ALARM, strategyEvent, triggerEvents}
 				c.eventQueuesMutex.RLock()
-				c.eventQueues[strategy_event.ProductID].PutNoWait(&QueueEvent{OLD_ALARM, strategy_event, trigger_events})
+				if err := c.eventQueues[strategyEvent.ProductID].putQueueEvent(event); err != nil {
+					lg.Error("put strategy event to event queue failed %s", err)
+				} else {
+					lg.Info("put strategy event to queue %d strategy:%s hostname:%s ip:%s",
+						strategyEvent.ProductID, strategyEvent.StrategyName, strategyEvent.HostName, strategyEvent.IP)
+				}
 				c.eventQueuesMutex.RUnlock()
-				lg.Debug(fmt.Sprintf("put old alarm event by strategy %s into event queue.", strategy_event.StrategyName))
 				return
 			}
 		}
-		mydb.UpdateStrategyEvent(strategy_event, trigger_events)
+		mydb.UpdateStrategyEvent(strategyEvent, triggerEvents)
 		return
 	}
 
-	if old_strategy_event = mydb.GetStrategyEvent(task.Strategy.ID, types.EVENT_NEW, task.Host.ID); old_strategy_event != nil {
-		strategy_event, trigger_events := generateEvent(old_strategy_event, strategy_result, task)
-		if strategy_result.Triggered == false {
-			triggered_trigger_events := mydb.GetTriggeredTriggerEvents(strategy_event.ID)
-			trigger_events = tagChangedTrigger(triggered_trigger_events, trigger_events)
-			strategy_event.Status = types.EVENT_CLOSED
+	//获取已产生报警
+	if oldStrategyEvent = mydb.GetStrategyEvent(task.Strategy.ID, types.EVENT_NEW, task.Host.ID); oldStrategyEvent != nil {
+		strategyEvent, triggerEvents := generateEvent(oldStrategyEvent, strategyResult, task)
+		//告警恢复
+		if strategyResult.Triggered == false {
+			triggeredTriggerEvents := mydb.GetTriggeredTriggerEvents(strategyEvent.ID)
+			triggerEvents = tagChangedTrigger(triggeredTriggerEvents, triggerEvents)
+			strategyEvent.Status = types.EVENT_CLOSED
+			event := &QueueEvent{RESTORE_ALARM, strategyEvent, triggerEvents}
 			c.eventQueuesMutex.RLock()
-			c.eventQueues[strategy_event.ProductID].PutNoWait(&QueueEvent{RESTORE_ALARM, strategy_event, trigger_events})
+			if err := c.eventQueues[strategyEvent.ProductID].putQueueEvent(event); err != nil {
+				lg.Error("put strategy event to event queue failed %s", err)
+			} else {
+				lg.Info("put strategy event to queue %d strategy:%s hostname:%s ip:%s",
+					strategyEvent.ProductID, strategyEvent.StrategyName, strategyEvent.HostName, strategyEvent.IP)
+			}
 			c.eventQueuesMutex.RUnlock()
-			lg.Debug(fmt.Sprintf("put restore event by strategy %s into event queue.", strategy_event.StrategyName))
 			return
 		}
-		if strategy_event.Count >= task.Strategy.AlarmCount && task.Strategy.AlarmCount != 0 {
-			mydb.UpdateStrategyEvent(strategy_event, trigger_events)
+		if strategyEvent.Count >= task.Strategy.AlarmCount && task.Strategy.AlarmCount != 0 {
+			mydb.UpdateStrategyEvent(strategyEvent, triggerEvents)
 			return
 		}
-		strategy_event.Count += 1
+		strategyEvent.Count++
+		event := &QueueEvent{OLD_ALARM, strategyEvent, triggerEvents}
 		c.eventQueuesMutex.RLock()
-		c.eventQueues[strategy_event.ProductID].PutNoWait(&QueueEvent{OLD_ALARM, strategy_event, trigger_events})
+		if err := c.eventQueues[strategyEvent.ProductID].putQueueEvent(event); err != nil {
+			lg.Error("put strategy event to event queue failed %s", err)
+		} else {
+			lg.Info("put strategy event to queue %d strategy:%s hostname:%s ip:%s",
+				strategyEvent.ProductID, strategyEvent.StrategyName, strategyEvent.HostName, strategyEvent.IP)
+		}
 		c.eventQueuesMutex.RUnlock()
-		lg.Debug(fmt.Sprintf("put old alarm event by strategy %s into event queue.", strategy_event.StrategyName))
 		return
 	}
 
-	if old_strategy_event == nil && aware_strategy_event == nil {
-		strategy_event, trigger_events := generateEvent(nil, strategy_result, task)
-		if strategy_result.Triggered == true {
-			strategy_event.Status = types.EVENT_NEW
+	// 新产生的告警
+	if oldStrategyEvent == nil && awareStrategyEvent == nil {
+		strategyEvent, triggerEvents := generateEvent(nil, strategyResult, task)
+		if strategyResult.Triggered == true {
+			strategyEvent.Status = types.EVENT_NEW
+			event := &QueueEvent{NEW_ALARM, strategyEvent, triggerEvents}
 			c.eventQueuesMutex.RLock()
-			c.eventQueues[strategy_event.ProductID].PutNoWait(&QueueEvent{NEW_ALARM, strategy_event, trigger_events})
+			if err := c.eventQueues[strategyEvent.ProductID].putQueueEvent(event); err != nil {
+				lg.Error("put strategy event to event queue failed %s", err)
+			} else {
+				lg.Info("put strategy event to queue %d strategy:%s hostname:%s ip:%s",
+					strategyEvent.ProductID, strategyEvent.StrategyName, strategyEvent.HostName, strategyEvent.IP)
+			}
 			c.eventQueuesMutex.RUnlock()
-			lg.Debug(fmt.Sprintf("put new alarm event by strategy %s into event queue.", strategy_event.StrategyName))
 		}
 	}
 }
 
-func tagChangedTrigger(triggered_trigger_events []*types.TriggerEvent, trigger_events map[string]*types.TriggerEvent) map[string]*types.TriggerEvent {
-	for _, e := range triggered_trigger_events {
-		if value, ok := trigger_events[e.Index+e.Metric+e.Tags]; ok {
+func tagChangedTrigger(triggeredTriggerEvents []*types.TriggerEvent, triggerEvents map[string]*types.TriggerEvent) map[string]*types.TriggerEvent {
+	for _, e := range triggeredTriggerEvents {
+		if value, ok := triggerEvents[e.Index+e.Metric+e.Tags]; ok {
 			value.TriggerChanged = true
 		}
 	}
-	return trigger_events
+	return triggerEvents
 }
 
 func syncStrategyEventFailed(strategy_id int, host_id string) error {

@@ -4,37 +4,39 @@ import (
 	"sync"
 	"time"
 
-	"owl/common/tcp"
 	"owl/common/types"
 	"owl/controller/cache"
+
+	"github.com/wuyingsong/tcp"
 )
 
 var controller *Controller
 
 type Controller struct {
-	*tcp.Server
+	*tcp.AsyncTCPServer
 	taskPool         *TaskPool
 	resultPool       *ResultPool
 	nodePool         *NodePool
-	eventQueues      map[int]*Queue
+	eventQueues      map[int]*EventPool
 	eventQueuesMutex *sync.RWMutex
 	statusCache      *cache.Cache
 	taskCache        *cache.Cache
 }
 
 func InitController() error {
-	controllerServer := tcp.NewServer(GlobalConfig.TCP_BIND, &ControllerHandle{})
-	controllerServer.SetMaxPacketSize(uint32(GlobalConfig.MAX_PACKET_SIZE))
-	if err := controllerServer.ListenAndServe(); err != nil {
+	protocol := &tcp.DefaultProtocol{}
+	protocol.SetMaxPacketSize(uint32(GlobalConfig.MAX_PACKET_SIZE))
+	server := tcp.NewAsyncTCPServer(GlobalConfig.TCP_BIND, &callback{}, protocol)
+	if err := server.ListenAndServe(); err != nil {
 		return err
 	}
 	lg.Info("Start listen: %v", GlobalConfig.TCP_BIND)
 
-	controller = &Controller{controllerServer,
+	controller = &Controller{server,
 		NewTaskPool(GlobalConfig.TASK_POOL_SIZE),
 		NewResultPool(GlobalConfig.RESULT_POOL_SIZE),
 		NewNodePool(),
-		generateQueues(),
+		make(map[int]*EventPool),
 		new(sync.RWMutex),
 		cache.New(time.Duration(GlobalConfig.LOAD_STRATEGIES_INTERVAL)*time.Second, 30*time.Second),
 		cache.New(10*time.Minute, 10*time.Minute)}
@@ -48,21 +50,12 @@ func InitController() error {
 	return nil
 }
 
-// generateQueues 生成产品线报警队列
-func generateQueues() map[int]*Queue {
-	pq := make(map[int]*Queue)
-	for _, product := range mydb.GetProducts() {
-		pq[product.ID] = NewQueue(0)
-	}
-	return pq
-}
-
 //checkNodesForever 持续运行检查节点函数，并维护节点数组
 func (c *Controller) checkNodesForever() {
 	for {
-		time_now := time.Now()
+		now := time.Now()
 		for ip, node := range c.nodePool.Nodes {
-			if time_now.Sub(node.Update) > time.Duration(time.Second*10) {
+			if now.Sub(node.Update) > time.Duration(time.Second*10) {
 				delete(c.nodePool.Nodes, ip)
 				lg.Warn("Inspector %v, %v lost from controller", ip, node.Hostname)
 			}
@@ -96,12 +89,17 @@ func (c *Controller) refreshQueue(products []*types.Product) {
 	now := time.Now()
 	for _, product := range products {
 		if _, ok := c.eventQueues[product.ID]; !ok {
-			c.eventQueues[product.ID] = NewQueue(0)
+			lg.Info("create event queue %s", product.Name)
+			eventPool := NewEventPool(product.Name, GlobalConfig.EVENT_POOL_SIZE)
+			c.eventQueues[product.ID] = eventPool
+			go processSingleQueue(eventPool)
 		}
+		lg.Info("refresh event queue %s", product.Name)
 		c.eventQueues[product.ID].update_time = now
 	}
 	for p, q := range c.eventQueues {
 		if now.Sub(q.update_time).Minutes() > 10 {
+			lg.Warn("product id %s event queue update time is expires, delete", p)
 			delete(c.eventQueues, p)
 		}
 	}

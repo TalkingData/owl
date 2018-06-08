@@ -15,7 +15,7 @@ type TimeSeriesData struct {
 	DataType  string            `json:"data_type"` //COUNTER,GAUGE,DERIVE
 	Value     float64           `json:"value"`     //99.00
 	Timestamp int64             `json:"timestamp"` //unix timestamp
-	Cycle     int               `json:"cycle"`
+	Cycle     int               `json:"cycle,omitempty"`
 	Tags      map[string]string `json:"tags"` //{"product":"app01", "group":"dev02"}
 }
 
@@ -99,6 +99,9 @@ func ParseTags(name string) map[string]string {
 	kv := strings.Split(name, ",")
 	for _, v := range kv {
 		tmp := strings.Split(v, "=")
+		if len(tmp) != 2 {
+			continue
+		}
 		res[tmp[0]] = tmp[1]
 	}
 	return res

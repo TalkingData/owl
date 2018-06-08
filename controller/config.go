@@ -20,6 +20,7 @@ const (
 	DEFAULT_LOAD_STRATEGIES_INTERVAL = 300 //seconds
 	DEFAULT_TASK_POOL_SIZE           = 409600
 	DEFAULT_RESULT_POOL_SIZE         = 409600
+	DEFAULT_EVENT_POOL_SIZE          = 1024
 	DEFAULT_HTTP_SERVER              = ":10051"
 	DEFAULT_TASK_SIZE                = 100
 	DEFAULT_WORKER_COUNT             = 20
@@ -52,6 +53,8 @@ type Config struct {
 	TASK_POOL_SIZE int //任务池的缓冲大小
 
 	RESULT_POOL_SIZE int //结果池的缓冲大小
+
+	EVENT_POOL_SIZE int
 
 	HTTP_SERVER string //Http服务的地址
 
@@ -87,6 +90,7 @@ func InitGlobalConfig() error {
 		LOAD_STRATEGIES_INTERVAL: cfg.MustInt(goconfig.DEFAULT_SECTION, "load_strategies_interval", DEFAULT_LOAD_STRATEGIES_INTERVAL),
 		TASK_POOL_SIZE:           cfg.MustInt(goconfig.DEFAULT_SECTION, "task_pool_size", DEFAULT_TASK_POOL_SIZE),
 		RESULT_POOL_SIZE:         cfg.MustInt(goconfig.DEFAULT_SECTION, "result_pool_size", DEFAULT_RESULT_POOL_SIZE),
+		EVENT_POOL_SIZE:          cfg.MustInt(goconfig.DEFAULT_SECTION, "event_pool_size", DEFAULT_EVENT_POOL_SIZE),
 		HTTP_SERVER:              cfg.MustValue(goconfig.DEFAULT_SECTION, "http_server", DEFAULT_HTTP_SERVER),
 		TASK_SIZE:                cfg.MustInt(goconfig.DEFAULT_SECTION, "task_size", DEFAULT_TASK_SIZE),
 		WORKER_COUNT:             cfg.MustInt(goconfig.DEFAULT_SECTION, "worker_count", DEFAULT_WORKER_COUNT),

@@ -49,7 +49,7 @@ func queueStatus(c *gin.Context) {
 	defer controller.eventQueuesMutex.RUnlock()
 	for _, product := range mydb.GetProducts() {
 		if queue, ok := controller.eventQueues[product.ID]; ok {
-			qs = append(qs, gin.H{"id": product.ID, "name": product.Name, "count": queue.Size(), "mute": queue.mute})
+			qs = append(qs, gin.H{"id": product.ID, "name": product.Name, "count": queue.len(), "mute": queue.mute})
 		}
 	}
 	c.JSON(http.StatusOK, gin.H{"queues": qs})
@@ -59,7 +59,7 @@ func queueClean(c *gin.Context) {
 	id := c.Param("id")
 	i, _ := strconv.Atoi(id)
 	if queue, ok := controller.eventQueues[i]; ok {
-		queue.Clear()
+		queue.clean()
 		c.JSON(http.StatusOK, gin.H{"message": "cleaned!"})
 		return
 	}

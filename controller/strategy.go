@@ -6,42 +6,38 @@ import (
 	"time"
 )
 
-func (c *Controller) Add(task *types.AlarmTask) {
-	if len(task.Triggers) == 0 {
-		lg.Warn("task %v has no triggers, skipped it.", task.ID)
-		return
-	}
-	if task.Host.Status == "2" {
-		lg.Debug("host %v is forbidden, skipped it.", task.Host.ID)
-		return
-	}
-	c.taskCache.Set(task.ID, task, 10*time.Minute)
-}
-
 //持续定时加载报警策略
 func (c *Controller) loadStrategiesForever() {
+	var wg sync.WaitGroup
 	for {
-		var wait_group sync.WaitGroup
+		// 获取所有产品线
 		products := mydb.GetProducts()
+		// 更新产品线告警队列
 		c.refreshQueue(products)
 		for _, product := range products {
+			// 根据产品线 id 获取策略
 			strategies := mydb.GetStrategies(product.ID)
-			wait_group.Add(1)
+			wg.Add(1)
 			go func(strategies []*types.Strategy) {
-				defer wait_group.Done()
+				defer wg.Done()
 				for _, strategy := range strategies {
 					if strategy.Enable == false {
-						lg.Info("strategy %v is not enabled, skipped it.", strategy.Name)
+						lg.Info("strategy %s is not enabled, skipped it.", strategy.Name)
 						continue
 					}
+					// 根据策略 id 获取 trigger
 					triggers := mydb.GetTriggersByStrategyID(strategy.ID)
+					//如果没有 trigger 则忽略
+					if len(triggers) == 0 {
+						lg.Warn("strategy %s has no trigger, skipped it.", strategy.Name)
+						continue
+					}
+					// 生成 AlarmTask
 					c.processSingleStrategy(strategy, triggers)
 				}
 			}(strategies)
 		}
-		wait_group.Wait()
-		c.taskPool.PutTasks(c.taskCache.GetItems())
-		lg.Info("loaded tasks %v for all products", c.taskCache.ItemCount())
+		wg.Wait()
 		time.Sleep(time.Second * time.Duration(GlobalConfig.LOAD_STRATEGIES_INTERVAL))
 	}
 }
@@ -54,8 +50,17 @@ func (c *Controller) processSingleStrategy(strategy *types.Strategy, triggers ma
 	}
 	exHosts := mydb.GetHostsExByStrategyID(strategy.ID)
 	for _, host := range globalHosts {
-		if _, ok := exHosts[host.ID]; !ok {
-			c.Add(types.NewAlarmTask(host, strategy, triggers))
+		// 过滤排除主机
+		if _, ok := exHosts[host.ID]; ok {
+			lg.Debug("strategy %d:%v exclude host %v:%v:%v", strategy.ID, strategy.Name, host.ID, host.IP, host.Hostname)
+			continue
 		}
+		// 向 taskCache 添加任务
+		task := types.NewAlarmTask(host, strategy, triggers)
+		if err := c.taskPool.putTask(task); err != nil {
+			lg.Error("put new task into task pool failed %v, maybe you need to increase the task_pool_size", err)
+			continue
+		}
+		c.taskCache.Set(task.ID, task, 10*time.Minute)
 	}
 }

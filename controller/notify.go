@@ -43,25 +43,27 @@ func (c *Controller) processStrategyEventForever() {
 	c.eventQueuesMutex.RLock()
 	defer c.eventQueuesMutex.RUnlock()
 	for _, queue := range c.eventQueues {
+		lg.Info("process queue event %s", queue.name)
 		go processSingleQueue(queue)
 	}
 }
 
-func processSingleQueue(queue *Queue) {
+//TODO: fix when product delete, goroutine leak
+func processSingleQueue(queue *EventPool) {
+	duration := time.Millisecond * 100
 	for {
-		duration := time.Millisecond * 100
-		if !queue.mute {
-			event, err := queue.Get(0)
-			if err != nil {
-				lg.Error(err.Error())
-				continue
-			}
-			go processSingleEvent(event.(*QueueEvent))
-		}
-		if queue.Size() > GlobalConfig.SEND_MAX {
-			duration = time.Millisecond * time.Duration(queue.Size())
-			if duration > time.Second*time.Duration(GlobalConfig.MAX_INTERVAL_WAIT_TIME) {
+		if queue.len() > GlobalConfig.SEND_MAX {
+			duration = time.Microsecond * time.Duration(queue.len())
+			if duration.Seconds() > float64(GlobalConfig.MAX_INTERVAL_WAIT_TIME) {
 				duration = time.Second * time.Duration(GlobalConfig.MAX_INTERVAL_WAIT_TIME)
+			}
+		}
+		if !queue.mute {
+			event := queue.getQueueEvent()
+			if queue.mute {
+				queue.putQueueEvent(event)
+			} else {
+				go processSingleEvent(event)
 			}
 		}
 		time.Sleep(duration)
@@ -71,8 +73,8 @@ func processSingleQueue(queue *Queue) {
 func processSingleEvent(event *QueueEvent) {
 	switch event.status {
 	case NEW_ALARM:
-		last_id, _ := mydb.CreateStrategyEvent(event.strategy_event, event.trigger_events)
-		event.strategy_event.ID = last_id
+		lastID, _ := mydb.CreateStrategyEvent(event.strategy_event, event.trigger_events)
+		event.strategy_event.ID = lastID
 		go doAlarmAction(event.strategy_event, event.trigger_events)
 	case OLD_ALARM:
 		mydb.UpdateStrategyEvent(event.strategy_event, event.trigger_events)
@@ -81,7 +83,7 @@ func processSingleEvent(event *QueueEvent) {
 		mydb.UpdateStrategyEvent(event.strategy_event, event.trigger_events)
 		mydb.CreateStrategyEventProcess(event.strategy_event.ID, event.strategy_event.Status, "系统", "报警恢复", time.Now().Format("2006-01-02 15:04:05"))
 		go doRestoreAction(event.strategy_event, event.trigger_events)
-		event.strategy_event.Count += 1
+		event.strategy_event.Count++
 	default:
 		lg.Error(fmt.Sprintf("unknow event type %d from event queue.", event.status))
 	}
@@ -93,6 +95,7 @@ func doAlarmAction(strategy_event *types.StrategyEvent, trigger_events map[strin
 	strategy_event.Status = types.EVENT_NEW
 	actions := mydb.GetAllActions(strategy_event.StrategyID)
 	for _, action := range actionFilter(actions, strategy_event) {
+		lg.Info("do action:%v", action)
 		switch action.Kind {
 		case types.ACTION_NOTIFY:
 			subject := action.AlarmSubject

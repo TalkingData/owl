@@ -1,31 +1,29 @@
 package types
 
 import (
-	"bytes"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
 	"time"
-)
 
-type AlarmMessageType byte
+	"github.com/wuyingsong/tcp"
+)
 
 //报警服务消息类型定义
 const (
-	ALAR_MESS_INSPECTOR_HEARTBEAT AlarmMessageType = iota + 1
+	ALAR_MESS_INSPECTOR_HEARTBEAT tcp.PacketType = iota + 1
 	ALAR_MESS_INSPECTOR_TASK_REQUEST
 	ALAR_MESS_INSPECTOR_TASKS
-	ALAR_MESS_INSPECTOR_RESULTS
+	ALAR_MESS_INSPECTOR_RESULT
 )
 
 //报警服务消息类型可读映射
-var AlarmMessageTypeText map[AlarmMessageType]string = map[AlarmMessageType]string{
+var AlarmMessageTypeText map[tcp.PacketType]string = map[tcp.PacketType]string{
 	ALAR_MESS_INSPECTOR_HEARTBEAT:    "inspector heartbeat",
 	ALAR_MESS_INSPECTOR_TASK_REQUEST: "inspector task request",
 	ALAR_MESS_INSPECTOR_TASKS:        "inspector tasks",
-	ALAR_MESS_INSPECTOR_RESULTS:      "inspector results",
+	ALAR_MESS_INSPECTOR_RESULT:       "inspector result",
 }
 
 //报警服务消息接口
@@ -33,15 +31,15 @@ type AlarmMessage interface {
 	Encode() []byte
 }
 
-func AlarmPack(t AlarmMessageType, m AlarmMessage) []byte {
-	var buf bytes.Buffer
-	binary.Write(&buf, binary.BigEndian, t)
-	if m != nil {
-		binary.Write(&buf, binary.BigEndian, m.Encode())
-	}
-	binary.Write(&buf, binary.BigEndian, make([]byte, 0))
-	return buf.Bytes()
-}
+// func AlarmPack(t MessageType, m AlarmMessage) []byte {
+// 	var buf bytes.Buffer
+// 	binary.Write(&buf, binary.BigEndian, t)
+// 	if m != nil {
+// 		binary.Write(&buf, binary.BigEndian, m.Encode())
+// 	}
+// 	binary.Write(&buf, binary.BigEndian, make([]byte, 0))
+// 	return buf.Bytes()
+// }
 
 type AlarmTask struct {
 	ID       string
@@ -122,15 +120,15 @@ type AlarmResults struct {
 }
 
 type StrategyResult struct {
-	TaskID            string
-	Priority          int
-	TriggerResultSets map[string]*TriggerResultSet
-	ErrorMessage      string
-	Triggered         bool
-	CreateTime        time.Time
+	TaskID            string                       `json:"taskid"`
+	Priority          int                          `json:"priority"`
+	TriggerResultSets map[string]*TriggerResultSet `json:"trigger_resultset"`
+	ErrorMessage      string                       `json:"error_message"`
+	Triggered         bool                         `json:"triggered"`
+	CreateTime        time.Time                    `json:"create_time"`
 }
 
-func (this *AlarmResults) Encode() []byte {
+func (this *StrategyResult) Encode() []byte {
 	data, err := json.Marshal(this)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -138,7 +136,7 @@ func (this *AlarmResults) Encode() []byte {
 	return data
 }
 
-func (this *AlarmResults) Decode(data []byte) error {
+func (this *StrategyResult) Decode(data []byte) error {
 	return json.Unmarshal(data, &this)
 }
 
