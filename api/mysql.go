@@ -1256,14 +1256,20 @@ func (d *db) getHostAppNames(hostID string) []string {
 	return appNames
 }
 
-func (d *db) getHostHostGroups(hostID string) []HostGroup {
+func (d *db) getHostHostGroups(productID int, hostID string) []HostGroup {
 	var (
 		hostGroups = make([]HostGroup, 0)
 		err        error
+		rawSQL     string
 	)
-	rawSQL := fmt.Sprintf("select id, name, description, creator, DATE_FORMAT(create_at,'%s') as create_at,"+
+	rawSQL = fmt.Sprintf("select id, name, description, creator, DATE_FORMAT(create_at,'%s') as create_at,"+
 		"DATE_FORMAT(update_at,'%s') as update_at  from host_group where id in (select host_group_id from host_group_host where host_id='%s')",
 		dbDateFormat, dbDateFormat, hostID)
+	if productID != 0 {
+		rawSQL = fmt.Sprintf("select id, name, description, creator, DATE_FORMAT(create_at,'%s') as create_at,"+
+			"DATE_FORMAT(update_at,'%s') as update_at  from host_group where product_id = %d and id in (select host_group_id from host_group_host where host_id='%s')",
+			dbDateFormat, dbDateFormat, productID, hostID)
+	}
 	log.Println(rawSQL)
 	if err = d.Select(&hostGroups, rawSQL); err != nil {
 		log.Println(err)

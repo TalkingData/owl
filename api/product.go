@@ -226,8 +226,9 @@ func listProductHosts(c *gin.Context) {
 		order = "status asc"
 	}
 	var (
-		noGroup bool
-		err     error
+		noGroup   bool
+		err       error
+		productID = c.GetInt("product_id")
 	)
 	noGroup, err = strconv.ParseBool(c.DefaultQuery("no_group", "false"))
 	if err != nil {
@@ -235,7 +236,7 @@ func listProductHosts(c *gin.Context) {
 	}
 
 	total, hosts := mydb.getProductHosts(
-		c.GetInt("product_id"),
+		productID,
 		noGroup,
 		c.GetBool("paging"),
 		c.DefaultQuery("query", ""),
@@ -244,7 +245,7 @@ func listProductHosts(c *gin.Context) {
 		c.GetInt("limit"),
 	)
 	response["total"] = total
-	response["hosts"] = warpHosts(hosts)
+	response["hosts"] = warpProductHosts(productID, hosts)
 }
 
 func listNotInProductHosts(c *gin.Context) {

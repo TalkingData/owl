@@ -132,14 +132,34 @@ func warpHosts(hosts []Host) []WarpHost {
 	return warpHosts
 }
 
+func warpProductHosts(productID int, hosts []Host) []WarpHost {
+	warpHosts := []WarpHost{}
+	for _, host := range hosts {
+		warpHosts = append(warpHosts, warpProductHost(productID, host))
+	}
+	return warpHosts
+}
+
 func warpHost(host Host) WarpHost {
 	pluginCnt, _ := mydb.getHostPlugins(host.ID, false, "", "", 0, 0)
 	return WarpHost{
 		host,
 		mydb.getHostAppNames(host.ID),
 		pluginCnt,
-		mydb.getHostHostGroups(host.ID),
+		mydb.getHostHostGroups(0, host.ID),
 		mydb.getHostProducts(host.ID),
+	}
+}
+
+func warpProductHost(productID int, host Host) WarpHost {
+	pluginCnt, _ := mydb.getHostPlugins(host.ID, false, "", "", 0, 0)
+	return WarpHost{
+		host,
+		mydb.getHostAppNames(host.ID),
+		pluginCnt,
+		mydb.getHostHostGroups(productID, host.ID),
+		nil,
+		// mydb.getHostProducts(host.ID),
 	}
 }
 
