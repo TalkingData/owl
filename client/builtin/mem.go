@@ -23,6 +23,7 @@ func memoryMetrics(cycle int) []*types.TimeSeriesData {
 		return nil
 	}
 	ts := time.Now().Unix()
+	ts = ts - (ts % int64(cycle))
 	metrics[0] = &types.TimeSeriesData{
 		Metric:    "system.mem.active",
 		Value:     float64(cnt.Active),

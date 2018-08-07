@@ -35,6 +35,7 @@ func diskIOMetrics() []*types.TimeSeriesData {
 	}
 	metrics := []*types.TimeSeriesData{}
 	ts := time.Now().Unix()
+	ts = ts - (ts % int64(Cycle))
 	for _, v := range cnt {
 		metrics = append(metrics,
 			&types.TimeSeriesData{

@@ -31,6 +31,7 @@ func fdMetrics(cycle int) []*types.TimeSeriesData {
 		return nil
 	}
 	ts := time.Now().Unix()
+	ts = ts - (ts % int64(cycle))
 	r := bufio.NewReader(fd)
 	line, err := r.ReadString('\n')
 	if err != nil {

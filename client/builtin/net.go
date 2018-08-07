@@ -27,6 +27,7 @@ func netMetrics(cycle int) []*types.TimeSeriesData {
 		return nil
 	}
 	ts := time.Now().Unix()
+	ts = ts - (ts % int64(cycle))
 	metrics := []*types.TimeSeriesData{}
 
 	for _, v := range cnt {
