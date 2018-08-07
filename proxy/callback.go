@@ -118,12 +118,28 @@ func (cb *callback) OnMessage(conn *tcp.TCPConn, p tcp.Packet) {
 			lg.Warn("get host id failed", res.HostID)
 		}
 		proxy.lock.RUnlock()
-		fd, err := os.OpenFile(filepath.Join(GlobalConfig.PluginDir, res.Path), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+		filename := filepath.Join(GlobalConfig.PluginDir, res.Path)
+	retry:
+		fd, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 		if err != nil {
+			if os.IsNotExist(err) {
+				dir := filepath.Dir(filename)
+				lg.Warn("create plugin failed, dir(%s) is not exists, create", dir)
+				if err = os.MkdirAll(dir, 0755); err != nil {
+					lg.Warn("mkdir %s failed, error:%s", dir, err.Error())
+					return
+				}
+				goto retry
+			}
 			lg.Error("%s", err)
 			return
 		}
-		fd.Write(res.Body)
+		writeLen, err := fd.Write(res.Body)
+		if err != nil {
+			lg.Error("create plugin error(%s), %s", err, res.Path)
+			return
+		}
+		lg.Debug("create plugin(%s) successfully, write %d bytes.", res.Path, writeLen)
 		fd.Close()
 	}
 }
