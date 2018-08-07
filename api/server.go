@@ -176,11 +176,11 @@ func InitServer() error {
 				// 获取产品线下的用户
 				productUser.GET("", listProductUsers)
 				// 向产品线中添加用户
-				productUser.PUT("/add", verifyAdminPermission, addUsers2Product)
+				productUser.PUT("/add", addUsers2Product)
 				// 从产品线中移除用户
-				productUser.PUT("/remove", verifyAdminPermission, removeUsersFromProduct)
+				productUser.PUT("/remove", removeUsersFromProduct)
 				// 获取不在产品线中的用户
-				productUser.GET("/not_in", verifyAdminPermission, listNotInProductUsers)
+				productUser.GET("/not_in", listNotInProductUsers)
 			}
 			productHostGroup := productDetail.Group("/host_groups")
 			{
