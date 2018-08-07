@@ -60,11 +60,22 @@ func SyncUsers(c *gin.Context) {
 	}{}
 	fmt.Println(string(buf))
 	fmt.Println(json.Unmarshal(buf, &s))
+	_, users := mydb.getAllUsers(false, "", "", 0, 0)
+	userMap := map[string]struct{}{}
 	for _, user := range s.Message {
+		userMap[user.Username] = struct{}{}
 		if user.Username == "" {
 			continue
 		}
 		mydb.Exec("insert into user(username, mail, display_name) values(?,?,?)", user.Username, user.EmailAddress, strings.TrimSpace(user.DisplayName))
+	}
+	for _, user := range users {
+		if _, ok := userMap[user.Username]; ok {
+			continue
+		}
+		mydb.deleteUser(user.ID)
+		log.Printf("delete user %v", user)
+
 	}
 	c.JSON(http.StatusOK, gin.H{"users": s})
 }
