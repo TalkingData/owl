@@ -3,20 +3,22 @@ package main
 import "github.com/Unknwon/goconfig"
 
 const (
-	ConfigFilePath          = "./conf/cfc.conf"
-	DefaultTCPBind          = "0.0.0.0:10020"
-	DefaultMetricBind       = "0.0.0.0:10021"
-	DefaultMySQLAddr        = "127.0.0.1:3306"
-	DefaultMySQLDBName      = "owl"
-	DefaultMySQLUser        = "owl"
-	DefaultMySQLPassword    = ""
-	DefaultMySQLMaxConn     = 20
-	DefaultMySQLMaxIdleConn = 5
-	DefaultMaxPacketSize    = 4096
-	DefaultLogFile          = "./logs/cfc.log"
-	DefaultLogExpireDays    = 7
-	DefaultLogLevel         = 3
-	DefaultPluginDir        = "./plugins"
+	ConfigFilePath                       = "./conf/cfc.conf"
+	DefaultTCPBind                       = "0.0.0.0:10020"
+	DefaultMetricBind                    = "0.0.0.0:10021"
+	DefaultMySQLAddr                     = "127.0.0.1:3306"
+	DefaultMySQLDBName                   = "owl"
+	DefaultMySQLUser                     = "owl"
+	DefaultMySQLPassword                 = ""
+	DefaultMySQLMaxConn                  = 20
+	DefaultMySQLMaxIdleConn              = 5
+	DefaultMaxPacketSize                 = 4096
+	DefaultLogFile                       = "./logs/cfc.log"
+	DefaultLogExpireDays                 = 7
+	DefaultLogLevel                      = 3
+	DefaultPluginDir                     = "./plugins"
+	DefaultCleanupExpiredMetricsInterval = 10
+	DefaultMetricExpiredCycle            = 10
 )
 
 var GlobalConfig *Config
@@ -39,8 +41,11 @@ type Config struct {
 	LogLevel      int    //日志级别
 	LogExpireDays int    //日志保留天数
 
-	MaxPacketSize int
-	PluginDir     string
+	MaxPacketSize                       int
+	PluginDir                           string
+	CleanupExpiredMetricIntervalMinutes int // 清理过期 metric 时间间隔，单位分钟
+	MetricExpiredCycle                  int //metric 过期时间
+	EnableCleanupExpiredMetric          bool
 }
 
 func InitGlobalConfig() error {
@@ -62,7 +67,10 @@ func InitGlobalConfig() error {
 		LogExpireDays:    cfg.MustInt(goconfig.DEFAULT_SECTION, "log_expire_days", DefaultLogExpireDays),
 		LogLevel:         cfg.MustInt(goconfig.DEFAULT_SECTION, "log_level", DefaultLogLevel),
 		PluginDir:        cfg.MustValue(goconfig.DEFAULT_SECTION, "plugin_dir", DefaultPluginDir),
+		CleanupExpiredMetricIntervalMinutes: cfg.MustInt(goconfig.DEFAULT_SECTION, "cleanup_expired_metric_interval",
+			DefaultCleanupExpiredMetricsInterval),
+		MetricExpiredCycle:         cfg.MustInt(goconfig.DEFAULT_SECTION, "metric_expired_cycle", DefaultMetricExpiredCycle),
+		EnableCleanupExpiredMetric: cfg.MustBool(goconfig.DEFAULT_SECTION, "enable_cleanup_expired_metric", false),
 	}
 	return nil
-
 }

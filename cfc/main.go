@@ -39,5 +39,8 @@ func main() {
 	}
 	lg.Info("start cfc on %s ", GlobalConfig.TCPBind)
 	go updatHostStatus()
+	if GlobalConfig.EnableCleanupExpiredMetric {
+		go cleanupExpiredMetrics()
+	}
 	select {}
 }

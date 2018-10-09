@@ -43,3 +43,12 @@ func updatHostStatus() {
 		time.Sleep(time.Minute * 2)
 	}
 }
+
+func cleanupExpiredMetrics() {
+	for {
+		time.Sleep(time.Minute * time.Duration(GlobalConfig.CleanupExpiredMetricIntervalMinutes))
+		if err := mydb.cleanupExpiredMetrics(); err != nil {
+			lg.Error("cleanupExpiredMetrics failed, error:%s", err)
+		}
+	}
+}
