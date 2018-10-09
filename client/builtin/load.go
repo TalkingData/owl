@@ -22,7 +22,6 @@ func loadMetrics(cycle int) []*types.TimeSeriesData {
 		return nil
 	}
 	ts := time.Now().Unix()
-	ts = ts - (ts % int64(cycle))
 	metrics := make([]*types.TimeSeriesData, 3)
 
 	metrics[0] = &types.TimeSeriesData{

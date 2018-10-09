@@ -35,7 +35,6 @@ func diskIOMetrics() []*types.TimeSeriesData {
 	}
 	metrics := []*types.TimeSeriesData{}
 	ts := time.Now().Unix()
-	ts = ts - (ts % int64(Cycle))
 	for _, v := range cnt {
 		metrics = append(metrics,
 			&types.TimeSeriesData{
@@ -97,6 +96,7 @@ func diskPartitionMetrics() []*types.TimeSeriesData {
 	}
 	metrics := []*types.TimeSeriesData{}
 	ts := time.Now().Unix()
+	ts = ts - (ts % int64(Cycle))
 	for _, p := range pts {
 		cnt, err := disk.Usage(p.Mountpoint)
 		if err != nil {

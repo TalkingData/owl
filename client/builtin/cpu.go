@@ -28,7 +28,6 @@ func CpuMetrics(cycle int, channel chan types.TimeSeriesData) {
 func cpuMetrics(cycle int) []*types.TimeSeriesData {
 	metrics := []*types.TimeSeriesData{}
 	ts := time.Now().Unix()
-	ts = ts - (ts % int64(cycle))
 	t1 := getAllTimes()
 	time.Sleep(time.Second * 1)
 	t2 := getAllTimes()
