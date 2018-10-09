@@ -16,7 +16,7 @@ var (
 type Repeater struct {
 	srv     *tcp.AsyncTCPServer
 	buffer  chan []byte
-	backend Backend
+	backend []Backend
 }
 
 func InitRepeater() error {
@@ -26,42 +26,55 @@ func InitRepeater() error {
 	repeater = &Repeater{}
 	repeater.srv = s
 	repeater.buffer = make(chan []byte, GlobalConfig.BufferSize)
-	var err error
-	switch GlobalConfig.Backend {
-	case "opentsdb", "kairosdb":
-		repeater.backend, err = backend.NewOpentsdbBackend(GlobalConfig.OpentsdbAddr)
-	case "repeater":
-		repeater.backend, err = backend.NewRepeaterBackend(GlobalConfig.RepeaterAddr)
-	case "kafka":
-		repeater.backend, err = backend.NewKafkaBackend(GlobalConfig.KafkaBrokers, GlobalConfig.KafkaTopic)
-	default:
-		err = fmt.Errorf("unsupported backend %s", GlobalConfig.Backend)
-	}
-	if err != nil {
-		return fmt.Errorf("%s error:%s", GlobalConfig.Backend, err)
+
+	var (
+		err error
+		bk  Backend
+	)
+
+	for _, b := range GlobalConfig.Backend {
+		switch b {
+		case "opentsdb":
+			bk, err = backend.NewOpentsdbBackend(GlobalConfig.OpentsdbAddr)
+		case "kairosdb":
+			bk, err = backend.NewOpentsdbBackend(GlobalConfig.KairosdbAddr)
+		case "repeater":
+			bk, err = backend.NewRepeaterBackend(GlobalConfig.RepeaterAddr)
+		case "kafka":
+			bk, err = backend.NewKafkaBackend(GlobalConfig.KafkaBrokers, GlobalConfig.KafkaTopic)
+		default:
+			err = fmt.Errorf("unsupported backend %s", GlobalConfig.Backend)
+		}
+		if err != nil {
+			return fmt.Errorf("%s error:%s", b, err)
+		}
+		lg.Info("new time series backend:%s", b)
+		repeater.backend = append(repeater.backend, bk)
 	}
 	return repeater.srv.ListenAndServe()
 }
 
 func (this *Repeater) Forward() {
-	var err error
-	for {
-		select {
-		case data := <-this.buffer:
-			tsd := &types.TimeSeriesData{}
-			if err = tsd.Decode(data); err != nil {
-				lg.Error("decode error %s ", err)
-				continue
-			}
+	var (
+		err error
+	)
+	for data := range this.buffer {
+		tsd := &types.TimeSeriesData{}
+		if err = tsd.Decode(data); err != nil {
+			lg.Error("decode error %s ", err)
+			continue
+		}
+		//时间对齐
+		tsd.Timestamp = tsd.Timestamp - (tsd.Timestamp % int64(tsd.Cycle))
+		for index, b := range this.backend {
 			for {
-				err = this.backend.Write(tsd)
-				if err == nil {
+				if err = b.Write(tsd); err == nil {
 					break
 				}
-				lg.Error("forward to %s error(%s)", GlobalConfig.Backend, err)
+				lg.Error("write backend %s failed, error:%s", GlobalConfig.Backend[index], err)
 				time.Sleep(time.Second * 5)
 			}
-			lg.Notice("forward to %s %v", GlobalConfig.Backend, *tsd)
+			lg.Notice("forward to %s %v", GlobalConfig.Backend[index], *tsd)
 		}
 	}
 }

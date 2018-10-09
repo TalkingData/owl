@@ -8,6 +8,7 @@ const (
 	DefaultTCPBind       = "0.0.0.0:10040"
 	DefaultMetricBind    = "0.0.0.0:10041"
 	DefaultOpentsdbAddr  = "127.0.0.1:4242"
+	DefaultKairosdbAddr  = "127.0.0.1:4242"
 	DefaultRepeaterAddr  = ""
 	DefaultMaxPacketSize = 4096
 	DefaultBufferSize    = 1 << 20
@@ -19,13 +20,15 @@ const (
 var GlobalConfig *Config
 
 type Config struct {
-	Backend    string
+	Backend    []string
 	TCPBind    string
 	MetricBind string
 
 	OpentsdbAddr string
 	KafkaBrokers []string
 	KafkaTopic   string
+
+	KairosdbAddr string
 
 	RepeaterAddr string
 	//LOG CONFIG
@@ -43,10 +46,11 @@ func InitGlobalConfig() error {
 		return err
 	}
 	GlobalConfig = &Config{
-		Backend:      cfg.MustValue(goconfig.DEFAULT_SECTION, "backend", DefaultBackend),
+		Backend:      cfg.MustValueArray(goconfig.DEFAULT_SECTION, "backend", ","),
 		TCPBind:      cfg.MustValue(goconfig.DEFAULT_SECTION, "tcp_bind", DefaultTCPBind),
 		MetricBind:   cfg.MustValue(goconfig.DEFAULT_SECTION, "metric_bind", DefaultMetricBind),
 		OpentsdbAddr: cfg.MustValue(goconfig.DEFAULT_SECTION, "opentsdb_addr", DefaultOpentsdbAddr),
+		KairosdbAddr: cfg.MustValue(goconfig.DEFAULT_SECTION, "kairosdb_addr", DefaultKairosdbAddr),
 		RepeaterAddr: cfg.MustValue(goconfig.DEFAULT_SECTION, "repeater_addr", DefaultRepeaterAddr),
 		KafkaBrokers: cfg.MustValueArray(goconfig.DEFAULT_SECTION, "kafka_brokers", ","),
 		KafkaTopic:   cfg.MustValue(goconfig.DEFAULT_SECTION, "kafka_topic", "owl"),
