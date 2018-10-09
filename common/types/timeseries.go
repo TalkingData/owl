@@ -8,7 +8,27 @@ import (
 	"strings"
 )
 
-var reg = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_.]+$`)
+var reg = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_.-]+$`)
+
+type TimeSeriesDataV4 struct {
+	PerformanceIndex map[string]float64 `json:"performance_index"`
+	Host             string             `json:"host"`
+	AppName          string             `json:"app_name"`
+	Domain           string             `json:"domain"`
+}
+
+func (tsdv4 *TimeSeriesDataV4) ToV5() []*TimeSeriesData {
+	ts := []*TimeSeriesData{}
+	for k, v := range tsdv4.PerformanceIndex {
+		ts = append(ts, &TimeSeriesData{
+			Metric:   fmt.Sprintf("%s.%s", strings.ToLower(tsdv4.AppName), strings.ToLower(k)),
+			DataType: "gauge",
+			Value:    v,
+			Tags:     map[string]string{},
+		})
+	}
+	return ts
+}
 
 type TimeSeriesData struct {
 	Metric    string            `json:"metric"`    //sys.cpu.idle
@@ -90,6 +110,13 @@ func (tsd *TimeSeriesData) AddTags(tags map[string]string) {
 	for k, v := range tags {
 		tsd.Tags[k] = v
 	}
+}
+
+func (tsd *TimeSeriesData) RemoveTag(tagk string) {
+	if tsd.Tags == nil {
+		return
+	}
+	delete(tsd.Tags, tagk)
 }
 
 //tag1=v1,tag2=v2,tag3=v3
