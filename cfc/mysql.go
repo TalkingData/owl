@@ -29,27 +29,48 @@ func InitMysqlConnPool() error {
 	return nil
 }
 
-func (s *Storage) createHost(host *types.Host) error {
+// func (s *Storage) createHost(host *types.Host) error {
+// 	now := time.Now().Format(timeFomart)
+// 	sqlString := fmt.Sprintf("insert into `host`(`id`, `ip`, `hostname`, `uptime`, `idle_pct`, `agent_version`, `create_at`, `update_at`) "+
+// 		" values('%s', '%s', '%s', %0.2f, %0.2f, '%s','%s','%s')", host.ID, host.IP, host.Hostname, host.Uptime, host.IdlePct, host.AgentVersion, now, now)
+// 	lg.Debug("create host:%s", sqlString)
+// 	_, err := s.Exec(sqlString)
+// 	return err
+// }
+
+// func (s *Storage) updateHost(host *types.Host) error {
+// 	sqlString := fmt.Sprintf("update `host` set `ip`='%s', `uptime`=%0.2f, `idle_pct`=%0.2f, `hostname`='%s', `agent_version`='%s', `update_at`='%s' where id='%s'",
+// 		host.IP, host.Uptime, host.IdlePct, host.Hostname, host.AgentVersion, time.Now().Format(timeFomart), host.ID)
+// 	lg.Debug("update host:%s", sqlString)
+// 	_, err := s.Exec(sqlString)
+// 	return err
+// }
+
+func (s *Storage) createOrUpdateHost(host *types.Host) error {
 	now := time.Now().Format(timeFomart)
 	sqlString := fmt.Sprintf("insert into `host`(`id`, `ip`, `hostname`, `uptime`, `idle_pct`, `agent_version`, `create_at`, `update_at`) "+
-		" values('%s', '%s', '%s', %0.2f, %0.2f, '%s','%s','%s')", host.ID, host.IP, host.Hostname, host.Uptime, host.IdlePct, host.AgentVersion, now, now)
-	lg.Debug("create host:%s", sqlString)
+		" values('%s', '%s', '%s', %0.2f, %0.2f, '%s','%s','%s') ON DUPLICATE key UPDATE ip=VALUES(ip), uptime=VALUES(uptime),"+
+		"idle_pct=VALUES(idle_pct), hostname=VALUES(hostname), agent_version=VALUES(agent_version), update_at=VALUES(update_at)",
+		host.ID, host.IP, host.Hostname, host.Uptime, host.IdlePct, host.AgentVersion, now, now)
+	lg.Debug("create or update host:%s", sqlString)
 	_, err := s.Exec(sqlString)
 	return err
 }
 
-func (s *Storage) updateHost(host *types.Host) error {
-	sqlString := fmt.Sprintf("update `host` set `ip`='%s', `uptime`=%0.2f, `idle_pct`=%0.2f, `hostname`='%s', `agent_version`='%s', `update_at`='%s' where id='%s'",
-		host.IP, host.Uptime, host.IdlePct, host.Hostname, host.AgentVersion, time.Now().Format(timeFomart), host.ID)
-	lg.Debug("update host:%s", sqlString)
-	_, err := s.Exec(sqlString)
-	return err
-}
-
-func (s *Storage) getHost(hostID string) (*types.Host, error) {
+func (s *Storage) getHostByID(hostID string) (*types.Host, error) {
 	host := &types.Host{}
 	sqlString := fmt.Sprintf("select id, ip, hostname, agent_version,status,create_at, update_at  from `host` where id='%s'", hostID)
-	lg.Debug("getHost:%s", sqlString)
+	lg.Debug("getHostByID:%s", sqlString)
+	err := s.Get(host, sqlString)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return host, err
+}
+func (s *Storage) getHostByHostname(hostname string) (*types.Host, error) {
+	host := &types.Host{}
+	sqlString := fmt.Sprintf("select id, ip, hostname, agent_version,status,create_at, update_at  from `host` where hostname='%s'", hostname)
+	lg.Debug("getHostByHostname:%s", sqlString)
 	err := s.Get(host, sqlString)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -120,29 +141,20 @@ func (s *Storage) getHostPlugins(hostID string) ([]types.Plugin, error) {
 	return plugins, nil
 }
 
-func (s *Storage) metricIsExists(hostID, metric string, tags string) bool {
-	sqlString := fmt.Sprintf("select `id` from `metric` where `host_id`= '%s' and `metric`='%s' and `tags`='%s'", hostID, metric, tags)
-	lg.Debug("metricIsExists:%s", sqlString)
-	var id int
-	if err := s.Get(&id, sqlString); err != nil {
-		if err == sql.ErrNoRows {
-			// no row
-			return false
-		}
-		// error
-		lg.Error("metricIsExists:%s", err)
-		return false
-	}
-	// exists
-	return true
-}
-
-func (s *Storage) createMetric(hostID string, tsd types.TimeSeriesData) error {
+func (s *Storage) createOrUpdateMetric(hostID string, tsd types.TimeSeriesData) error {
 	now := time.Now().Format(timeFomart)
 	sqlString := fmt.Sprintf("insert into `metric` (`host_id`, `metric`, `tags`, `dt`, `cycle`, `create_at`, `update_at`) "+
-		"values('%s', '%s', '%s', '%s', %d, '%s', '%s')",
+		"values('%s', '%s', '%s', '%s', %d, '%s', '%s') ON DUPLICATE key UPDATE update_at = VALUES(update_at), cycle=VALUES(cycle)",
 		hostID, tsd.Metric, tsd.Tags2String(), tsd.DataType, tsd.Cycle, now, now)
-	lg.Debug("createMetric:%s", sqlString)
+	lg.Debug("create or update metric:%s", sqlString)
 	_, err := s.Exec(sqlString)
+	return err
+}
+
+func (s *Storage) cleanupExpiredMetrics() error {
+	rawSQL := fmt.Sprintf("delete from metric where UNIX_TIMESTAMP(now()) - UNIX_TIMESTAMP(update_at) > (cycle * %d)",
+		GlobalConfig.MetricExpiredCycle)
+	lg.Info("cleanupExpiredMetrics:%s", rawSQL)
+	_, err := s.Exec(rawSQL)
 	return err
 }

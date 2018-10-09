@@ -49,7 +49,7 @@ func (cb *callback) dispatch(conn *tcp.TCPConn, pkt *tcp.DefaultPacket) {
 			conn.Close()
 			return
 		}
-		if err := cb.registerAgent(host); err != nil {
+		if err := mydb.createOrUpdateHost(host); err != nil {
 			lg.Error("register agent error:%s, host:%v", err, host)
 			return
 		}
@@ -63,24 +63,21 @@ func (cb *callback) dispatch(conn *tcp.TCPConn, pkt *tcp.DefaultPacket) {
 			lg.Error("decode metricConfig error", err)
 			return
 		}
-		// 判断 metric 是否已经存在
-		if mydb.metricIsExists(
-			metricConfig.HostID,
-			metricConfig.SeriesData.Metric,
-			metricConfig.SeriesData.Tags2String(),
-		) {
-			lg.Warn("ignore exists metric: %v", metricConfig)
-			return
+		if metricConfig.HostID == "" {
+			hostname := metricConfig.SeriesData.Tags["host"]
+			metricConfig.HostID = getHostIDByHostname(hostname)
 		}
+		metricConfig.SeriesData.RemoveTag("host")
+		metricConfig.SeriesData.RemoveTag("uuid")
 		//创建 metric
-		if err := mydb.createMetric(
+		if err := mydb.createOrUpdateMetric(
 			metricConfig.HostID,
 			metricConfig.SeriesData,
 		); err != nil {
-			lg.Error("create metric error %s metric:%v", err, metricConfig)
+			lg.Error("create or update metric error %s metric:%v", err, metricConfig)
 			return
 		}
-		lg.Info("create metric %v", metricConfig)
+		lg.Debug("create metric %s", metricConfig.Encode())
 	// 客户端获取需要执行的插件列表
 	case types.MsgAgentGetPluginsList:
 		var (
@@ -159,19 +156,19 @@ func (cb *callback) dispatch(conn *tcp.TCPConn, pkt *tcp.DefaultPacket) {
 			lg.Warning("host id is empty %v", host)
 			return
 		}
-		cb.registerAgent(host)
+		mydb.createOrUpdateHost(host)
 	default:
 		lg.Warn("%v no callback", types.MsgTextMap[pkt.Type])
 	}
 }
 
-func (cb *callback) registerAgent(host *types.Host) error {
-	h, err := mydb.getHost(host.ID)
+func getHostIDByHostname(hostname string) string {
+	host, err := mydb.getHostByHostname(hostname)
 	if err != nil {
-		return err
+		lg.Error("get host id by hostname failed, hostname:%q, error:%s", hostname, err)
 	}
-	if h == nil {
-		return mydb.createHost(host)
+	if host == nil {
+		return ""
 	}
-	return mydb.updateHost(host)
+	return host.ID
 }
