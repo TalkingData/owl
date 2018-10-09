@@ -3,13 +3,16 @@ package main
 import "github.com/Unknwon/goconfig"
 
 const (
+	//ConfigFilePath 定义配置文件路径
 	ConfigFilePath      = "./conf/client.conf"
 	DefaultCfcAddr      = "127.0.0.1:10020"
 	DefaultRepeaterAddr = "127.0.0.1:10040"
 	DefaultTCPBind      = "127.0.0.1:10000"
 	DefaultMetricBind   = "127.0.0.1:10001"
 
-	// 0 代表不限制
+	DefaultReportMetricIntervalMinutes = 5
+
+	// DefaultMaxPacketSize 定义最大包大小的默认值，0 代表不限制
 	DefaultMaxPacketSize = 0
 	DefaultLogExpireDays = 7
 
@@ -24,10 +27,11 @@ var GlobalConfig *Config
 type Config struct {
 	CfcAddr string //tcp监听地址和端口
 
-	RepeaterAddr string
-	TCPBind      string
-	MetricBind   string
-	BufferSize   int
+	RepeaterAddr                string
+	TCPBind                     string
+	MetricBind                  string
+	BufferSize                  int
+	ReportMetricIntervalMinutes int
 
 	//LOG CONFIG
 	LogFile       string //日志保存目录
@@ -49,6 +53,9 @@ func InitGlobalConfig() error {
 		TCPBind:      cfg.MustValue(goconfig.DEFAULT_SECTION, "tcp_bind", DefaultTCPBind),
 		MetricBind:   cfg.MustValue(goconfig.DEFAULT_SECTION, "metric_bind", DefaultMetricBind),
 		BufferSize:   cfg.MustInt(goconfig.DEFAULT_SECTION, "buffer_size", DefaultBufferSize),
+		ReportMetricIntervalMinutes: cfg.MustInt(goconfig.DEFAULT_SECTION,
+			"report_metric_interval_minutes",
+			DefaultReportMetricIntervalMinutes),
 
 		MaxPacketSize: cfg.MustInt(goconfig.DEFAULT_SECTION, "max_packet_size", DefaultMaxPacketSize),
 		LogFile:       cfg.MustValue(goconfig.DEFAULT_SECTION, "log_FILE", DefaultLogFile),

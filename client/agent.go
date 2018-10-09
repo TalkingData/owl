@@ -5,6 +5,7 @@ import (
 	"owl/client/builtin"
 	"owl/common/types"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/wuyingsong/tcp"
@@ -23,11 +24,12 @@ const (
 
 type Agent struct {
 	*tcp.AsyncTCPServer
-	hostcfg    *types.Host
-	cfc        *tcp.TCPConn
-	repeater   *tcp.TCPConn
-	SendChan   chan types.TimeSeriesData
-	tsdHistory map[string]float64
+	hostcfg  *types.Host
+	cfc      *tcp.TCPConn
+	repeater *tcp.TCPConn
+	SendChan chan types.TimeSeriesData
+	// tsdHistory  map[string]float64
+	metricStore *types.TimeSeriesDataStore
 }
 
 var (
@@ -46,8 +48,12 @@ func InitAgent() error {
 		&tcp.TCPConn{},
 		&tcp.TCPConn{},
 		make(chan types.TimeSeriesData, GlobalConfig.BufferSize),
-		make(map[string]float64),
+		// make(map[string]float64),
+		types.NewTimeSeriesDataStore(),
 	}
+	agent.dialCFC()
+	agent.dialRepeater()
+	agent.hostcfg = newHostConfig()
 	return agent.ListenAndServe()
 }
 
@@ -93,15 +99,10 @@ func (agent *Agent) watchConnLoop() {
 
 func (agent *Agent) watchHostConfig() {
 	for {
-		if agent.hostcfg == nil {
-			agent.hostcfg = newHostConfig()
+		hostcfg := newHostConfig()
+		if !reflect.DeepEqual(agent.hostcfg, hostcfg) {
+			agent.hostcfg = hostcfg
 			agent.register()
-		} else {
-			hostcfg := newHostConfig()
-			if !reflect.DeepEqual(agent.hostcfg, hostcfg) {
-				agent.hostcfg = hostcfg
-				agent.register()
-			}
 		}
 		time.Sleep(time.Second * 30)
 	}
@@ -111,8 +112,8 @@ func (agent *Agent) watchHostConfig() {
 func (agent *Agent) sendSyncPluginRequest(p types.Plugin) error {
 	lg.Debug("send sync plugin request, %s", p.Path)
 	spr := types.SyncPluginRequest{
-		agent.hostcfg.ID,
-		p,
+		HostID: agent.hostcfg.ID,
+		Plugin: p,
 	}
 	return agent.cfc.AsyncWritePacket(
 		tcp.NewDefaultPacket(types.MsgAgentRequestSyncPlugins, spr.Encode()),
@@ -151,21 +152,17 @@ func (agent *Agent) sendGetPluginList() error {
 		))
 }
 
-func (agent *Agent) sendMetric2CFC(tsd types.TimeSeriesData) {
+func (agent *Agent) sendMetric2CFC(tsd types.TimeSeriesData) error {
 	cfg := types.MetricConfig{
-		agent.hostcfg.ID,
-		tsd,
+		HostID:     agent.hostcfg.ID,
+		SeriesData: tsd,
 	}
-	if err := agent.cfc.AsyncWritePacket(
+	return agent.cfc.AsyncWritePacket(
 		tcp.NewDefaultPacket(
 			types.MsgAgentSendMetricInfo,
 			cfg.Encode(),
 		),
-	); err == nil {
-		lg.Info("send to cfc %s", tsd)
-	} else {
-		lg.Error("send time series data to cfc error %s", err)
-	}
+	)
 }
 
 func (agent *Agent) StartTimer() {
@@ -203,12 +200,10 @@ func (agent *Agent) SendTSD2Repeater() {
 		time.Sleep(time.Second)
 	}
 	for tsd := range agent.SendChan {
-
 		tags := map[string]string{"uuid": agent.hostcfg.ID, "host": agent.hostcfg.Hostname}
-		pk := tsd.PK()
-		history, exist := agent.tsdHistory[pk]
-		currValue := tsd.Value
-		agent.tsdHistory[pk] = currValue
+		tsd.AddTags(tags)
+		prevtsd, exist := agent.metricStore.Get(tsd.PK())
+		agent.metricStore.Add(tsd)
 		if !exist {
 			agent.sendMetric2CFC(tsd)
 			switch tsd.DataType {
@@ -216,19 +211,17 @@ func (agent *Agent) SendTSD2Repeater() {
 				continue
 			}
 		}
-		switch tsd.DataType {
-		// 计算速率
-		case "COUNTER", "counter":
-			rate := (tsd.Value - history) / float64(tsd.Cycle)
+
+		switch strings.ToLower(tsd.DataType) {
+		case "counter":
+			rate := (tsd.Value - prevtsd.Value) / float64(tsd.Cycle)
 			if rate < 0 {
 				continue
 			}
 			tsd.Value = rate
-		// 计算差值
-		case "DERIVE", "derive":
-			tsd.Value = tsd.Value - history
+		case "derive":
+			tsd.Value = tsd.Value - prevtsd.Value
 		}
-		tsd.AddTags(tags)
 		for {
 			if agent.repeater.IsClosed() {
 				err = tcp.ErrConnClosing
@@ -265,11 +258,26 @@ func (agent *Agent) sendHeartbeat2Repeater() {
 	}
 }
 
+func (agent *Agent) syncMetricToCFC() {
+	for {
+		if !agent.cfc.IsClosed() {
+			for _, metric := range agent.metricStore.GetAll() {
+				if (time.Now().Unix() - metric.Timestamp) > int64(metric.Cycle*2) {
+					agent.metricStore.Remove(metric.PK())
+					lg.Info("remove expired metric %s", metric.Encode())
+					continue
+				}
+				if err := agent.sendMetric2CFC(metric); err != nil {
+					lg.Error("send metric to cfc failed, error:%s", err)
+				}
+			}
+		}
+		time.Sleep(time.Minute * time.Duration(GlobalConfig.ReportMetricIntervalMinutes))
+	}
+}
+
 func (agent *Agent) runBuiltinMetricCollect() {
 	lg.Debug("run built-in metric collect")
-	now := time.Now().Unix()
-	diff := 60 - (now % 60)
-	time.Sleep(time.Second * time.Duration(diff))
 	for {
 		go builtin.MemoryMetrics(RunBuiltinMetricCycle, agent.SendChan)
 		go builtin.SwapMetrics(RunBuiltinMetricCycle, agent.SendChan)

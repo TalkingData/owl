@@ -35,13 +35,13 @@ func main() {
 	}
 
 	lg.Info("listen on %s", GlobalConfig.TCPBind)
-	agent.dialCFC()
-	agent.dialRepeater()
+	agent.register()
 	go agent.watchConnLoop()
 	go agent.watchHostConfig()
 	go agent.StartTimer()
 
 	go agent.SendTSD2Repeater()
 	go agent.sendHeartbeat2Repeater()
+	go agent.syncMetricToCFC()
 	select {}
 }
