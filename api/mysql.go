@@ -85,6 +85,7 @@ func (d *db) GetStrategies(where, order, limit string) []*StrategySummary {
 	if len(limit) > 0 {
 		rawSQL = fmt.Sprintf("%s LIMIT %s", rawSQL, limit)
 	}
+	log.Println(rawSQL)
 	if err := d.Select(&strategies, rawSQL); err != nil {
 		log.Println(err)
 	}
@@ -1160,7 +1161,8 @@ func (d *db) getAllHosts(paging bool, noProduct bool, query string, order string
 	)
 	rawSQL := fmt.Sprintf("select id, ip, name, hostname, agent_version, status, "+
 		"DATE_FORMAT(create_at,'%s') as create_at, DATE_FORMAT(update_at,'%s') as update_at,"+
-		"mute_time, uptime, idle_pct from host", dbDateFormat, dbDateFormat)
+		"DATE_FORMAT(mute_time, '%s') as mute_time, uptime, idle_pct from host",
+		dbDateFormat, dbDateFormat, dbDateFormat)
 	cntSQL := fmt.Sprintf("select count(*) from host")
 
 	if noProduct {
@@ -1198,7 +1200,8 @@ func (d *db) getHostByID(hostID string) *Host {
 	host := &Host{}
 	rawSQL := fmt.Sprintf("select id, ip, name, hostname, agent_version, status, "+
 		"DATE_FORMAT(create_at,'%s') as create_at, DATE_FORMAT(update_at,'%s') as update_at,"+
-		"mute_time, uptime, idle_pct from host where id='%s'", dbDateFormat, dbDateFormat, hostID)
+		"DATE_FORMAT(mute_time, '%s') as mute_time, uptime, idle_pct from host where id='%s'",
+		dbDateFormat, dbDateFormat, dbDateFormat, hostID)
 	log.Println(rawSQL)
 	if err := d.Get(host, rawSQL); err != nil {
 		if err != sql.ErrNoRows {
@@ -1211,6 +1214,16 @@ func (d *db) getHostByID(hostID string) *Host {
 //删除主机
 func (d *db) deleteHost(hostID string) error {
 	rawSQL := fmt.Sprintf("delete from host where id='%s'", hostID)
+	log.Println(rawSQL)
+	if _, err := d.Exec(rawSQL); err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
+func (d *db) muteHost(hostID string, muteTime string) error {
+	rawSQL := fmt.Sprintf("update host set mute_time='%s' where id='%s'", muteTime, hostID)
 	log.Println(rawSQL)
 	if _, err := d.Exec(rawSQL); err != nil {
 		log.Println(err)

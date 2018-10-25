@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"owl/common/types"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -55,7 +56,7 @@ func listAllHosts(c *gin.Context) {
 	total, hosts := mydb.getAllHosts(
 		c.GetBool("paging"),
 		noProduct,
-		c.Query("query"),
+		c.GetString("query"),
 		order,
 		c.GetInt("offset"),
 		c.GetInt("limit"),
@@ -93,7 +94,7 @@ func listHostMetrics(c *gin.Context) {
 		hostID,
 		c.GetBool("paging"),
 		c.Query("prefix"),
-		c.Query("query"),
+		c.GetString("query"),
 		"metric asc",
 		c.GetInt("offset"),
 		c.GetInt("limit"),
@@ -123,6 +124,38 @@ func listHostApps(c *gin.Context) {
 		return
 	}
 
+}
+
+func muteHost(c *gin.Context) {
+	response := gin.H{"code": http.StatusOK}
+	defer c.JSON(http.StatusOK, response)
+	hostID := c.Param("host_id")
+	muteTime := c.Query("mute_time")
+	if len(hostID) == 0 {
+		return
+	}
+	if err := mydb.muteHost(hostID, muteTime); err != nil {
+		response["code"] = http.StatusInternalServerError
+		response["message"] = err.Error()
+		return
+	}
+	response["host"] = mydb.getHostByID(hostID)
+}
+
+func unmuteHost(c *gin.Context) {
+	response := gin.H{"code": http.StatusOK}
+	defer c.JSON(http.StatusOK, response)
+	hostID := c.Param("host_id")
+	if len(hostID) == 0 {
+		return
+	}
+	unmuteTime := time.Now().Add(-time.Hour * 24).Format("2006-01-02 15:04:05")
+	if err := mydb.muteHost(hostID, unmuteTime); err != nil {
+		response["code"] = http.StatusInternalServerError
+		response["message"] = err.Error()
+		return
+	}
+	response["host"] = mydb.getHostByID(hostID)
 }
 
 func warpHosts(hosts []Host) []WarpHost {
@@ -170,7 +203,7 @@ func listHostPlugins(c *gin.Context) {
 	total, plugins := mydb.getHostPlugins(
 		c.Param("host_id"),
 		c.GetBool("paging"),
-		c.Query("query"),
+		c.GetString("query"),
 		"metric asc",
 		c.GetInt("offset"),
 		c.GetInt("limit"),

@@ -92,6 +92,9 @@ func InitServer() error {
 
 			hosts.PUT("/:host_id/plugins", updateHostPlugin)
 
+			hosts.PUT("/:host_id/mute", muteHost)
+			hosts.PUT("/:host_id/unmute", unmuteHost)
+
 			hosts.GET("/:host_id/plugins", listHostPlugins)
 
 			hosts.DELETE("/:host_id/plugins/:plugin_id", deleteHostPlugin)
