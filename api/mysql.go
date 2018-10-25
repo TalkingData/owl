@@ -360,6 +360,30 @@ func (d *db) CreateStrategyEventProcesses(strategyEventIDs []string, strategyEve
 	return
 }
 
+func (d *db) CleanupHostEvents(hostID string) {
+	var err error
+	if err = d.cleanupHostEvent(hostID); err != nil {
+		log.Println("clean-up host event failed, error:", err.Error())
+	}
+	if err = d.cleanupHostEventFailed(hostID); err != nil {
+		log.Println("clean-up host failed event failed, error:", err.Error())
+	}
+}
+
+func (d *db) cleanupHostEventFailed(hostID string) error {
+	rawSQL := fmt.Sprintf("delete from strategy_event_failed where host_id='%s'", hostID)
+	log.Println(rawSQL)
+	_, err := d.Exec(rawSQL)
+	return err
+}
+
+func (d *db) cleanupHostEvent(hostID string) error {
+	rawSQL := fmt.Sprintf("delete from strategy_event where host_id='%s'", hostID)
+	log.Println(rawSQL)
+	_, err := d.Exec(rawSQL)
+	return err
+}
+
 // GetStrategyEventsFailed 获取失败的报警事件
 func (d *db) GetStrategyEventsFailed(where, order, limit string) []*StrategyEventFailed {
 	eventsFailed := []*StrategyEventFailed{}

@@ -73,6 +73,7 @@ func deleteHost(c *gin.Context) {
 		response["code"] = http.StatusInternalServerError
 		return
 	}
+	mydb.CleanupHostEvents(hostID)
 }
 
 func listHostMetrics(c *gin.Context) {
