@@ -22,7 +22,8 @@ func pagination(c *gin.Context) {
 	page, _ = strconv.Atoi(c.Query("page"))
 	pageSize, _ = strconv.Atoi(c.Query("page_size"))
 	pagingString := c.DefaultQuery("paging", "true")
-	orderString := c.Query("order")
+	orderString := strings.TrimSpace(c.Query("order"))
+	queryString := strings.TrimSpace(c.Query("query"))
 	if len(orderString) > 0 {
 		fields := strings.Split(orderString, "|")
 		if len(fields) == 2 {
@@ -38,6 +39,7 @@ func pagination(c *gin.Context) {
 		}
 
 	}
+	c.Set("query", queryString)
 	c.Set("order", orderString)
 	c.Set("paging", true)
 

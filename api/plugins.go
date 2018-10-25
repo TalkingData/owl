@@ -18,7 +18,7 @@ func listPlugins(c *gin.Context) {
 	response := gin.H{"code": http.StatusOK}
 	defer c.JSON(http.StatusOK, response)
 	total, plugins := mydb.getPlugins(
-		c.Query("query"),
+		c.GetString("query"),
 		c.GetBool("paging"),
 		c.GetInt("offset"),
 		c.GetInt("limit"),
@@ -133,7 +133,7 @@ func listPluginHostGroups(c *gin.Context) {
 	total, hostGroups := mydb.getPluginHostGroups(
 		pluginID,
 		c.GetBool("paging"),
-		c.Query("query"),
+		c.GetString("query"),
 		c.GetString("order"),
 		c.GetInt("offset"),
 		c.GetInt("limit"),
@@ -153,7 +153,7 @@ func listNotInPluginHostGroups(c *gin.Context) {
 	total, hostGroups := mydb.getNotInPluginHostGroups(
 		pluginID,
 		c.GetBool("paging"),
-		c.Query("query"),
+		c.GetString("query"),
 		c.GetString("order"),
 		c.GetInt("offset"),
 		c.GetInt("limit"),

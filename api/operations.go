@@ -71,7 +71,7 @@ func OperationRecord() gin.HandlerFunc {
 func operationList(c *gin.Context) {
 	startTime := c.DefaultQuery("start_time", time.Now().Add(-time.Hour).Format("2006-01-02 15:04:05"))
 	endTime := c.DefaultQuery("end_time", time.Now().Format("2006-01-02 15:04:05"))
-	query := c.DefaultQuery("query", "")
+	query := c.GetString("query")
 	where := fmt.Sprintf("(time BETWEEN '%s' AND '%s')", startTime, endTime)
 	if query != "" {
 		where += fmt.Sprintf("AND (ip LIKE '%%%s%%' OR method LIKE '%%%s%%' OR operator LIKE '%%%s%%' OR api LIKE '%%%s%%')", query, query, query, query)

@@ -19,7 +19,7 @@ func listProductPanel(c *gin.Context) {
 	defer c.JSON(http.StatusOK, response)
 	total, panels := mydb.getProductPanels(
 		c.GetInt("product_id"),
-		c.Query("query"),
+		c.GetString("query"),
 		c.GetString("order"),
 		c.GetBool("paging"),
 		c.GetInt("offset"),

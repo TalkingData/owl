@@ -29,7 +29,7 @@ func listPanelChats(c *gin.Context) {
 	defer c.JSON(http.StatusOK, response)
 	total, charts := mydb.getPanelCharts(
 		c.GetInt("panel_id"),
-		c.Query("query"),
+		c.GetString("query"),
 		c.GetString("order"),
 		c.GetBool("paging"),
 		c.GetInt("offset"),

@@ -20,7 +20,7 @@ func listProductUserGroups(c *gin.Context) {
 	total, userGroups := mydb.getProductUserGroups(
 		c.GetInt("product_id"),
 		c.GetBool("paging"),
-		c.Query("query"),
+		c.GetString("query"),
 		c.GetString("order"),
 		c.GetInt("offset"),
 		c.GetInt("limit"),
@@ -35,7 +35,7 @@ func listProductUserGroupUsers(c *gin.Context) {
 	total, users := mydb.getProductUserGroupUsers(
 		c.GetInt("user_group_id"),
 		c.GetBool("paging"),
-		c.Query("query"),
+		c.GetString("query"),
 		c.GetString("order"),
 		c.GetInt("offset"),
 		c.GetInt("limit"),
@@ -51,7 +51,7 @@ func listNotInProductUserGroupUsers(c *gin.Context) {
 		c.GetInt("product_id"),
 		c.GetInt("user_group_id"),
 		c.GetBool("paging"),
-		c.Query("query"),
+		c.GetString("query"),
 		c.GetString("order"),
 		c.GetInt("offset"),
 		c.GetInt("limit"),
@@ -133,7 +133,7 @@ func addUsers2ProductUserGroup(c *gin.Context) {
 	total, users := mydb.getProductUserGroupUsers(
 		c.GetInt("user_group_id"),
 		c.GetBool("paging"),
-		c.Query("query"),
+		c.GetString("query"),
 		c.GetString("order"),
 		c.GetInt("offset"),
 		c.GetInt("limit"),
@@ -160,7 +160,7 @@ func removeUsersFromProductUserGroup(c *gin.Context) {
 	total, users := mydb.getProductUserGroupUsers(
 		c.GetInt("user_group_id"),
 		c.GetBool("paging"),
-		c.Query("query"),
+		c.GetString("query"),
 		c.GetString("order"),
 		c.GetInt("offset"),
 		c.GetInt("limit"),

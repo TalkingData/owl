@@ -52,7 +52,7 @@ func listProductHostGroupHosts(c *gin.Context) {
 	total, hosts := mydb.getProductHostGroupHosts(
 		c.GetInt("host_group_id"),
 		c.GetBool("paging"),
-		c.DefaultQuery("query", ""),
+		c.GetString("query"),
 		c.GetString("order"),
 		c.GetInt("offset"),
 		c.GetInt("limit"),
@@ -68,7 +68,7 @@ func listNotInProductHostGroupHosts(c *gin.Context) {
 		c.GetInt("product_id"),
 		c.GetInt("host_group_id"),
 		c.GetBool("paging"),
-		c.DefaultQuery("query", ""),
+		c.GetString("query"),
 		c.GetString("order"),
 		c.GetInt("offset"),
 		c.GetInt("limit"),
@@ -83,7 +83,7 @@ func listProductHostGroups(c *gin.Context) {
 	total, hostGroups := mydb.getProductHostGroups(
 		c.GetInt("product_id"),
 		c.GetBool("paging"),
-		c.DefaultQuery("query", ""),
+		c.GetString("query"),
 		c.GetString("order"),
 		c.GetInt("offset"),
 		c.GetInt("limit"),
@@ -163,7 +163,7 @@ func addHosts2ProductHostGroup(c *gin.Context) {
 	total, hosts := mydb.getProductHostGroupHosts(
 		groupID,
 		c.GetBool("paging"),
-		c.DefaultQuery("query", ""),
+		c.GetString("query"),
 		c.GetString("order"),
 		c.GetInt("offset"),
 		c.GetInt("limit"),
@@ -191,7 +191,7 @@ func removeHostsFromProductHostGroup(c *gin.Context) {
 	total, hosts := mydb.getProductHostGroupHosts(
 		groupID,
 		c.GetBool("paging"),
-		c.DefaultQuery("query", ""),
+		c.GetString("query"),
 		c.GetString("order"),
 		c.GetInt("offset"),
 		c.GetInt("limit"),
@@ -207,7 +207,7 @@ func listHostGroupPlugins(c *gin.Context) {
 	total, plugins := mydb.getHostGroupPlugins(
 		c.GetInt("host_group_id"),
 		c.GetBool("paging"),
-		c.Query("query"),
+		c.GetString("query"),
 		c.GetInt("offset"),
 		c.GetInt("limit"),
 	)

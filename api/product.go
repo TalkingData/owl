@@ -41,7 +41,7 @@ func listAllProducts(c *gin.Context) {
 	defer c.JSON(http.StatusOK, response)
 	total, products := mydb.getProducts(
 		c.GetBool("paging"),
-		c.Query("query"),
+		c.GetString("query"),
 		c.GetString("order"),
 		c.Query("is_delete"),
 		c.GetInt("offset"),
@@ -139,7 +139,7 @@ func listProductUsers(c *gin.Context) {
 	total, users := mydb.getProductUsers(
 		c.GetInt("product_id"),
 		c.GetBool("paging"),
-		c.DefaultQuery("query", ""),
+		c.GetString("query"),
 		c.GetString("order"),
 		c.GetInt("offset"),
 		c.GetInt("limit"),
@@ -154,7 +154,7 @@ func listNotInProductUsers(c *gin.Context) {
 	total, users := mydb.getNotInProductUsers(
 		c.GetInt("product_id"),
 		c.GetBool("paging"),
-		c.DefaultQuery("query", ""),
+		c.GetString("query"),
 		c.GetString("order"),
 		c.GetInt("offset"),
 		c.GetInt("limit"),
@@ -181,7 +181,7 @@ func addUsers2Product(c *gin.Context) {
 	total, users := mydb.getProductUsers(
 		c.GetInt("product_id"),
 		c.GetBool("paging"),
-		c.DefaultQuery("query", ""),
+		c.GetString("query"),
 		c.GetString("order"),
 		c.GetInt("offset"),
 		c.GetInt("limit"),
@@ -209,7 +209,7 @@ func removeUsersFromProduct(c *gin.Context) {
 	total, users := mydb.getProductUsers(
 		c.GetInt("product_id"),
 		c.GetBool("paging"),
-		c.DefaultQuery("query", ""),
+		c.GetString("query"),
 		c.GetString("order"),
 		c.GetInt("offset"),
 		c.GetInt("limit"),
@@ -239,7 +239,7 @@ func listProductHosts(c *gin.Context) {
 		productID,
 		noGroup,
 		c.GetBool("paging"),
-		c.DefaultQuery("query", ""),
+		c.GetString("query"),
 		order,
 		c.GetInt("offset"),
 		c.GetInt("limit"),
@@ -252,7 +252,7 @@ func listNotInProductHosts(c *gin.Context) {
 	total, hosts := mydb.getNotInProductHosts(
 		c.GetInt("product_id"),
 		c.GetBool("paging"),
-		c.DefaultQuery("query", ""),
+		c.GetString("query"),
 		c.GetString("order"),
 		c.GetInt("offset"),
 		c.GetInt("limit"),
@@ -283,7 +283,7 @@ func addHosts2Product(c *gin.Context) {
 		c.GetInt("product_id"),
 		false,
 		c.GetBool("paging"),
-		c.DefaultQuery("query", ""),
+		c.GetString("query"),
 		c.GetString("order"),
 		c.GetInt("offset"),
 		c.GetInt("limit"),
@@ -312,7 +312,7 @@ func removeHostsFromProduct(c *gin.Context) {
 		c.GetInt("product_id"),
 		false,
 		c.GetBool("paging"),
-		c.DefaultQuery("query", ""),
+		c.GetString("query"),
 		c.GetString("order"),
 		c.GetInt("offset"),
 		c.GetInt("limit"),

@@ -122,7 +122,7 @@ type AlarmHost struct {
 
 func strategyList(c *gin.Context) {
 	productID := c.GetInt("product_id")
-	query := c.DefaultQuery("query", "")
+	query := c.GetString("query")
 	my := c.DefaultQuery("my", "false")
 	status := c.DefaultQuery("status", "all")
 	where := fmt.Sprintf("s.product_id=%d", productID)
@@ -152,7 +152,7 @@ func strategyHostGroup(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusOK, gin.H{"code": http.StatusBadRequest, "message": "params is invalid"})
 		return
 	}
-	query := c.DefaultQuery("query", "")
+	query := c.GetString("query")
 	where := fmt.Sprintf("sg.group_id = %d", hostGroupID)
 	if query != "" {
 		where += fmt.Sprintf(" AND (s.name LIKE '%%%s%%' OR u.username LIKE '%%%s%%')", query, query)

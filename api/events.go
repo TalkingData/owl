@@ -173,7 +173,7 @@ func eventsList(c *gin.Context) {
 	productID := c.GetInt("product_id")
 	strategyID, _ := strconv.Atoi(c.DefaultQuery("strategy_id", "0"))
 	status, _ := strconv.Atoi(c.DefaultQuery("status", "0"))
-	query := c.DefaultQuery("query", "")
+	query := c.GetString("query")
 	inputOrder := c.GetString("order")
 	order := "status ASC, create_time DESC, priority ASC"
 	if len(inputOrder) > 0 {
@@ -215,7 +215,7 @@ func eventAware(c *gin.Context) {
 func eventsFailed(c *gin.Context) {
 	strategyID := c.DefaultQuery("strategy_id", "")
 	status := c.DefaultQuery("status", "")
-	query := c.DefaultQuery("query", "")
+	query := c.GetString("query")
 	order := "update_time DESC"
 	if strategyID == "" {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"code": http.StatusBadRequest, "message": "params value is invalid"})

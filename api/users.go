@@ -85,7 +85,7 @@ func listAllUsers(c *gin.Context) {
 	defer c.JSON(http.StatusOK, response)
 	total, users := mydb.getAllUsers(
 		c.GetBool("paging"),
-		c.Query("query"),
+		c.GetString("query"),
 		c.GetString("order"),
 		c.GetInt("offset"),
 		c.GetInt("limit"),
