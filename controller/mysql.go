@@ -80,7 +80,7 @@ func (this *db) GetGroupsByStrategyID(strategy_id int) []*types.Group {
 
 func (this *db) GetHostsByGroupID(group_id int) []*types.Host {
 	hosts := []*types.Host{}
-	if err := this.Select(&hosts, "SELECT `id`, `ip`, `hostname`, `status` FROM host WHERE id IN (SELECT host_id FROM host_group_host WHERE host_group_id = ?)", group_id); err != nil {
+	if err := this.Select(&hosts, "SELECT `id`, `ip`, `hostname`, `status`, `mute_time` FROM host WHERE id IN (SELECT host_id FROM host_group_host WHERE host_group_id = ?)", group_id); err != nil {
 		lg.Error(err.Error())
 		return nil
 	}

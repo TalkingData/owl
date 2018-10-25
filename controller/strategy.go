@@ -15,6 +15,10 @@ func (c *Controller) loadStrategiesForever() {
 		// 更新产品线告警队列
 		c.refreshQueue(products)
 		for _, product := range products {
+			if len(c.nodePool.Nodes) == 0 {
+				lg.Error("no inspector connected, do not generate task")
+				break
+			}
 			// 根据产品线 id 获取策略
 			strategies := mydb.GetStrategies(product.ID)
 			wg.Add(1)
@@ -50,9 +54,16 @@ func (c *Controller) processSingleStrategy(strategy *types.Strategy, triggers ma
 	}
 	exHosts := mydb.GetHostsExByStrategyID(strategy.ID)
 	for _, host := range globalHosts {
+		// 过滤静音主机
+		if host.IsMute() {
+			lg.Info("strategy %d:%v host is mute %v:%v:%v, mute_time:%s",
+				strategy.ID, strategy.Name, host.ID, host.IP, host.Hostname, host.MuteTime)
+			continue
+		}
 		// 过滤排除主机
 		if _, ok := exHosts[host.ID]; ok {
-			lg.Debug("strategy %d:%v exclude host %v:%v:%v", strategy.ID, strategy.Name, host.ID, host.IP, host.Hostname)
+			lg.Info("strategy %d:%v exclude host %v:%v:%v",
+				strategy.ID, strategy.Name, host.ID, host.IP, host.Hostname)
 			continue
 		}
 		// 向 taskCache 添加任务
