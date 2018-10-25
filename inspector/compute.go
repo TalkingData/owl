@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -370,11 +371,17 @@ func nodataMethod(cycle int, trigger *types.Trigger) (*types.TriggerResultSet, e
 	if err != nil {
 		return nil, err
 	}
-
+	lg.Debug("query trigger result, trigger:%s, result:%s, error:%v",
+		covert2JSONString(trigger), covert2JSONString(results), err)
 	var current_threshold float64 = 1
 
 	if len(results) == 0 {
-		trigger_result_set.TriggerResults = append(trigger_result_set.TriggerResults, types.NewTriggerResult(trigger.Index, make(map[string]string), make([]string, 0), current_threshold, true))
+		tags := map[string]string{}
+		if len(trigger.Tags) != 0 {
+			tags = types.ParseTags(trigger.Tags)
+		}
+		trigger_result_set.TriggerResults = append(trigger_result_set.TriggerResults,
+			types.NewTriggerResult(trigger.Index, tags, make([]string, 0), current_threshold, true))
 		trigger_result_set.Triggered = true
 		return trigger_result_set, nil
 	}
@@ -388,16 +395,18 @@ func nodataMethod(cycle int, trigger *types.Trigger) (*types.TriggerResultSet, e
 		parameters["current_threshold"] = current_threshold
 		parameters["threshold"] = trigger.Threshold
 		expression := fmt.Sprintf("current_threshold %s threshold", trigger.Symbol)
-		trigger_result, err := compute(parameters, expression)
+		triggered, err := compute(parameters, expression)
 		if err != nil {
 			return nil, err
 		}
-
-		if !trigger_result_set.Triggered && trigger_result {
-			trigger_result_set.Triggered = trigger_result
+		if !trigger_result_set.Triggered && triggered {
+			trigger_result_set.Triggered = triggered
 		}
-
-		trigger_result_set.TriggerResults = append(trigger_result_set.TriggerResults, types.NewTriggerResult(trigger.Index, result.Tags, result.AggregateTags, current_threshold, trigger_result))
+		if len(result.Tags) == 0 {
+			result.Tags = types.ParseTags(trigger.Tags)
+		}
+		trigger_result_set.TriggerResults = append(trigger_result_set.TriggerResults,
+			types.NewTriggerResult(trigger.Index, result.Tags, result.AggregateTags, current_threshold, triggered))
 	}
 
 	return trigger_result_set, nil
@@ -473,4 +482,9 @@ func avg(values map[string]float64) float64 {
 	}
 
 	return sum / float64(count)
+}
+
+func covert2JSONString(s interface{}) string {
+	data, _ := json.Marshal(s)
+	return string(data)
 }
