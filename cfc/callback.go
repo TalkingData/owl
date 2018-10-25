@@ -69,10 +69,13 @@ func (cb *callback) dispatch(conn *tcp.TCPConn, pkt *tcp.DefaultPacket) {
 		}
 		metricConfig.SeriesData.RemoveTag("host")
 		metricConfig.SeriesData.RemoveTag("uuid")
+		seriesData := metricConfig.SeriesData
+		seriesData.RemoveTag("host")
+		seriesData.RemoveTag("uuid")
 		//创建 metric
 		if err := mydb.createOrUpdateMetric(
 			metricConfig.HostID,
-			metricConfig.SeriesData,
+			seriesData,
 		); err != nil {
 			lg.Error("create or update metric error %s metric:%v", err, metricConfig)
 			return
