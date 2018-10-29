@@ -16,6 +16,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	LocalUser = "local"
+	IAMUser   = "iam"
+)
+
 type User struct {
 	ID           int    `json:"id"`
 	Username     string `json:"username" db:"username"`
@@ -26,6 +31,7 @@ type User struct {
 	Wechat       string `json:"wechat" db:"wechat"`
 	Role         int    `json:"role" db:"role"` // 1:admin 0:user
 	Status       int    `json:"status" db:"status"`
+	Type         string `json:"type" db:"type"`
 	CreateAt     string `json:"created_date" db:"create_at"`
 	UpdateAt     string `json:"updated_date" db:"update_at"`
 }
@@ -58,8 +64,10 @@ func SyncUsers(c *gin.Context) {
 		Code    int    `json:"code"`
 		Message []User `json:"message"`
 	}{}
-	fmt.Println(string(buf))
-	fmt.Println(json.Unmarshal(buf, &s))
+	if err := json.Unmarshal(buf, &s); err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
 	_, users := mydb.getAllUsers(false, "", "", 0, 0)
 	userMap := map[string]struct{}{}
 	for _, user := range s.Message {
@@ -67,15 +75,18 @@ func SyncUsers(c *gin.Context) {
 		if user.Username == "" {
 			continue
 		}
-		mydb.Exec("insert into user(username, mail, display_name) values(?,?,?)", user.Username, user.EmailAddress, strings.TrimSpace(user.DisplayName))
+		user.Type = IAMUser
+		user, _ := mydb.createUser(&user)
+		log.Println("create user:", user)
 	}
 	for _, user := range users {
 		if _, ok := userMap[user.Username]; ok {
 			continue
 		}
-		mydb.deleteUser(user.ID)
-		log.Printf("delete user %v", user)
-
+		if user.Type == IAMUser {
+			mydb.deleteUser(user.ID)
+			log.Printf("delete iam user %v", user)
+		}
 	}
 	c.JSON(http.StatusOK, gin.H{"users": s})
 }
@@ -135,6 +146,7 @@ func createUser(c *gin.Context) {
 		return
 	}
 	user.Password = utils.Md5(user.Username)
+	user.Type = LocalUser
 	if user, err = mydb.createUser(user); err != nil {
 		response["code"] = http.StatusInternalServerError
 		return

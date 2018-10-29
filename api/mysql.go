@@ -720,7 +720,7 @@ func (d *db) getAllUsers(paging bool, query string, order string, offset, limit 
 		cnt   int
 		err   error
 	)
-	rawSQL := fmt.Sprintf("select id, username, display_name, role, wechat, mail, phone, status, create_at, update_at from user")
+	rawSQL := fmt.Sprintf("select id, username, display_name, role, wechat, type, mail, phone, status, create_at, update_at from user")
 	cntSQL := fmt.Sprintf("select count(*) from user")
 	if len(query) > 0 {
 		rawSQL = fmt.Sprintf("%s where username like '%%%s%%' or display_name like '%%%s%%' or phone like '%%%s%%'", rawSQL, query, query, query)
@@ -746,7 +746,7 @@ func (d *db) getAllUsers(paging bool, query string, order string, offset, limit 
 // get user profile
 func (d *db) getUserProfile(username string) *User {
 	user := &User{}
-	rawSQL := fmt.Sprintf("select id, username, password, display_name, phone, wechat, mail, role, "+
+	rawSQL := fmt.Sprintf("select id, username, password, display_name, phone, wechat, type, mail, role, "+
 		"DATE_FORMAT(create_at,'%s') as create_at, DATE_FORMAT(update_at,'%s') "+
 		"as update_at from user where username='%s'",
 		timeFormat, timeFormat, username)
@@ -762,9 +762,9 @@ func (d *db) getUserProfile(username string) *User {
 
 // 创建用户
 func (d *db) createUser(user *User) (*User, error) {
-	rawSQL := fmt.Sprintf("insert into user(username, password, display_name, mail, phone, wechat, role, status) "+
-		"values('%s', '%s', '%s', '%s', '%s', '%s', %d, %d)",
-		user.Username, user.Password, user.DisplayName, user.EmailAddress, user.PhoneNum, user.Wechat, user.Role, user.Status)
+	rawSQL := fmt.Sprintf("insert into user(username, password, display_name, mail, phone, wechat, type, role, status) "+
+		"values('%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, %d)",
+		user.Username, user.Password, user.DisplayName, user.EmailAddress, user.PhoneNum, user.Wechat, user.Type, user.Role, user.Status)
 	log.Println(rawSQL)
 	res, err := d.Exec(rawSQL)
 	if err != nil {

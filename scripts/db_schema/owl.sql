@@ -602,4 +602,15 @@ CREATE TABLE `user_group_user` (
   CONSTRAINT `fk_user_usergroup_user_group_id` FOREIGN KEY (`user_group_id`) REFERENCES `user_group` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
+ALTER TABLE `strategy_event_failed`
+ADD CONSTRAINT `stragety_event_failed_host_id_fk` FOREIGN KEY (`host_id`) REFERENCES `host` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+ADD CONSTRAINT `strategy_event_failed_strategy_id_fk` FOREIGN KEY (`strategy_id`) REFERENCES `strategy` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE  `strategy_event_record`
+ADD CONSTRAINT `strategy_event_record_host_id_fk` FOREIGN KEY (`host_id`) REFERENCES  `host` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- 增加用户类型
+ALTER TABLE `owl`.`user`
+ADD COLUMN `types` varchar(255) NOT NULL DEFAULT '' AFTER `wechat`;
+
 SET FOREIGN_KEY_CHECKS = 1;
