@@ -15,6 +15,7 @@ type Host struct {
 	UpdateAt     time.Time `json:"update_at" db:"update_at"`
 	Uptime       float64   `json:"uptime" db:"uptime"`
 	IdlePct      float64   `json:"idle_pct" db:"idle_pct"`
+	MuteTime     time.Time `json:"-" db:"mute_time"`
 }
 
 func (this *Host) Encode() []byte {
@@ -28,4 +29,8 @@ func (this *Host) Decode(data []byte) error {
 
 func (this *Host) IsAlive() bool {
 	return this.Status == "1"
+}
+
+func (this *Host) IsMute() bool {
+	return time.Now().Before(this.MuteTime)
 }
