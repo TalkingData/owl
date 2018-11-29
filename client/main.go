@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"path/filepath"
@@ -25,10 +24,6 @@ func main() {
 		fmt.Println("failed to init logfile.")
 		return
 	}
-	go func() {
-		fmt.Printf("start metric interface %s\n", GlobalConfig.MetricBind)
-		fmt.Printf("%s\n", http.ListenAndServe(GlobalConfig.MetricBind, nil))
-	}()
 	if err = InitAgent(); err != nil {
 		fmt.Println(err)
 		return
@@ -43,5 +38,6 @@ func main() {
 	go agent.SendTSD2Repeater()
 	go agent.sendHeartbeat2Repeater()
 	go agent.syncMetricToCFC()
+	go startHttpMetrcs()
 	select {}
 }
