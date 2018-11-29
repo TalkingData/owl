@@ -5,11 +5,21 @@ import (
 	"fmt"
 	"net/http"
 	"owl/common/types"
+	"strings"
 	"time"
 )
 
 func startHttpMetrcs() {
-	if GlobalConfig.MetricBind != "0" {
+	var port string
+	mblist := strings.Split(GlobalConfig.MetricBind, ":")
+	if len(mblist) == 2 {
+		port = mblist[1]
+	} else {
+		lg.Error("metric_bind in the config file is incorrect")
+		return
+	}
+
+	if port != "0" {
 		http.HandleFunc("/", metricsHandler)
 		lg.Info("start http listen on: %s", GlobalConfig.MetricBind)
 		err := http.ListenAndServe(GlobalConfig.MetricBind, nil)
