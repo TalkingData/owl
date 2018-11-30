@@ -1234,10 +1234,11 @@ func (d *db) muteHost(hostID string, muteTime string) error {
 
 //获取主机metrics
 
-func (d *db) getHostMetrics(hostID string, paging bool, prefix string, query string, order string, offset, limit int) (int, []*ChartElement) {
-	elements := make([]*ChartElement, 0)
+func (d *db) getHostMetrics(hostID string, paging bool, prefix string, query string, order string, offset, limit int) (int, []*MetricSummary) {
+	metrics := make([]*MetricSummary, 0)
 	cnt := 0
-	rawSQL := fmt.Sprintf("select metric, tags from metric where host_id='%s'", hostID)
+	rawSQL := fmt.Sprintf("select metric, tags, dt, cycle, DATE_FORMAT(update_at,'%s') as update_at "+
+		" from metric where host_id='%s'", dbDateFormat, hostID)
 	cntSQL := fmt.Sprintf("select count(*) from metric where host_id='%s'", hostID)
 
 	if len(prefix) != 0 {
@@ -1262,13 +1263,13 @@ func (d *db) getHostMetrics(hostID string, paging bool, prefix string, query str
 	}
 	log.Println(rawSQL)
 	log.Println(cntSQL)
-	if err := d.Select(&elements, rawSQL); err != nil {
+	if err := d.Select(&metrics, rawSQL); err != nil {
 		log.Println(err)
 	}
 	if err := d.Get(&cnt, cntSQL); err != nil {
 		log.Println(err)
 	}
-	return cnt, elements
+	return cnt, metrics
 }
 
 func (d *db) getHostAppNames(hostID string) []string {
@@ -1923,9 +1924,10 @@ func (d *db) getNotInPluginHostGroups(pluginID int, paging bool, query string, o
 //获取metric列表
 func (d *db) suggestMetrics(productID int) []string {
 	rawSQL := fmt.Sprintf("select distinct metric from metric")
-	if productID != 0 {
-		rawSQL = fmt.Sprintf("%s where host_id in (select host_id from product_host where product_id = %d)", rawSQL, productID)
-	}
+	// if productID != 0 {
+	// rawSQL = fmt.Sprintf("%s where host_id in (select host_id from product_host where product_id = %d)",
+	// rawSQL, productID)
+	// }
 	log.Println(rawSQL)
 	metrics := []string{}
 	if err := d.Select(&metrics, rawSQL); err != nil {

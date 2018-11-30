@@ -99,13 +99,6 @@ func listHostMetrics(c *gin.Context) {
 		c.GetInt("offset"),
 		c.GetInt("limit"),
 	)
-	for _, metric := range metrics {
-		if metric.Tags != "" {
-			metric.Tags = fmt.Sprintf("host=%s,%s", host.Hostname, metric.Tags)
-		} else {
-			metric.Tags = fmt.Sprintf("host=%s", host.Hostname)
-		}
-	}
 	response["metrics"] = metrics
 	response["total"] = total
 }

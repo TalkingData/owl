@@ -8,6 +8,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type MetricSummary struct {
+	Metric   string `json:"metric"`            //sys.cpu.idle
+	DataType string `json:"data_type" db:"dt"` //COUNTER,GAUGE,DERIVE
+	Cycle    int    `json:"cycle,omitempty"`
+	Tags     string `json:"tags"` //{"product":"app01", "group":"dev02"}
+	UpdateAt string `json:"update_at" db:"update_at"`
+}
+
 func suggestMetrics(c *gin.Context) {
 	response := gin.H{"code": http.StatusOK}
 	defer c.JSON(http.StatusOK, response)
