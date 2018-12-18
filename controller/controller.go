@@ -41,11 +41,11 @@ func InitController() error {
 		cache.New(time.Duration(GlobalConfig.LOAD_STRATEGIES_INTERVAL)*time.Second, 30*time.Second),
 		cache.New(10*time.Minute, 10*time.Minute)}
 
-	go controller.loadStrategiesForever()
 	go controller.processStrategyResultForever()
 	go controller.processStrategyEventForever()
 	go controller.checkNodesForever()
 	go controller.startHttpServer()
+	go controller.loadStrategiesForever()
 
 	return nil
 }
