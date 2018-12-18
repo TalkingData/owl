@@ -1,0 +1,14 @@
+[Unit]
+Description=owl-client
+After=network.target
+
+[Service]
+ExecStart=/usr/local/owl-client/client
+Type=simple
+PIDFile=/usr/local/owl-client/client.pid
+Restart=always
+RestartSec=5
+StandardOutput=null
+
+[Install]
+WantedBy=default.target

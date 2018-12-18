@@ -1,0 +1,14 @@
+[Unit]
+Description=owl-controller
+After=network.target
+
+[Service]
+ExecStart=/usr/local/owl-controller/controller
+Type=simple
+PIDFile=/usr/local/owl-controller/controller.pid
+Restart=always
+RestartSec=5
+StandardOutput=null
+
+[Install]
+WantedBy=default.target
