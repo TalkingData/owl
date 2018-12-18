@@ -29,23 +29,6 @@ func InitMysqlConnPool() error {
 	return nil
 }
 
-// func (s *Storage) createHost(host *types.Host) error {
-// 	now := time.Now().Format(timeFomart)
-// 	sqlString := fmt.Sprintf("insert into `host`(`id`, `ip`, `hostname`, `uptime`, `idle_pct`, `agent_version`, `create_at`, `update_at`) "+
-// 		" values('%s', '%s', '%s', %0.2f, %0.2f, '%s','%s','%s')", host.ID, host.IP, host.Hostname, host.Uptime, host.IdlePct, host.AgentVersion, now, now)
-// 	lg.Debug("create host:%s", sqlString)
-// 	_, err := s.Exec(sqlString)
-// 	return err
-// }
-
-// func (s *Storage) updateHost(host *types.Host) error {
-// 	sqlString := fmt.Sprintf("update `host` set `ip`='%s', `uptime`=%0.2f, `idle_pct`=%0.2f, `hostname`='%s', `agent_version`='%s', `update_at`='%s' where id='%s'",
-// 		host.IP, host.Uptime, host.IdlePct, host.Hostname, host.AgentVersion, time.Now().Format(timeFomart), host.ID)
-// 	lg.Debug("update host:%s", sqlString)
-// 	_, err := s.Exec(sqlString)
-// 	return err
-// }
-
 func (s *Storage) createOrUpdateHost(host *types.Host) error {
 	now := time.Now().Format(timeFomart)
 	sqlString := fmt.Sprintf("insert into `host`(`id`, `ip`, `hostname`, `uptime`, `idle_pct`, `agent_version`, `create_at`, `update_at`) "+

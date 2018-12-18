@@ -26,18 +26,20 @@ type Host struct {
 
 type WarpHost struct {
 	Host
-	Apps       []string    `json:"apps"`
-	PluginCnt  int         `json:"plugin_cnt"`
-	HostGroups []HostGroup `json:"host_groups,omitempty"`
-	Products   []Product   `json:"products,omitempty"`
+	Apps       []string `json:"apps,omitempty" db:"apps"`
+	PluginCnt  int      `json:"plugin_cnt" db:"plugin_cnt"`
+	HostGroups string   `json:"host_groups,omitempty" db:"groups"`
+	Products   string   `json:"products,omitempty" db:"products"`
 }
 
 func getHost(c *gin.Context) {
 	response := gin.H{"code": http.StatusOK}
 	defer c.JSON(http.StatusOK, response)
-	response["host"] = warpHost(*mydb.getHostByID(c.Param("host_id")))
+	//response["host"] = warpHost(*mydb.getHostByID(c.Param("host_id")))
+	response["host"] = mydb.getHostByID(c.Param("host_id"))
 }
 
+//TODO: 优化查询性能
 func listAllHosts(c *gin.Context) {
 	response := gin.H{"code": http.StatusOK}
 	defer c.JSON(http.StatusOK, response)
@@ -63,7 +65,7 @@ func listAllHosts(c *gin.Context) {
 	)
 	response["code"] = http.StatusOK
 	response["total"] = total
-	response["hosts"] = warpHosts(hosts)
+	response["hosts"] = hosts
 }
 
 func deleteHost(c *gin.Context) {
@@ -116,7 +118,7 @@ func listHostApps(c *gin.Context) {
 		response["message"] = fmt.Sprintf("host [%s] is not exists", hostID)
 		return
 	}
-
+	response["apps"] = mydb.getHostAppNames(hostID)
 }
 
 func muteHost(c *gin.Context) {
@@ -149,45 +151,6 @@ func unmuteHost(c *gin.Context) {
 		return
 	}
 	response["host"] = mydb.getHostByID(hostID)
-}
-
-func warpHosts(hosts []Host) []WarpHost {
-	warpHosts := []WarpHost{}
-	for _, host := range hosts {
-		warpHosts = append(warpHosts, warpHost(host))
-	}
-	return warpHosts
-}
-
-func warpProductHosts(productID int, hosts []Host) []WarpHost {
-	warpHosts := []WarpHost{}
-	for _, host := range hosts {
-		warpHosts = append(warpHosts, warpProductHost(productID, host))
-	}
-	return warpHosts
-}
-
-func warpHost(host Host) WarpHost {
-	pluginCnt, _ := mydb.getHostPlugins(host.ID, false, "", "", 0, 0)
-	return WarpHost{
-		host,
-		mydb.getHostAppNames(host.ID),
-		pluginCnt,
-		mydb.getHostHostGroups(0, host.ID),
-		mydb.getHostProducts(host.ID),
-	}
-}
-
-func warpProductHost(productID int, host Host) WarpHost {
-	pluginCnt, _ := mydb.getHostPlugins(host.ID, false, "", "", 0, 0)
-	return WarpHost{
-		host,
-		mydb.getHostAppNames(host.ID),
-		pluginCnt,
-		mydb.getHostHostGroups(productID, host.ID),
-		nil,
-		// mydb.getHostProducts(host.ID),
-	}
 }
 
 func listHostPlugins(c *gin.Context) {

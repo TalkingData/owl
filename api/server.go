@@ -85,6 +85,9 @@ func InitServer() error {
 			// 获取主机的metric列表
 			hosts.GET("/:host_id/metrics", listHostMetrics)
 
+			//获取主机 metric 前缀
+			hosts.GET("/:host_id/apps", listHostApps)
+
 			hosts.GET("/:host_id", getHost)
 
 			// 添加 plugin 到主机

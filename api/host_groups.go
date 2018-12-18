@@ -58,7 +58,7 @@ func listProductHostGroupHosts(c *gin.Context) {
 		c.GetInt("limit"),
 	)
 	response["total"] = total
-	response["hosts"] = warpProductHosts(c.GetInt("product_id"), hosts)
+	response["hosts"] = hosts
 }
 
 func listNotInProductHostGroupHosts(c *gin.Context) {
