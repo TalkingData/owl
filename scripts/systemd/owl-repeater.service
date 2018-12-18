@@ -1,0 +1,14 @@
+[Unit]
+Description=owl-repeater
+After=network.target
+
+[Service]
+ExecStart=/usr/local/owl-repeater/repeater
+Type=simple
+PIDFile=/usr/local/owl-repeater/repeater.pid
+Restart=always
+RestartSec=5
+StandardOutput=null
+
+[Install]
+WantedBy=default.target

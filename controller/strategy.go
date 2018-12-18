@@ -14,11 +14,15 @@ func (c *Controller) loadStrategiesForever() {
 		products := mydb.GetProducts()
 		// 更新产品线告警队列
 		c.refreshQueue(products)
-		for _, product := range products {
-			if len(c.nodePool.Nodes) == 0 {
-				lg.Error("no inspector connected, do not generate task")
+		for {
+			if len(c.nodePool.Nodes) != 0 {
 				break
 			}
+			lg.Warn("no inspector connected, do not generate task, retry after 1 seconds")
+			time.Sleep(time.Second)
+		}
+
+		for _, product := range products {
 			// 根据产品线 id 获取策略
 			strategies := mydb.GetStrategies(product.ID)
 			wg.Add(1)

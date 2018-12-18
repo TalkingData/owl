@@ -1,0 +1,14 @@
+[Unit]
+Description=owl-api
+After=network.target
+
+[Service]
+ExecStart=/usr/local/owl-api/api
+Type=simple
+PIDFile=/usr/local/owl-api/api.pid
+Restart=always
+RestartSec=5
+StandardOutput=null
+
+[Install]
+WantedBy=default.target

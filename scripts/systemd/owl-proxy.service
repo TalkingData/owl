@@ -1,0 +1,14 @@
+[Unit]
+Description=owl-proxy
+After=network.target
+
+[Service]
+ExecStart=/usr/local/owl-proxy/proxy
+Type=simple
+PIDFile=/usr/local/owl-proxy/proxy.pid
+Restart=always
+RestartSec=5
+StandardOutput=null
+
+[Install]
+WantedBy=default.target

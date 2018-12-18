@@ -1,0 +1,14 @@
+[Unit]
+Description=owl-cfc
+After=network.target
+
+[Service]
+ExecStart=/usr/local/owl-cfc/cfc
+Type=simple
+PIDFile=/usr/local/owl-cfc/cfc.pid
+Restart=always
+RestartSec=5
+StandardOutput=null
+
+[Install]
+WantedBy=default.target

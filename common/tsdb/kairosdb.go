@@ -1,6 +1,7 @@
 package tsdb
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -35,6 +36,9 @@ func (k *KairosDbClient) newQueryBuilder(start, end, rawTags, aggregator, metric
 			if _, ok := tags[tagKV[0]]; !ok {
 				tagks = append(tagks, tagKV[0])
 			}
+			if tagKV[1] == "all" {
+				continue
+			}
 			tags[tagKV[0]] = append(tags[tagKV[0]], strings.Split(tagKV[1], "|")...)
 		}
 	}
@@ -58,6 +62,10 @@ func (k *KairosDbClient) Query(start, end, rawTags, aggregator, metric string, i
 	queryResp, err := k.rawClient.Query(qb)
 	if err != nil {
 		return
+	}
+	errs := queryResp.GetErrors()
+	if len(errs) > 0 {
+		err = errors.New(strings.Join(errs, "|"))
 	}
 	if len(queryResp.QueriesArr) > 0 {
 		for _, r := range queryResp.QueriesArr[0].ResultsArr {
