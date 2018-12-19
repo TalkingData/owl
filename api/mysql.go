@@ -1623,10 +1623,11 @@ func (d *db) getProductHostGroupHosts(groupID int, paging bool, query string, or
 	rawSQL := fmt.Sprintf("select host.id, host.ip, host.name, host.hostname, host.agent_version, host.status,"+
 		"DATE_FORMAT(host.create_at,'%s') as create_at, DATE_FORMAT(host.update_at,'%s') as update_at,"+
 		"host.mute_time, host.uptime, host.idle_pct, count(host_plugin.id) as plugin_cnt, "+
-		"IFNULL(groups.name,'-') as groups from host left join host_plugin on host.id = host_plugin.host_id left join (select group_concat(hg.name) as name,"+
-		"hgh.host_id from host_group_host as hgh left join host_group as hg on hgh.host_group_id = hg.id "+
-		"group by hgh.host_id) as groups on host.id = groups.host_id",
-		dbDateFormat, dbDateFormat)
+		"IFNULL(groups.name,'-') as groups from host left join host_plugin on host.id = host_plugin.host_id left join " +
+		"(select group_concat(hg.name) as name, hgh.host_id from host_group_host as hgh left join host_group as hg"+
+		" on hgh.host_group_id = hg.id group by hgh.host_id) as groups on host.id = groups.host_id "+
+		" left join host_group_host as hgh on host.id = hgh.host_id where hgh.host_group_id=%d group by host.id",
+		dbDateFormat, dbDateFormat, groupID)
 
 	cntSQL := fmt.Sprintf("select count(*) from host h where id in (select host_id from host_group_host where host_group_id = %d)",
 		groupID)
