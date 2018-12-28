@@ -1406,9 +1406,9 @@ func (d *db) getProductHosts(productID int, noGroup bool, paging bool, query str
 		"host.mute_time, host.uptime, host.idle_pct, count(host_plugin.id) as plugin_cnt, "+
 		"IFNULL(groups.name,'-') as groups from host right join product_host on product_host.host_id = host.id "+
 		"left join host_plugin on host.id = host_plugin.host_id left join (select group_concat(hg.name) as name,"+
-		"hgh.host_id from host_group_host as hgh left join host_group as hg on hgh.host_group_id = hg.id "+
+		"hgh.host_id from host_group_host as hgh left join host_group as hg on hgh.host_group_id = hg.id where hg.product_id=%d "+
 		"group by hgh.host_id) as groups on host.id = groups.host_id where product_host.product_id=%d",
-		dbDateFormat, dbDateFormat, productID)
+		dbDateFormat, dbDateFormat, productID, productID)
 	if noGroup {
 		rawSQL = fmt.Sprintf("%s and groups.name is null", rawSQL)
 	}
@@ -1520,14 +1520,18 @@ func (d *db) removeHostsFromProduct(productID int, ids []string) (err error) {
 }
 
 //获取产品线下的主机组
-func (d *db) getProductHostGroups(productID int, paging bool, query string, order string, offset, limit int) (int, []HostGroup) {
+func (d *db) getProductHostGroups(productID int, paging bool, query string, order string, offset, limit int) (int, []WarpHostGroup) {
 	var (
-		groups = make([]HostGroup, 0)
+		groups = make([]WarpHostGroup, 0)
 		err    error
 		cnt    int
 	)
-	rawSQL := fmt.Sprintf("select id, name, description, creator, DATE_FORMAT(create_at,'%s') as create_at,"+
-		"DATE_FORMAT(update_at,'%s') as update_at from host_group where product_id = %d",
+	rawSQL := fmt.Sprintf("select hg.id, hg.name, hg.description, hg.creator, DATE_FORMAT(hg.create_at,'%s') as create_at,"+
+		"DATE_FORMAT(hg.update_at,'%s') as update_at, count(distinct host_group_plugin.id) as plugin_cnt, "+
+		"count(distinct host_group_host.id) as host_cnt, count(distinct strategy_group.id) as strategy_cnt "+
+		" from host_group as hg left join host_group_plugin on hg.id = host_group_plugin.group_id left join host_group_host "+
+		" on hg.id = host_group_host.host_group_id left join strategy_group on hg.id=strategy_group.group_id "+
+		" where hg.product_id=%d group by hg.id",
 		dbDateFormat, dbDateFormat, productID)
 	cntSQL := fmt.Sprintf("select count(*) from host_group where product_id = %d", productID)
 	if len(query) > 0 {
@@ -1614,7 +1618,7 @@ func (d *db) deleteHostGroupPlugin(groupID int, pluginID int) error {
 }
 
 //获取主机组下的主机
-func (d *db) getProductHostGroupHosts(groupID int, paging bool, query string, order string, offset, limit int) (int, []WarpHost) {
+func (d *db) getProductHostGroupHosts(productID, groupID int, paging bool, query string, order string, offset, limit int) (int, []WarpHost) {
 	var (
 		hosts = make([]WarpHost, 0)
 		err   error
@@ -1625,9 +1629,9 @@ func (d *db) getProductHostGroupHosts(groupID int, paging bool, query string, or
 		"host.mute_time, host.uptime, host.idle_pct, count(host_plugin.id) as plugin_cnt, "+
 		"IFNULL(groups.name,'-') as groups from host left join host_plugin on host.id = host_plugin.host_id left join " +
 		"(select group_concat(hg.name) as name, hgh.host_id from host_group_host as hgh left join host_group as hg"+
-		" on hgh.host_group_id = hg.id group by hgh.host_id) as groups on host.id = groups.host_id "+
+		" on hgh.host_group_id = hg.id where hg.product_id=%d group by hgh.host_id) as groups on host.id = groups.host_id "+
 		" left join host_group_host as hgh on host.id = hgh.host_id where hgh.host_group_id=%d group by host.id",
-		dbDateFormat, dbDateFormat, groupID)
+		dbDateFormat, dbDateFormat, productID, groupID)
 
 	cntSQL := fmt.Sprintf("select count(*) from host h where id in (select host_id from host_group_host where host_group_id = %d)",
 		groupID)

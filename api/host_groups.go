@@ -21,35 +21,16 @@ type HostGroup struct {
 
 type WarpHostGroup struct {
 	HostGroup
-	PluginCnt   int `json:"plugin_cnt,omitempty"`
-	HostCnt     int `json:"host_cnt,omitempty"`
-	StrategyCnt int `json:"strategy_cnt,omitempty"`
-}
-
-func warpHosGroups(groups []HostGroup) []WarpHostGroup {
-	hostGroups := []WarpHostGroup{}
-	for _, g := range groups {
-		hostGroups = append(hostGroups, warpHostGroup(g))
-	}
-	return hostGroups
-}
-
-func warpHostGroup(group HostGroup) WarpHostGroup {
-	whg := WarpHostGroup{}
-	whg.HostGroup = group
-	pluginCnt, _ := mydb.getHostGroupPlugins(group.ID, false, "", 0, 0)
-	hostCnt, _ := mydb.getProductHostGroupHosts(group.ID, false, "", "", 0, 0)
-	strategyCnt := mydb.GetStrategiesByHostGroupIDCount(fmt.Sprintf("sg.group_id = %d", group.ID))
-	whg.PluginCnt = pluginCnt
-	whg.HostCnt = hostCnt
-	whg.StrategyCnt = strategyCnt
-	return whg
+	PluginCnt   int `json:"plugin_cnt,omitempty" db:"plugin_cnt"`
+	HostCnt     int `json:"host_cnt,omitempty" db:"host_cnt"`
+	StrategyCnt int `json:"strategy_cnt,omitempty" db:"strategy_cnt"`
 }
 
 func listProductHostGroupHosts(c *gin.Context) {
 	response := gin.H{"status": http.StatusOK}
 	defer c.JSON(http.StatusOK, response)
 	total, hosts := mydb.getProductHostGroupHosts(
+		c.GetInt("product_id"),
 		c.GetInt("host_group_id"),
 		c.GetBool("paging"),
 		c.GetString("query"),
@@ -89,7 +70,7 @@ func listProductHostGroups(c *gin.Context) {
 		c.GetInt("limit"),
 	)
 	response["total"] = total
-	response["host_groups"] = warpHosGroups(hostGroups)
+	response["host_groups"] = hostGroups
 }
 
 func updateProductHostGroup(c *gin.Context) {
@@ -161,6 +142,7 @@ func addHosts2ProductHostGroup(c *gin.Context) {
 		return
 	}
 	total, hosts := mydb.getProductHostGroupHosts(
+		c.GetInt("product_id"),
 		groupID,
 		c.GetBool("paging"),
 		c.GetString("query"),
@@ -189,6 +171,7 @@ func removeHostsFromProductHostGroup(c *gin.Context) {
 		return
 	}
 	total, hosts := mydb.getProductHostGroupHosts(
+		c.GetInt("product_id"),
 		groupID,
 		c.GetBool("paging"),
 		c.GetString("query"),
