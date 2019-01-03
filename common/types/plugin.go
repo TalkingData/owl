@@ -30,6 +30,8 @@ type Plugin struct {
 	Interval int `json:"interval"`
 	// 执行超时时间
 	Timeout int `json:"timeout"`
+
+	Comment string `json:"comment,omitempty"`
 }
 
 func (plugin *Plugin) Encode() []byte {
