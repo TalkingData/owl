@@ -1293,6 +1293,20 @@ func (d *db) getHostMetrics(hostID string, paging bool, prefix string, query str
 	return cnt, metrics
 }
 
+func (d *db) deleteHostMetrics(hostID string, ids []int) error {
+
+	tx := d.MustBegin()
+	for _, id := range ids {
+		rawSQL := fmt.Sprintf("delete from metric where host_id ='%s' and id = %d", hostID, id)
+		log.Println(rawSQL)
+		if _, err := tx.Exec(rawSQL); err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
 func (d *db) getHostAppNames(hostID string) []string {
 	metrics := []string{}
 	appNames := []string{}

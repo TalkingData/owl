@@ -114,6 +114,26 @@ func listHostMetrics(c *gin.Context) {
 	response["total"] = total
 }
 
+func deleteHostMetrics(c *gin.Context) {
+	response := gin.H{"code": http.StatusOK}
+	defer c.JSON(http.StatusOK, response)
+	hostID := c.Param("host_id")
+	ids := struct {
+		IDS []int `json:"ids"`
+	}{}
+	if err := c.BindJSON(&ids); err != nil || len(ids.IDS) == 0 {
+		response["code"] = http.StatusBadRequest
+		response["message"] = err.Error()
+		return
+	}
+
+	if err := mydb.deleteHostMetrics(hostID, ids.IDS); err != nil {
+		response["code"] = http.StatusInternalServerError
+		response["message"] = err.Error()
+		return
+	}
+}
+
 func listHostApps(c *gin.Context) {
 	response := gin.H{"code": http.StatusOK}
 	defer c.JSON(http.StatusOK, response)

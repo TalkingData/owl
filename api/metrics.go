@@ -9,6 +9,7 @@ import (
 )
 
 type MetricSummary struct {
+	ID       int    `json:"id"`
 	Metric   string `json:"metric"`            //sys.cpu.idle
 	DataType string `json:"data_type" db:"dt"` //COUNTER,GAUGE,DERIVE
 	Cycle    int    `json:"cycle,omitempty"`
