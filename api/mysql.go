@@ -1258,7 +1258,7 @@ func (d *db) muteHost(hostID string, muteTime string) error {
 func (d *db) getHostMetrics(hostID string, paging bool, prefix string, query string, order string, offset, limit int) (int, []*MetricSummary) {
 	metrics := make([]*MetricSummary, 0)
 	cnt := 0
-	rawSQL := fmt.Sprintf("select metric, tags, dt, cycle, DATE_FORMAT(update_at,'%s') as update_at "+
+	rawSQL := fmt.Sprintf("select id, metric, tags, dt, cycle, DATE_FORMAT(update_at,'%s') as update_at "+
 		" from metric where host_id='%s'", dbDateFormat, hostID)
 	cntSQL := fmt.Sprintf("select count(*) from metric where host_id='%s'", hostID)
 
@@ -1562,13 +1562,14 @@ func (d *db) getProductHostGroups(productID int, paging bool, query string, orde
 		"count(distinct host_group_host.id) as host_cnt, count(distinct strategy_group.id) as strategy_cnt "+
 		" from host_group as hg left join host_group_plugin on hg.id = host_group_plugin.group_id left join host_group_host "+
 		" on hg.id = host_group_host.host_group_id left join strategy_group on hg.id=strategy_group.group_id "+
-		" where hg.product_id=%d group by hg.id",
+		" where hg.product_id=%d",
 		dbDateFormat, dbDateFormat, productID)
 	cntSQL := fmt.Sprintf("select count(*) from host_group where product_id = %d", productID)
 	if len(query) > 0 {
-		rawSQL = fmt.Sprintf("%s and name like '%%%s%%'", rawSQL, query)
+		rawSQL = fmt.Sprintf("%s and hg.name like '%%%s%%'", rawSQL, query)
 		cntSQL = fmt.Sprintf("%s and name like '%%%s%%'", cntSQL, query)
 	}
+	rawSQL = fmt.Sprintf("%s group by hg.id", rawSQL)
 	if len(order) > 0 {
 		rawSQL = fmt.Sprintf("%s order by %s", rawSQL, order)
 	}
@@ -1660,18 +1661,19 @@ func (d *db) getProductHostGroupHosts(productID, groupID int, paging bool, query
 	rawSQL := fmt.Sprintf("select host.id, host.ip, host.name, host.hostname, host.agent_version, host.status,"+
 		"DATE_FORMAT(host.create_at,'%s') as create_at, DATE_FORMAT(host.update_at,'%s') as update_at,"+
 		"host.mute_time, host.uptime, host.idle_pct, count(host_plugin.id) as plugin_cnt, "+
-		"IFNULL(groups.name,'-') as groups from host left join host_plugin on host.id = host_plugin.host_id left join " +
+		"IFNULL(groups.name,'-') as groups from host left join host_plugin on host.id = host_plugin.host_id left join "+
 		"(select group_concat(hg.name) as name, hgh.host_id from host_group_host as hgh left join host_group as hg"+
 		" on hgh.host_group_id = hg.id where hg.product_id=%d group by hgh.host_id) as groups on host.id = groups.host_id "+
-		" left join host_group_host as hgh on host.id = hgh.host_id where hgh.host_group_id=%d group by host.id",
+		" left join host_group_host as hgh on host.id = hgh.host_id where hgh.host_group_id=%d",
 		dbDateFormat, dbDateFormat, productID, groupID)
 
-	cntSQL := fmt.Sprintf("select count(*) from host h where id in (select host_id from host_group_host where host_group_id = %d)",
+	cntSQL := fmt.Sprintf("select count(*) from host where id in (select host_id from host_group_host where host_group_id = %d)",
 		groupID)
 	if len(query) > 0 {
-		rawSQL = fmt.Sprintf("%s and (h.ip like '%%%s%%' or h.hostname like '%%%s%%')", rawSQL, query, query)
-		cntSQL = fmt.Sprintf("%s and (h.ip like '%%%s%%' or h.hostname like '%%%s%%')", cntSQL, query, query)
+		rawSQL = fmt.Sprintf("%s and (host.ip like '%%%s%%' or host.hostname like '%%%s%%')", rawSQL, query, query)
+		cntSQL = fmt.Sprintf("%s and (host.ip like '%%%s%%' or host.hostname like '%%%s%%')", cntSQL, query, query)
 	}
+	rawSQL = fmt.Sprintf("%s group by host.id", rawSQL)
 	if len(order) > 0 {
 		rawSQL = fmt.Sprintf("%s order by %s", rawSQL, order)
 	}
