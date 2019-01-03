@@ -35,7 +35,6 @@ type Agent struct {
 var (
 	agent Agent
 	// AgentVersion 定义owl agent版本号
-	AgentVersion = "5.0.0"
 )
 
 func InitAgent() error {
@@ -157,6 +156,7 @@ func (agent *Agent) sendMetric2CFC(tsd types.TimeSeriesData) error {
 		HostID:     agent.hostcfg.ID,
 		SeriesData: tsd,
 	}
+	lg.Info("send metric to cfc:%s", cfg.Encode())
 	return agent.cfc.AsyncWritePacket(
 		tcp.NewDefaultPacket(
 			types.MsgAgentSendMetricInfo,
@@ -237,7 +237,7 @@ func (agent *Agent) SendTSD2Repeater() {
 				break
 			}
 		retry:
-			lg.Warn("send to rpeater error(%s), retry after 5 seconds", err.Error())
+			lg.Warn("send to repeater error(%s), retry after 5 seconds", err.Error())
 			time.Sleep(time.Second * 5)
 		}
 		lg.Info("send to repeater %s", tsd)
@@ -295,7 +295,7 @@ func newHostConfig() *types.Host {
 	host.ID = getHostID()
 	host.Uptime, host.IdlePct = getHostUptime()
 	host.Hostname = getHostname()
-	host.AgentVersion = AgentVersion
+	host.AgentVersion = Version
 	host.IP = agent.getLocalIPAddress()
 	return host
 }
