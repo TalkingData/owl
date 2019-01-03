@@ -1217,6 +1217,21 @@ func (d *db) getHostByID(hostID string) *Host {
 	return host
 }
 
+func (d *db) getHostByIP(hostIP string) *Host {
+	host := &Host{}
+	rawSQL := fmt.Sprintf("select id, ip, name, hostname, agent_version, status, "+
+		"DATE_FORMAT(create_at,'%s') as create_at, DATE_FORMAT(update_at,'%s') as update_at,"+
+		"DATE_FORMAT(mute_time, '%s') as mute_time, uptime, idle_pct from host where ip='%s'",
+		dbDateFormat, dbDateFormat, dbDateFormat, hostIP)
+	log.Println(rawSQL)
+	if err := d.Get(host, rawSQL); err != nil {
+		if err != sql.ErrNoRows {
+			log.Println(err)
+		}
+	}
+	return host
+}
+
 //删除主机
 func (d *db) deleteHost(hostID string) error {
 	rawSQL := fmt.Sprintf("delete from host where id='%s'", hostID)

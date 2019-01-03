@@ -35,8 +35,17 @@ type WarpHost struct {
 func getHost(c *gin.Context) {
 	response := gin.H{"code": http.StatusOK}
 	defer c.JSON(http.StatusOK, response)
-	//response["host"] = warpHost(*mydb.getHostByID(c.Param("host_id")))
-	response["host"] = mydb.getHostByID(c.Param("host_id"))
+	var host *Host
+	hostID := c.Param("host_id")
+	if host = mydb.getHostByID(hostID); host.ID == "" {
+		if host = mydb.getHostByIP(hostID); host.ID == "" {
+			response["code"] = http.StatusNotFound
+			return
+		}
+	}
+	response["host"] = host
+	response["products"] = mydb.getHostProducts(host.ID)
+	response["apps"] = mydb.getHostAppNames(host.ID)
 }
 
 //TODO: 优化查询性能
