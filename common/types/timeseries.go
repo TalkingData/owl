@@ -48,6 +48,13 @@ func (m *TimeSeriesData) Validate() bool {
 	default:
 		return false
 	}
+	//check tags
+	for tagk, tagv := range m.Tags {
+		if !reg.MatchString(tagk) || !reg.MatchString(tagv) {
+			return false
+		}
+	}
+
 	return true
 }
 
