@@ -35,8 +35,17 @@ type WarpHost struct {
 func getHost(c *gin.Context) {
 	response := gin.H{"code": http.StatusOK}
 	defer c.JSON(http.StatusOK, response)
-	//response["host"] = warpHost(*mydb.getHostByID(c.Param("host_id")))
-	response["host"] = mydb.getHostByID(c.Param("host_id"))
+	var host *Host
+	hostID := c.Param("host_id")
+	if host = mydb.getHostByID(hostID); host.ID == "" {
+		if host = mydb.getHostByIP(hostID); host.ID == "" {
+			response["code"] = http.StatusNotFound
+			return
+		}
+	}
+	response["host"] = host
+	response["products"] = mydb.getHostProducts(host.ID)
+	response["apps"] = mydb.getHostAppNames(host.ID)
 }
 
 //TODO: 优化查询性能
@@ -103,6 +112,26 @@ func listHostMetrics(c *gin.Context) {
 	)
 	response["metrics"] = metrics
 	response["total"] = total
+}
+
+func deleteHostMetrics(c *gin.Context) {
+	response := gin.H{"code": http.StatusOK}
+	defer c.JSON(http.StatusOK, response)
+	hostID := c.Param("host_id")
+	ids := struct {
+		IDS []int `json:"ids"`
+	}{}
+	if err := c.BindJSON(&ids); err != nil || len(ids.IDS) == 0 {
+		response["code"] = http.StatusBadRequest
+		response["message"] = err.Error()
+		return
+	}
+
+	if err := mydb.deleteHostMetrics(hostID, ids.IDS); err != nil {
+		response["code"] = http.StatusInternalServerError
+		response["message"] = err.Error()
+		return
+	}
 }
 
 func listHostApps(c *gin.Context) {

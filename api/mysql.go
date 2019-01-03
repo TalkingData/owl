@@ -1217,6 +1217,21 @@ func (d *db) getHostByID(hostID string) *Host {
 	return host
 }
 
+func (d *db) getHostByIP(hostIP string) *Host {
+	host := &Host{}
+	rawSQL := fmt.Sprintf("select id, ip, name, hostname, agent_version, status, "+
+		"DATE_FORMAT(create_at,'%s') as create_at, DATE_FORMAT(update_at,'%s') as update_at,"+
+		"DATE_FORMAT(mute_time, '%s') as mute_time, uptime, idle_pct from host where ip='%s'",
+		dbDateFormat, dbDateFormat, dbDateFormat, hostIP)
+	log.Println(rawSQL)
+	if err := d.Get(host, rawSQL); err != nil {
+		if err != sql.ErrNoRows {
+			log.Println(err)
+		}
+	}
+	return host
+}
+
 //删除主机
 func (d *db) deleteHost(hostID string) error {
 	rawSQL := fmt.Sprintf("delete from host where id='%s'", hostID)
@@ -1243,7 +1258,7 @@ func (d *db) muteHost(hostID string, muteTime string) error {
 func (d *db) getHostMetrics(hostID string, paging bool, prefix string, query string, order string, offset, limit int) (int, []*MetricSummary) {
 	metrics := make([]*MetricSummary, 0)
 	cnt := 0
-	rawSQL := fmt.Sprintf("select metric, tags, dt, cycle, DATE_FORMAT(update_at,'%s') as update_at "+
+	rawSQL := fmt.Sprintf("select id, metric, tags, dt, cycle, DATE_FORMAT(update_at,'%s') as update_at "+
 		" from metric where host_id='%s'", dbDateFormat, hostID)
 	cntSQL := fmt.Sprintf("select count(*) from metric where host_id='%s'", hostID)
 
@@ -1276,6 +1291,20 @@ func (d *db) getHostMetrics(hostID string, paging bool, prefix string, query str
 		log.Println(err)
 	}
 	return cnt, metrics
+}
+
+func (d *db) deleteHostMetrics(hostID string, ids []int) error {
+
+	tx := d.MustBegin()
+	for _, id := range ids {
+		rawSQL := fmt.Sprintf("delete from metric where host_id ='%s' and id = %d", hostID, id)
+		log.Println(rawSQL)
+		if _, err := tx.Exec(rawSQL); err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 func (d *db) getHostAppNames(hostID string) []string {
@@ -1337,7 +1366,7 @@ func (d *db) getHostProducts(hostID string) []Product {
 func (d *db) getHostPlugins(hostID string, paging bool, query string, order string, offset, limit int) (int, []*types.Plugin) {
 	plugins := make([]*types.Plugin, 0)
 	cnt := 0
-	rawSQL := fmt.Sprintf("select hp.id, p.name, p.path, p.checksum, hp.args, hp.interval, hp.timeout from host_plugin as hp"+
+	rawSQL := fmt.Sprintf("select hp.id, p.name, p.path, p.checksum, hp.args, hp.interval, hp.timeout, hp.comment from host_plugin as hp"+
 		" left join plugin as p on p.id = hp.plugin_id where hp.host_id='%s'", hostID)
 	cntSQL := fmt.Sprintf("select count(*) from host_plugin as hp left join plugin as p on p.id = hp.plugin_id where host_id='%s'", hostID)
 
@@ -1360,8 +1389,9 @@ func (d *db) getHostPlugins(hostID string, paging bool, query string, order stri
 }
 
 func (d *db) createHostPlugin(hostID string, plugin *types.Plugin) (*types.Plugin, error) {
-	rawSQL := fmt.Sprintf("insert into host_plugin(`host_id`, `plugin_id`, `args`, `interval`, `timeout`) values('%s', %d, '%s', %d, %d)",
-		hostID, plugin.ID, plugin.Args, plugin.Interval, plugin.Timeout)
+	rawSQL := fmt.Sprintf("insert into host_plugin(`host_id`, `plugin_id`, `args`, `interval`, `timeout`, `comment`)"+
+		" values('%s', %d, '%s', %d, %d, '%s')",
+		hostID, plugin.ID, plugin.Args, plugin.Interval, plugin.Timeout, plugin.Comment)
 	log.Println(rawSQL)
 	res, err := d.Exec(rawSQL)
 	if err != nil {
@@ -1374,8 +1404,9 @@ func (d *db) createHostPlugin(hostID string, plugin *types.Plugin) (*types.Plugi
 }
 
 func (d *db) updateHostPlugin(hostID string, plugin *types.Plugin) error {
-	rawSQL := fmt.Sprintf("update host_plugin set `args`='%s', `interval`=%d, `timeout`=%d where host_id='%s' and id=%d",
-		plugin.Args, plugin.Interval, plugin.Timeout, hostID, plugin.ID)
+	rawSQL := fmt.Sprintf("update host_plugin set `args`='%s', `interval`=%d, `timeout`=%d, `comment`='%s' "+
+		" where host_id='%s' and id=%d",
+		plugin.Args, plugin.Interval, plugin.Timeout, plugin.Comment, hostID, plugin.ID)
 	log.Println(rawSQL)
 	if _, err := d.Exec(rawSQL); err != nil {
 		log.Println(err)
@@ -1531,13 +1562,14 @@ func (d *db) getProductHostGroups(productID int, paging bool, query string, orde
 		"count(distinct host_group_host.id) as host_cnt, count(distinct strategy_group.id) as strategy_cnt "+
 		" from host_group as hg left join host_group_plugin on hg.id = host_group_plugin.group_id left join host_group_host "+
 		" on hg.id = host_group_host.host_group_id left join strategy_group on hg.id=strategy_group.group_id "+
-		" where hg.product_id=%d group by hg.id",
+		" where hg.product_id=%d",
 		dbDateFormat, dbDateFormat, productID)
 	cntSQL := fmt.Sprintf("select count(*) from host_group where product_id = %d", productID)
 	if len(query) > 0 {
-		rawSQL = fmt.Sprintf("%s and name like '%%%s%%'", rawSQL, query)
+		rawSQL = fmt.Sprintf("%s and hg.name like '%%%s%%'", rawSQL, query)
 		cntSQL = fmt.Sprintf("%s and name like '%%%s%%'", cntSQL, query)
 	}
+	rawSQL = fmt.Sprintf("%s group by hg.id", rawSQL)
 	if len(order) > 0 {
 		rawSQL = fmt.Sprintf("%s order by %s", rawSQL, order)
 	}
@@ -1561,7 +1593,7 @@ func (d *db) getHostGroupPlugins(groupID int, paging bool, query string, offset,
 		err     error
 		cnt     int
 	)
-	rawSQL := fmt.Sprintf("select hgp.id, p.name, p.path, p.checksum, hgp.args, hgp.interval, hgp.timeout from host_group_plugin as hgp "+
+	rawSQL := fmt.Sprintf("select hgp.id, p.name, p.path, p.checksum, hgp.args, hgp.interval, hgp.timeout, hgp.comment from host_group_plugin as hgp "+
 		" left join plugin as p on p.id = hgp.plugin_id where hgp.group_id=%d", groupID)
 	cntSQL := fmt.Sprintf("select count(*) from host_group_plugin as hgp left join plugin as p on p.id = hgp.plugin_id where hgp.group_id=%d", groupID)
 	if len(query) > 0 {
@@ -1583,8 +1615,9 @@ func (d *db) getHostGroupPlugins(groupID int, paging bool, query string, offset,
 }
 
 func (d *db) updateHostGroupPlugin(groupID int, plugin *types.Plugin) error {
-	rawSQL := fmt.Sprintf("update host_group_plugin set `args`='%s', `interval`=%d, `timeout`=%d where group_id=%d and id=%d",
-		plugin.Args, plugin.Interval, plugin.Timeout, groupID, plugin.ID)
+	rawSQL := fmt.Sprintf("update host_group_plugin set `args`='%s', `interval`=%d, `timeout`=%d, `comment`='%s' "+
+		" where group_id=%d and id=%d",
+		plugin.Args, plugin.Interval, plugin.Timeout, plugin.Comment, groupID, plugin.ID)
 	log.Println(rawSQL)
 	if _, err := d.Exec(rawSQL); err != nil {
 		log.Println(err)
@@ -1594,8 +1627,9 @@ func (d *db) updateHostGroupPlugin(groupID int, plugin *types.Plugin) error {
 }
 
 func (d *db) createHostGroupPlugin(groupID int, plugin *types.Plugin) (*types.Plugin, error) {
-	rawSQL := fmt.Sprintf("insert into host_group_plugin(`group_id`, `plugin_id`, `args`, `interval`, `timeout`) values(%d, %d, '%s', %d, %d)",
-		groupID, plugin.ID, plugin.Args, plugin.Interval, plugin.Timeout)
+	rawSQL := fmt.Sprintf("insert into host_group_plugin(`group_id`, `plugin_id`, `args`, `interval`, `timeout`, `comment`)"+
+		" values(%d, %d, '%s', %d, %d, '%s')",
+		groupID, plugin.ID, plugin.Args, plugin.Interval, plugin.Timeout, plugin.Comment)
 	log.Println(rawSQL)
 	res, err := d.Exec(rawSQL)
 	if err != nil {
@@ -1627,18 +1661,19 @@ func (d *db) getProductHostGroupHosts(productID, groupID int, paging bool, query
 	rawSQL := fmt.Sprintf("select host.id, host.ip, host.name, host.hostname, host.agent_version, host.status,"+
 		"DATE_FORMAT(host.create_at,'%s') as create_at, DATE_FORMAT(host.update_at,'%s') as update_at,"+
 		"host.mute_time, host.uptime, host.idle_pct, count(host_plugin.id) as plugin_cnt, "+
-		"IFNULL(groups.name,'-') as groups from host left join host_plugin on host.id = host_plugin.host_id left join " +
+		"IFNULL(groups.name,'-') as groups from host left join host_plugin on host.id = host_plugin.host_id left join "+
 		"(select group_concat(hg.name) as name, hgh.host_id from host_group_host as hgh left join host_group as hg"+
 		" on hgh.host_group_id = hg.id where hg.product_id=%d group by hgh.host_id) as groups on host.id = groups.host_id "+
-		" left join host_group_host as hgh on host.id = hgh.host_id where hgh.host_group_id=%d group by host.id",
+		" left join host_group_host as hgh on host.id = hgh.host_id where hgh.host_group_id=%d",
 		dbDateFormat, dbDateFormat, productID, groupID)
 
-	cntSQL := fmt.Sprintf("select count(*) from host h where id in (select host_id from host_group_host where host_group_id = %d)",
+	cntSQL := fmt.Sprintf("select count(*) from host where id in (select host_id from host_group_host where host_group_id = %d)",
 		groupID)
 	if len(query) > 0 {
-		rawSQL = fmt.Sprintf("%s and (h.ip like '%%%s%%' or h.hostname like '%%%s%%')", rawSQL, query, query)
-		cntSQL = fmt.Sprintf("%s and (h.ip like '%%%s%%' or h.hostname like '%%%s%%')", cntSQL, query, query)
+		rawSQL = fmt.Sprintf("%s and (host.ip like '%%%s%%' or host.hostname like '%%%s%%')", rawSQL, query, query)
+		cntSQL = fmt.Sprintf("%s and (host.ip like '%%%s%%' or host.hostname like '%%%s%%')", cntSQL, query, query)
 	}
+	rawSQL = fmt.Sprintf("%s group by host.id", rawSQL)
 	if len(order) > 0 {
 		rawSQL = fmt.Sprintf("%s order by %s", rawSQL, order)
 	}
@@ -1785,7 +1820,7 @@ func (d *db) deleteProductHostGroup(productID int, hostGroupID int) error {
 func (d *db) getPlugins(query string, paging bool, offset, limit int) (int, []types.Plugin) {
 	plugins := []types.Plugin{}
 	cnt := 0
-	rawSQL := fmt.Sprintf("select `id`, `name`, `path`, `args`, `interval`, `timeout`, `checksum` from plugin")
+	rawSQL := fmt.Sprintf("select `id`, `name`, `path`, `args`, `interval`, `timeout`, `checksum`, `comment` from plugin")
 	cntSQL := fmt.Sprintf("select count(*) from plugin")
 	if len(query) > 0 {
 		rawSQL = fmt.Sprintf("%s where name like '%%%s%%' or path like '%%%s%%'", rawSQL, query, query)
@@ -1810,9 +1845,10 @@ func (d *db) getPlugins(query string, paging bool, offset, limit int) (int, []ty
 //创建插件
 func (d *db) createPlugin(plugin *types.Plugin, creator string) (*types.Plugin, error) {
 	now := time.Now().Format(timeFormat)
-	rawSQL := fmt.Sprintf("insert into plugin(`name`, `args`, `path`, `checksum`, `interval`, `create_at`,`update_at`,`creator`) "+
-		"values('%s', '%s', '%s', '%s', %d, '%s', '%s', '%s')",
-		plugin.Name, plugin.Args, plugin.Path, plugin.Checksum, plugin.Interval, now, now, creator)
+	rawSQL := fmt.Sprintf("insert into plugin(`name`, `args`, `path`, `checksum`,"+
+		" `interval`, `create_at`,`update_at`,`creator`, `comment`) "+
+		"values('%s', '%s', '%s', '%s', %d, '%s', '%s', '%s', '%s')",
+		plugin.Name, plugin.Args, plugin.Path, plugin.Checksum, plugin.Interval, now, now, creator, plugin.Comment)
 	log.Println(rawSQL)
 	res, err := d.Exec(rawSQL)
 	if err != nil {
@@ -1827,7 +1863,8 @@ func (d *db) createPlugin(plugin *types.Plugin, creator string) (*types.Plugin, 
 //更新插件
 func (d *db) updatePlugin(plugin types.Plugin) error {
 	rawSQL := fmt.Sprintf("update plugin set `name` ='%s', `args`='%s', `path`='%s', `checksum`='%s', `interval`=%d "+
-		"where id = %d", plugin.Name, plugin.Args, plugin.Path, plugin.Checksum, plugin.Interval, plugin.ID)
+		", `comment`='%s' where id = %d",
+		plugin.Name, plugin.Args, plugin.Path, plugin.Checksum, plugin.Interval, plugin.Comment, plugin.ID)
 	log.Println(rawSQL)
 	_, err := d.Exec(rawSQL)
 	return err

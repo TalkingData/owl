@@ -84,6 +84,7 @@ func InitServer() error {
 			hosts.GET("", verifyAdminPermission, listAllHosts)
 			// 获取主机的metric列表
 			hosts.GET("/:host_id/metrics", listHostMetrics)
+			hosts.DELETE("/:host_id/metrics", deleteHostMetrics)
 
 			//获取主机 metric 前缀
 			hosts.GET("/:host_id/apps", listHostApps)

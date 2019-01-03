@@ -88,6 +88,7 @@ func (task *Task) run() {
 		}
 	}
 	ts := time.Now().Unix()
+	ts = ts - (ts % int64(task.Interval))
 	output, err := utils.RunCmdWithTimeout(fpath, task.args, task.Timeout)
 	if err != nil {
 		lg.Error("run %s %s %s %s", fpath, task.args, bytes.TrimSpace(output), err.Error())
