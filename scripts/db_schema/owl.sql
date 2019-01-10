@@ -611,7 +611,7 @@ ADD CONSTRAINT `strategy_event_record_host_id_fk` FOREIGN KEY (`host_id`) REFERE
 
 -- 增加用户类型
 ALTER TABLE `owl`.`user`
-ADD COLUMN `types` varchar(255) NOT NULL DEFAULT '' AFTER `wechat`;
+ADD COLUMN `type` varchar(255) NOT NULL DEFAULT '' AFTER `wechat`;
 
 -- 插件增加备注
 ALTER TABLE `host_group_plugin` ADD COLUMN `comment` varchar(1024) NOT NULL DEFAULT '' AFTER `timeout`;
