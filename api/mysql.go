@@ -924,7 +924,7 @@ func (d *db) addUsers2Product(productID int, userids []int) error {
 	tx := d.MustBegin()
 	var err error
 	for _, id := range userids {
-		rawSQL := fmt.Sprintf("insert into product_user(product_id, user_id) values(%d, %d)",
+		rawSQL := fmt.Sprintf("insert ignore into product_user(product_id, user_id) values(%d, %d)",
 			productID, id)
 		log.Println(rawSQL)
 		if _, err = tx.Exec(rawSQL); err != nil {
