@@ -34,6 +34,7 @@ func maxMethod(cycle int, trigger *types.Trigger) (*types.TriggerResultSet, erro
 
 	for _, result := range results {
 		if len(result.Dps) == 0 {
+			lg.Warn("metric:%s, tags:%s %d no data", trigger.Metric, trigger.Tags, cycle)
 			continue
 		}
 		values := make([]float64, 0)
@@ -72,6 +73,7 @@ func minMethod(cycle int, trigger *types.Trigger) (*types.TriggerResultSet, erro
 
 	for _, result := range results {
 		if len(result.Dps) == 0 {
+			lg.Warn("metric:%s, tags:%s %d no data", trigger.Metric, trigger.Tags, cycle)
 			continue
 		}
 		values := make([]float64, 0)
@@ -120,6 +122,7 @@ func ratioMethod(cycle int, trigger *types.Trigger) (*types.TriggerResultSet, er
 
 	for index, result := range results {
 		if len(result.Dps) == 0 {
+			lg.Warn("metric:%s, tags:%s %d no data", trigger.Metric, trigger.Tags, cycle)
 			continue
 		}
 		data := avg(result.Dps)
@@ -162,6 +165,7 @@ func topMethod(cycle int, trigger *types.Trigger) (*types.TriggerResultSet, erro
 	}
 	for _, result := range results {
 		if len(result.Dps) == 0 {
+			lg.Warn("metric:%s, tags:%s %d no data", trigger.Metric, trigger.Tags, cycle)
 			continue
 		}
 		values := make([]float64, 0)
@@ -216,6 +220,7 @@ func bottomMethod(cycle int, trigger *types.Trigger) (*types.TriggerResultSet, e
 	}
 	for _, result := range results {
 		if len(result.Dps) == 0 {
+			lg.Warn("metric:%s, tags:%s %d no data", trigger.Metric, trigger.Tags, cycle)
 			continue
 		}
 		values := make([]float64, 0)
@@ -270,6 +275,7 @@ func lastMethod(cycle int, trigger *types.Trigger) (*types.TriggerResultSet, err
 	}
 	for _, result := range results {
 		if len(result.Dps) == 0 {
+			lg.Warn("metric:%s, tags:%s %d no data", trigger.Metric, trigger.Tags, cycle)
 			continue
 		}
 		value_times := make([]string, 0)
@@ -325,6 +331,7 @@ func diffMethod(cycle int, trigger *types.Trigger) (*types.TriggerResultSet, err
 
 	for _, result := range results {
 		if len(result.Dps) == 0 {
+			lg.Warn("metric:%s, tags:%s %d no data", trigger.Metric, trigger.Tags, cycle)
 			continue
 		}
 
@@ -422,6 +429,7 @@ func avgMethod(cycle int, trigger *types.Trigger) (*types.TriggerResultSet, erro
 
 	for _, result := range results {
 		if len(result.Dps) == 0 {
+			lg.Warn("metric:%s, tags:%s %d no data", trigger.Metric, trigger.Tags, cycle)
 			continue
 		}
 
