@@ -1,6 +1,10 @@
 package main
 
-import "github.com/Unknwon/goconfig"
+import (
+	"strings"
+
+	"github.com/Unknwon/goconfig"
+)
 
 const (
 	//ConfigFilePath 定义配置文件路径
@@ -40,6 +44,7 @@ type Config struct {
 
 	MaxPacketSize int
 	PluginDir     string
+	Metadata      map[string]string
 }
 
 func InitGlobalConfig() error {
@@ -63,6 +68,23 @@ func InitGlobalConfig() error {
 		LogLevel:      cfg.MustInt(goconfig.DEFAULT_SECTION, "log_level", DefaultLogLevel),
 		PluginDir:     cfg.MustValue(goconfig.DEFAULT_SECTION, "plugin_dir", DefaultPluginDir),
 	}
+	metadata := cfg.MustValue(goconfig.DEFAULT_SECTION, "meta_data", "")
+	if len(metadata) > 0 {
+		GlobalConfig.Metadata = parseMedata(metadata)
+	}
 	return nil
 
+}
+
+func parseMedata(val string) map[string]string {
+	m := map[string]string{}
+	arr1 := strings.Split(val, ",")
+	for _, val := range arr1 {
+		arr2 := strings.Split(val, "=")
+		if len(arr2) != 2 {
+			continue
+		}
+		m[arr2[0]] = arr2[1]
+	}
+	return m
 }

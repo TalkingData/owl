@@ -12,24 +12,23 @@ import (
 )
 
 var (
-	netCollect   *NetCollect
-	AgentVersion string = "0.1"
+	netCollect *NetCollect
 )
 
 type NetCollect struct {
-	tsdBuffer    chan *types.TimeSeriesData
-	histroyMap   map[string]float64
+	tsdBuffer chan *types.TimeSeriesData
+	//historyMap   map[string]float64
 	repeater     *tcp.TCPConn
 	cfc          *tcp.TCPConn
 	metricBuffer chan *types.MetricConfig
-	switchs      []*types.Switch
+	switches     []*types.Switch
 }
 
 func InitNetCollect() error {
 	c := &NetCollect{}
 	c.tsdBuffer = make(chan *types.TimeSeriesData, GlobalConfig.BUFFER_SIZE)
 	c.metricBuffer = make(chan *types.MetricConfig, GlobalConfig.BUFFER_SIZE)
-	c.switchs = []*types.Switch{}
+	c.switches = []*types.Switch{}
 	c.repeater = &tcp.TCPConn{}
 	c.cfc = &tcp.TCPConn{}
 	netCollect = c
@@ -129,12 +128,14 @@ func InitIpRange() error {
 				Timeout:   GlobalConfig.SNMP_TIMEOUT,
 			},
 		}
-		netCollect.switchs = append(netCollect.switchs, s)
+		s.GetHostname()
+		s.GetVendor()
+		netCollect.switches = append(netCollect.switches, s)
 		lg.Info("do %s, %#v", s.IP, s.Snmp)
 		go s.Do(netCollect.tsdBuffer, netCollect.metricBuffer)
 	}
-
-	go netCollect.SendConfig2CFC()
+	netCollect.registerSwitchs()
+	go netCollect.SendHeartbeat2CFC()
 	go netCollect.SendMetri2CFC()
 
 	return nil
@@ -191,27 +192,52 @@ func InitIpRange() error {
 // 	}
 // }
 
-func (this *NetCollect) SendConfig2CFC() {
+func (this *NetCollect) registerSwitchs() {
+	for _, s := range this.switches {
+		if !s.IsInit() {
+			continue
+		}
+		h := &types.Host{
+			ID:           s.ID,
+			IP:           s.IP,
+			Hostname:     s.Hostname,
+			AgentVersion: Version,
+			Metadata:     GlobalConfig.Metadata,
+		}
+		//config
+		if err := this.cfc.AsyncWritePacket(
+			tcp.NewDefaultPacket(
+				types.MsgAgentRegister,
+				h.Encode(),
+			)); err != nil {
+			lg.Error("register ")
+		}
+	}
+}
+
+func (this *NetCollect) SendHeartbeat2CFC() {
 	for {
 		if this.cfc.IsClosed() {
 			goto sleep
 		}
-		for _, s := range this.switchs {
-			if s.Hostname == "" || s.Hostname == "Unknown" {
+		for _, s := range this.switches {
+			if !s.IsInit() {
 				continue
 			}
 			h := &types.Host{
 				ID:           s.ID,
 				IP:           s.IP,
 				Hostname:     s.Hostname,
-				AgentVersion: AgentVersion,
+				AgentVersion: Version,
+				Metadata:     GlobalConfig.Metadata,
 			}
 			//config
-			this.cfc.AsyncWritePacket(
-				tcp.NewDefaultPacket(
-					types.MsgAgentRegister,
-					h.Encode(),
-				))
+			//this.cfc.AsyncWritePacket(
+			//	tcp.NewDefaultPacket(
+			//		types.MsgAgentRegister,
+			//		h.Encode(),
+			//	))
+
 			//heartbeat
 			this.cfc.AsyncWritePacket(
 				tcp.NewDefaultPacket(

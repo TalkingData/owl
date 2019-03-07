@@ -101,8 +101,8 @@ func (task *Task) run() {
 		return
 	}
 	for _, tsd := range result {
-		if !tsd.Validate() {
-			lg.Warn("time series data validation failed %v", tsd)
+		if err := tsd.Validate(); err != nil {
+			lg.Warn("time series data validation failed %v, error:%s", tsd, err)
 			continue
 		}
 		tsd.Cycle = task.Interval

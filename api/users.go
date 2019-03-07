@@ -207,7 +207,7 @@ func updateUserProfile(c *gin.Context) {
 	currUser := mydb.getUserProfile(c.GetString("username"))
 	if user.ID != currUser.ID {
 		if !currUser.isAdmin() {
-			response["code"] = http.StatusForbidden
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"message": "permission denied"})
 			return
 		}
 	}

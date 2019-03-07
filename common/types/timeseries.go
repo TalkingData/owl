@@ -8,7 +8,11 @@ import (
 	"strings"
 )
 
-var reg = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_.-]+$`)
+var (
+	MetricReg = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_.-]+$`)
+	TagvReg   = regexp.MustCompile(`[a-zA-Z0-9_.-/]+$`)
+	TagkReg   = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_.-]+$`)
+)
 
 type TimeSeriesDataV4 struct {
 	PerformanceIndex map[string]float64 `json:"performance_index"`
@@ -39,23 +43,25 @@ type TimeSeriesData struct {
 	Tags      map[string]string `json:"tags"` //{"product":"app01", "group":"dev02"}
 }
 
-func (m *TimeSeriesData) Validate() bool {
-	if !reg.MatchString(m.Metric) || m.Metric == "" {
-		return false
+func (m *TimeSeriesData) Validate() error {
+	if !MetricReg.MatchString(m.Metric) || m.Metric == "" {
+		return fmt.Errorf("invalid metric %s, must complie %s", m.Metric, MetricReg)
 	}
 	switch strings.ToLower(m.DataType) {
 	case "gauge", "counter", "derive":
 	default:
-		return false
+		return fmt.Errorf("invalid data type %s, only allowed [gauge, counter, derive]", m.DataType)
 	}
 	//check tags
 	for tagk, tagv := range m.Tags {
-		if !reg.MatchString(tagk) || !reg.MatchString(tagv) {
-			return false
+		if !TagkReg.MatchString(tagk) {
+			return fmt.Errorf("invalid tag key %s, must complie %s", tagk, TagkReg)
+		}
+		if !TagvReg.MatchString(tagv) {
+			return fmt.Errorf("invalid tag value %s, must complie %s", tagv, TagvReg)
 		}
 	}
-
-	return true
+	return nil
 }
 
 func (tsd *TimeSeriesData) Encode() []byte {
@@ -117,6 +123,15 @@ func (tsd *TimeSeriesData) AddTags(tags map[string]string) {
 	for k, v := range tags {
 		tsd.Tags[k] = v
 	}
+}
+
+func (tsd *TimeSeriesData) AddTag(tagk, tagv string) {
+	tsd.Tags[tagk] = tagv
+}
+
+func (tsd *TimeSeriesData) HasTag(tagk string) bool {
+	_, exist := tsd.Tags[tagk]
+	return exist
 }
 
 func (tsd *TimeSeriesData) RemoveTag(tagk string) {

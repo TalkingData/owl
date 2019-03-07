@@ -101,7 +101,6 @@ func (agent *Agent) watchHostConfig() {
 		hostcfg := newHostConfig()
 		if !reflect.DeepEqual(agent.hostcfg, hostcfg) {
 			agent.hostcfg = hostcfg
-			agent.register()
 		}
 		time.Sleep(time.Second * 30)
 	}
@@ -143,11 +142,12 @@ func (agent *Agent) sendHeartbeat2CFC() error {
 }
 
 func (agent *Agent) sendGetPluginList() error {
-	lg.Debug("send get plugin list request")
+	req := newHostConfig().Encode()
+	lg.Debug("send get plugin list request %s", req)
 	return agent.cfc.AsyncWritePacket(
 		tcp.NewDefaultPacket(
 			types.MsgAgentGetPluginsList,
-			newHostConfig().Encode(),
+			req,
 		))
 }
 
@@ -297,5 +297,6 @@ func newHostConfig() *types.Host {
 	host.Hostname = getHostname()
 	host.AgentVersion = Version
 	host.IP = agent.getLocalIPAddress()
+	host.Metadata = GlobalConfig.Metadata
 	return host
 }

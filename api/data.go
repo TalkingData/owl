@@ -2,8 +2,13 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"owl/common/tsdb"
+	"owl/common/types"
+	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -25,12 +30,39 @@ func initTSDB() error {
 }
 
 func queryTimeSeriesData(c *gin.Context) {
-	metric := c.Query("metric")
-	tags := c.Query("tags")
-	start := c.DefaultQuery("start", time.Now().Add(-time.Hour).Format("2006/01/02-15:04:05"))
-	end := c.DefaultQuery("end", time.Now().Format("2006/01/02-15:04:05"))
 	response := gin.H{}
 	defer c.JSON(http.StatusOK, response)
+	metric := c.Query("metric")
+	tags := c.Query("tags")
+	tagMap := types.ParseTags(tags)
+	if groupName, exist := tagMap["host_group"]; exist {
+		productIDStr, ok := c.GetQuery("product_id")
+		if !ok {
+			response["code"] = http.StatusNotFound
+			response["message"] = "product id must provide"
+			return
+		}
+		productID, err := strconv.Atoi(productIDStr)
+		if err != nil {
+			response["code"] = http.StatusInternalServerError
+			response["message"] = "invalid product id "
+			return
+		}
+		delete(tagMap, "host_group")
+		hostSet := getHostnameTagsFromProductGroup(productID, groupName)
+		if len(hostSet) == 0 {
+			response["code"] = http.StatusBadRequest
+			response["message"] = groupName + " has no host"
+			return
+		}
+
+		tagMap["host"] = strings.Join(hostSet, "|")
+		tags = Tags2String(tagMap)
+	}
+
+	start := c.DefaultQuery("start", time.Now().Add(-time.Hour).Format("2006/01/02-15:04:05"))
+	end := c.DefaultQuery("end", time.Now().Format("2006/01/02-15:04:05"))
+	log.Println("query time series data, metric:", metric, "tags:", tags, "start_time:", start, "end_time:", end)
 	result, err := tsdbClient.Query(start, end, tags, "sum", metric, false)
 	if err != nil {
 		response["message"] = err.Error()
@@ -39,4 +71,36 @@ func queryTimeSeriesData(c *gin.Context) {
 	}
 	response["data"] = result
 	response["code"] = http.StatusOK
+}
+
+func getHostnameTagsFromProductGroup(productID int, groupName string) []string {
+	hostnameSet := []string{}
+	hostGroup := mydb.getProductHostGroupByName(productID, groupName)
+	if hostGroup.ID == 0 {
+		return hostnameSet
+	}
+	_, hosts := mydb.getProductHostGroupHosts(productID, hostGroup.ID, false, "", "", 0, 0)
+	for _, host := range hosts {
+		hostnameSet = append(hostnameSet, host.Hostname)
+	}
+	return hostnameSet
+}
+
+func Tags2String(tags map[string]string) string {
+	if len(tags) == 0 {
+		return ""
+	}
+	taglen := len(tags)
+	keys := make([]string, taglen)
+	i := 0
+	for k := range tags {
+		keys[i] = k
+		i++
+	}
+	sort.Strings(keys)
+	ret := ""
+	for _, k := range keys {
+		ret += fmt.Sprintf("%s=%s,", strings.TrimSpace(k), strings.TrimSpace(tags[k]))
+	}
+	return strings.Trim(ret, ",")
 }

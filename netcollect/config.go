@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/Unknwon/goconfig"
 )
@@ -44,6 +45,7 @@ type Config struct {
 	SNMP_VERSION   string
 	SNMP_COMMUNITY string
 	SNMP_TIMEOUT   int
+	Metadata       map[string]string
 }
 
 func InitGlobalConfig() error {
@@ -69,6 +71,23 @@ func InitGlobalConfig() error {
 		LOG_EXPIRE_DAYS:  cfg.MustInt(goconfig.DEFAULT_SECTION, "log_expire_days", DEFAULT_LOG_EXPIRE_DAYS),
 		LOG_LEVEL:        cfg.MustInt(goconfig.DEFAULT_SECTION, "log_level", DEFAULT_LOG_LEVEL),
 	}
+	metadata := cfg.MustValue(goconfig.DEFAULT_SECTION, "meta_data", "")
+	if len(metadata) > 0 {
+		GlobalConfig.Metadata = parseMedata(metadata)
+	}
 	fmt.Println("config %v", GlobalConfig)
 	return nil
+}
+
+func parseMedata(val string) map[string]string {
+	m := map[string]string{}
+	arr1 := strings.Split(val, ",")
+	for _, val := range arr1 {
+		arr2 := strings.Split(val, "=")
+		if len(arr2) != 2 {
+			continue
+		}
+		m[arr2[0]] = arr2[1]
+	}
+	return m
 }

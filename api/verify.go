@@ -10,7 +10,7 @@ import (
 func verifyAdminPermission(c *gin.Context) {
 	user := mydb.getUserProfile(c.GetString("username"))
 	if user == nil || !user.isAdmin() {
-		c.AbortWithStatusJSON(http.StatusOK, gin.H{"code": http.StatusForbidden})
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"message": "permission denied"})
 	}
 }
 
@@ -25,7 +25,7 @@ func verifyAndInjectProductID(c *gin.Context) {
 	)
 	user = mydb.getUserProfile(c.GetString("username"))
 	if user == nil {
-		c.AbortWithStatusJSON(http.StatusOK, gin.H{"code": http.StatusBadRequest})
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"message": "permission denied"})
 	}
 
 	if !user.isAdmin() {
@@ -36,7 +36,7 @@ func verifyAndInjectProductID(c *gin.Context) {
 			}
 		}
 		if !exists {
-			c.AbortWithStatusJSON(http.StatusOK, gin.H{"code": http.StatusBadRequest})
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"message": "permission denied"})
 		}
 	}
 	c.Set("product_id", productID)

@@ -105,8 +105,8 @@ retry:
 	this.Mem = make(map[string]uint64)
 	this.initAllInterfaceData()
 	this.CollectInterfaceName()
-	this.getHostname()
-	this.getVendor()
+	this.GetHostname()
+	this.GetVendor()
 	this.CollectIfaceSpeed()
 	go this.loop(buf1)
 	go this.postMetric(buf2)
@@ -241,6 +241,7 @@ func (this *Switch) loop(buffer chan<- *TimeSeriesData) {
 	}()
 	for {
 		ts := time.Now().Unix()
+		ts = ts - (ts % 60)
 		this.CollectTraffic()
 		interval := uint64(this.CollectInterval)
 		flag := 0
@@ -599,7 +600,7 @@ func (this *Switch) IsLegalPrefix(name string) bool {
 	return false
 }
 
-func (this *Switch) getHostname() {
+func (this *Switch) GetHostname() {
 	output, err := this.walk("1.3.6.1.2.1.1.5.0")
 	if err != nil {
 		this.Hostname = "Unknown"
@@ -608,7 +609,7 @@ func (this *Switch) getHostname() {
 	this.Hostname = fields[len(fields)-1]
 }
 
-func (this *Switch) getVendor() {
+func (this *Switch) GetVendor() {
 	output, err := this.walk("1.3.6.1.2.1.1.1.0")
 	if err != nil {
 		fmt.Println("get sysdesc error ", err.Error())
@@ -624,6 +625,13 @@ func (this *Switch) getVendor() {
 	} else {
 		this.Vendor = "Unknown"
 	}
+}
+
+func (this *Switch) IsInit() bool {
+	if len(this.Hostname) == 0 || this.Hostname == "Unknown" {
+		return false
+	}
+	return true
 }
 
 func (this *Switch) initAllInterfaceData() {

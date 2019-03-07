@@ -36,7 +36,7 @@ func (k *KairosDbClient) newQueryBuilder(start, end, rawTags, aggregator, metric
 			if _, ok := tags[tagKV[0]]; !ok {
 				tagks = append(tagks, tagKV[0])
 			}
-			if tagKV[1] == "all" {
+			if tagKV[1] == "*" {
 				continue
 			}
 			tags[tagKV[0]] = append(tags[tagKV[0]], strings.Split(tagKV[1], "|")...)

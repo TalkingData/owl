@@ -1,10 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"owl/common/types"
 	"path/filepath"
+	"strings"
 
 	"github.com/wuyingsong/tcp"
 	"github.com/wuyingsong/utils"
@@ -31,7 +33,7 @@ func (cb *callback) OnError(err error) {
 func (cb *callback) OnMessage(conn *tcp.TCPConn, p tcp.Packet) {
 	defer func() {
 		if r := recover(); r != nil {
-			lg.Error("Recovered in OnMessage", r)
+			lg.Error("Recovered in OnMessage %v", r)
 		}
 	}()
 	pkt := p.(*tcp.DefaultPacket)
@@ -49,38 +51,12 @@ func (cb *callback) dispatch(conn *tcp.TCPConn, pkt *tcp.DefaultPacket) {
 			conn.Close()
 			return
 		}
-		if err := mydb.createOrUpdateHost(host); err != nil {
-			lg.Error("register agent error:%s, host:%v", err, host)
+		if err := registerAgent(host); err != nil {
+			lg.Error("register agent failed, error:%s", err)
 			return
 		}
-		lg.Debug("register agent:%v", host)
-		// 客户端上传metric
+		lg.Info("register host %v", host)
 
-	case types.MsgAgentSendMetricInfo:
-		metricConfig := types.MetricConfig{}
-		// 反序列化
-		if err := metricConfig.Decode(pkt.Body); err != nil {
-			lg.Error("decode metricConfig error", err)
-			return
-		}
-		if metricConfig.HostID == "" {
-			hostname := metricConfig.SeriesData.Tags["host"]
-			metricConfig.HostID = getHostIDByHostname(hostname)
-		}
-		metricConfig.SeriesData.RemoveTag("host")
-		metricConfig.SeriesData.RemoveTag("uuid")
-		seriesData := metricConfig.SeriesData
-		seriesData.RemoveTag("host")
-		seriesData.RemoveTag("uuid")
-		//创建 metric
-		if err := mydb.createOrUpdateMetric(
-			metricConfig.HostID,
-			seriesData,
-		); err != nil {
-			lg.Error("create or update metric error %s metric:%v", err, metricConfig)
-			return
-		}
-		lg.Debug("create metric %s", metricConfig.Encode())
 	// 客户端获取需要执行的插件列表
 	case types.MsgAgentGetPluginsList:
 		var (
@@ -93,64 +69,25 @@ func (cb *callback) dispatch(conn *tcp.TCPConn, pkt *tcp.DefaultPacket) {
 			conn.Close()
 			return
 		}
-		// 获取 plugin
-		plugins, err := mydb.getHostPlugins(host.ID)
+		pluginsResp, err := agentGetPluginList(host)
 		if err != nil {
 			lg.Error("get host plugin error %s host:%v", err, host)
 			return
-		}
-		resp := types.GetPluginResp{
-			HostID:  host.ID,
-			Plugins: plugins,
 		}
 		// 发送结果集到 agent
 		if err = conn.AsyncWritePacket(
 			tcp.NewDefaultPacket(
 				types.MsgCFCSendPluginsList,
-				resp.Encode(),
+				pluginsResp.Encode(),
 			),
 		); err != nil {
-			lg.Error("send plugin list to agent error %s", err)
-		}
-	case types.MsgAgentRequestSyncPlugins:
-		spr := types.SyncPluginRequest{}
-		if err := spr.Decode(pkt.Body); err != nil {
-			lg.Error("decode SyncPluginRequest error", err)
+			lg.Error("send plugin list to agent failed, error:%s", err)
 			return
 		}
-		pth := filepath.Join(GlobalConfig.PluginDir, spr.Path)
-		md5String, err := utils.GetFileMD5(pth)
-		if err != nil {
-			lg.Error("get plugin(%s) checksum error(%s)", spr.Path, err)
-			return
-		}
-		if md5String != spr.Checksum {
-			lg.Error("%s checksum verification failed, want(%s) have(%s)", spr.Path, spr.Checksum, md5String)
-			return
-		}
-		fd, err := os.Open(pth)
-		if err != nil {
-			lg.Error("%s", err)
-			return
-		}
-		defer fd.Close()
-		sp := types.SyncPluginResponse{
-			HostID: spr.HostID,
-			Path:   spr.Path,
-		}
-		fileBytes, err := ioutil.ReadAll(fd)
-		if err != nil {
-			lg.Error("%s", err)
-			return
-		}
-		sp.Body = fileBytes
-		conn.AsyncWritePacket(tcp.NewDefaultPacket(
-			types.MsgCFCSendPlugin,
-			sp.Encode(),
-		))
+		lg.Info("send plugin list to agent, response:%s", pluginsResp.Encode())
 
 	case types.MsgAgentSendHeartbeat:
-		host := new(types.Host)
+		host := &types.Host{}
 		if err := host.Decode(pkt.Body); err != nil {
 			lg.Error("decode host error %s", err)
 			return
@@ -159,7 +96,41 @@ func (cb *callback) dispatch(conn *tcp.TCPConn, pkt *tcp.DefaultPacket) {
 			lg.Warning("host id is empty %v", host)
 			return
 		}
-		mydb.createOrUpdateHost(host)
+		if err := mydb.createOrUpdateHost(host); err != nil {
+			lg.Error("update host ")
+		}
+
+	case types.MsgAgentRequestSyncPlugins:
+		spr := types.SyncPluginRequest{}
+		if err := spr.Decode(pkt.Body); err != nil {
+			lg.Error("decode SyncPluginRequest error", err)
+			return
+		}
+		resp, err := agentRequestSyncPlugins(spr)
+		if err != nil {
+			lg.Error("get plugin failed, request:%s, error:%s", spr.Encode(), err)
+			return
+		}
+		if err = conn.AsyncWritePacket(tcp.NewDefaultPacket(
+			types.MsgCFCSendPlugin,
+			resp.Encode(),
+		)); err != nil {
+			lg.Error("send sync plugin response to agent failed, request:%s, error:%s",
+				spr.HostID, spr.Encode(), err)
+			return
+		}
+		lg.Info("send sync plugin response to agent, request:%s, response:%s",
+			spr.Encode(), resp.Encode())
+
+		// 客户端上传metric
+	case types.MsgAgentSendMetricInfo:
+		metricConfig := types.MetricConfig{}
+		// 反序列化
+		if err := metricConfig.Decode(pkt.Body); err != nil {
+			lg.Error("decode metricConfig error", err)
+			return
+		}
+		agentSendMetricInfo(metricConfig)
 	default:
 		lg.Warn("%v no callback", types.MsgTextMap[pkt.Type])
 	}
@@ -174,4 +145,131 @@ func getHostIDByHostname(hostname string) string {
 		return ""
 	}
 	return host.ID
+}
+
+//每次启动时发送
+func registerAgent(host *types.Host) error {
+	if err := mydb.createOrUpdateHost(host); err != nil {
+		return err
+	}
+	//添加到产品线
+	if host.GetMetadata("product") == "" {
+		return nil
+	}
+	productName := strings.TrimSpace(host.GetMetadata("product"))
+	var (
+		product *types.Product
+		err     error
+	)
+
+	//产品线不存在并且开启了自动创建
+	if product, err = mydb.getProductByName(productName); err != nil {
+		return fmt.Errorf("get product %s failed, %s", productName, err)
+	}
+	// 产品线不存在
+	if product == nil {
+		// 已开启自动创建
+		if GlobalConfig.AutoCreateProduct {
+			//创建产品线
+			product, err = mydb.createProduct(productName)
+			if err != nil {
+				return fmt.Errorf("auto create product failed, message:%s", err)
+			}
+			lg.Info("create product %d:%s", product.ID, product.Name)
+		} else {
+			lg.Info("auto_create_product is disabled, product %s not created ", productName)
+			return nil
+		}
+	}
+
+	//添加主机到产品线
+	if err = mydb.addHostToProduct(host.ID, product.ID); err != nil {
+		return fmt.Errorf("add host to product failed, host:%s, product:%s", host.ID, product.Name)
+	}
+	lg.Info("add host %s:%s to product %s ", host.Hostname, host.IP, product.Name)
+
+	//自动分配主机组
+	groupName := host.GetMetadata("group")
+	if groupName == "" {
+		return nil
+	}
+	group, err := mydb.getProductHostGroup(product.ID, groupName)
+	if err != nil {
+		return fmt.Errorf("get product %s host group %s failed, error:%s", productName, groupName, err)
+	}
+	if group == nil {
+		group, err = mydb.createProductHostGroup(product.ID, groupName)
+		if err != nil {
+			return fmt.Errorf("create host group %s in product %s failed, error:%s", groupName, productName, err)
+		}
+
+	}
+
+	if err = mydb.addHost2Group(group.ID, host.ID); err != nil {
+		return fmt.Errorf("add host %v to group %s failed, error:%s", host, groupName, err)
+	}
+	lg.Info("add host %v to product %s host group %s", host, productName, groupName)
+	return nil
+}
+
+//当插件不存在或者 md5 变化时请求
+func agentRequestSyncPlugins(req types.SyncPluginRequest) (*types.SyncPluginResponse, error) {
+	pth := filepath.Join(GlobalConfig.PluginDir, req.Path)
+	md5String, err := utils.GetFileMD5(pth)
+	if err != nil {
+		return nil, err
+	}
+	if md5String != req.Checksum {
+		return nil, err
+	}
+	fd, err := os.Open(pth)
+	if err != nil {
+		return nil, err
+	}
+	defer fd.Close()
+	sp := &types.SyncPluginResponse{
+		HostID: req.HostID,
+		Path:   req.Path,
+	}
+	fileBytes, err := ioutil.ReadAll(fd)
+	if err != nil {
+		return nil, err
+	}
+	sp.Body = fileBytes
+	return sp, nil
+}
+
+//客户端定时请求
+func agentGetPluginList(host types.Host) (*types.GetPluginResp, error) {
+	// 获取 plugin
+	plugins, err := mydb.getHostPlugins(host.ID)
+	if err != nil {
+		return nil, err
+	}
+	return &types.GetPluginResp{
+		HostID:  host.ID,
+		Plugins: plugins,
+	}, nil
+}
+
+//客户端定时同步
+func agentSendMetricInfo(info types.MetricConfig) {
+	if info.HostID == "" {
+		hostname := info.SeriesData.Tags["host"]
+		info.HostID = getHostIDByHostname(hostname)
+	}
+	info.SeriesData.RemoveTag("host")
+	info.SeriesData.RemoveTag("uuid")
+	seriesData := info.SeriesData
+	seriesData.RemoveTag("host")
+	seriesData.RemoveTag("uuid")
+	//创建 metric
+	if err := mydb.createOrUpdateMetric(
+		info.HostID,
+		seriesData,
+	); err != nil {
+		lg.Error("create or update metric error %s metric:%v", err, info)
+		return
+	}
+	lg.Debug("create metric %s", info.Encode())
 }

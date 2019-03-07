@@ -68,7 +68,7 @@ func fdMetrics(cycle int) []*types.TimeSeriesData {
 	}
 	metrics[3] = &types.TimeSeriesData{
 		Metric:    "system.fd.used_pct",
-		Value:     allocated / max,
+		Value:     (allocated / max) * 100,
 		Cycle:     cycle,
 		Timestamp: ts,
 		DataType:  "GAUGE",

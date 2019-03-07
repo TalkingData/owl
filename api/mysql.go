@@ -1734,7 +1734,7 @@ func (d *db) addHost2HostGroup(groupID int, ids []string) error {
 	tx := d.MustBegin()
 	var err error
 	for _, id := range ids {
-		rawSQL := fmt.Sprintf("insert into host_group_host(host_id, host_group_id) values('%s', %d)", id, groupID)
+		rawSQL := fmt.Sprintf("insert ignore into host_group_host(host_id, host_group_id) values('%s', %d)", id, groupID)
 		log.Println(rawSQL)
 		if _, err = tx.Exec(rawSQL); err != nil {
 			break
@@ -1780,6 +1780,7 @@ func (d *db) getProductHostGroupByName(productID int, groupName string) HostGrou
 	rawSQL := fmt.Sprintf("select id, name, description, creator, DATE_FORMAT(create_at,'%s') as create_at,"+
 		"DATE_FORMAT(update_at,'%s') as update_at from host_group where product_id =%d and name = '%s'",
 		dbDateFormat, dbDateFormat, productID, groupName)
+	log.Println(rawSQL)
 	hostGroup := HostGroup{}
 	d.Get(&hostGroup, rawSQL)
 	return hostGroup
@@ -1997,22 +1998,22 @@ func (d *db) suggestMetrics(productID int) []string {
 //获取metric对应的tag列表
 func (d *db) suggestMetricTagSet(productID int, metric string) map[string][]string {
 	rawSQL := fmt.Sprintf("select tags from metric where metric='%s'", metric)
-	hostSQL := fmt.Sprintf("select hostname from host where id in(select host_id from metric where metric='%s')", metric)
+	hostGroupSQL := "select name from host_group"
 	if productID != 0 {
 		rawSQL = fmt.Sprintf("%s and host_id in (select host_id from product_host where product_id=%d)", rawSQL, productID)
-		hostSQL = fmt.Sprintf("%s and id in (select host_id from product_host where product_id=%d)", hostSQL, productID)
+		hostGroupSQL = fmt.Sprintf("%s where product_id = %d", hostGroupSQL, productID)
 	}
 	log.Println(rawSQL)
-	log.Println(hostSQL)
+	log.Println(hostGroupSQL)
 	tagSet := make(map[string][]string)
 	tagSetString := []string{}
-	hostnameSet := []string{}
+	groupnameSet := []string{}
 	m := map[string]struct{}{}
 	if err := d.Select(&tagSetString, rawSQL); err != nil {
 		log.Println(err)
 		return tagSet
 	}
-	if err := d.Select(&hostnameSet, hostSQL); err != nil {
+	if err := d.Select(&groupnameSet, hostGroupSQL); err != nil {
 		log.Println(err)
 		return tagSet
 	}
@@ -2030,7 +2031,7 @@ func (d *db) suggestMetricTagSet(productID int, metric string) map[string][]stri
 			tagSet[tagk] = append(tagSet[tagk], tagv)
 		}
 	}
-	tagSet["host"] = hostnameSet
+	tagSet["host_group"] = groupnameSet
 	return tagSet
 }
 

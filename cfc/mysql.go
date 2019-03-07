@@ -141,3 +141,101 @@ func (s *Storage) cleanupExpiredMetrics() error {
 	_, err := s.Exec(rawSQL)
 	return err
 }
+
+func (s *Storage) productExist(productName string) (bool, error) {
+	sqlString := fmt.Sprintf("select count(*) from product where name ='%s'", productName)
+	lg.Info(sqlString)
+	cnt := 0
+	if err := s.QueryRow(sqlString).Scan(&cnt); err != nil {
+		return false, err
+	}
+	if cnt > 0 {
+		return true, nil
+	}
+	return false, nil
+}
+
+func (s *Storage) getProductByName(productName string) (*types.Product, error) {
+	sqlString := fmt.Sprintf("select id, name from product where name = '%s'", productName)
+	lg.Info(sqlString)
+	product := &types.Product{}
+	if err := s.QueryRow(sqlString).Scan(&product.ID, &product.Name); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return product, nil
+}
+
+func (s *Storage) createProduct(productName string) (*types.Product, error) {
+	sqlString := fmt.Sprintf("insert into product(name, description, creator, create_at) values('%s', '%s', '%s', '%s')",
+		productName, "auto create by cfc", "cfc", time.Now().Format("2006-01-02 15:04:05"))
+	lg.Info(sqlString)
+	product := &types.Product{
+		Name: productName,
+	}
+	var productID int
+	res, err := s.Exec(sqlString)
+	if err != nil {
+		return nil, err
+	}
+	id64, err := res.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+	productID = int(id64)
+	product.ID = productID
+	return product, nil
+}
+
+func (s *Storage) addHostToProduct(hostID string, productID int) error {
+	sqlString := fmt.Sprintf("insert ignore into product_host(product_id, host_id) values(%d, '%s')", productID, hostID)
+	lg.Info(sqlString)
+	if _, err := s.Exec(sqlString); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Storage) getProductHostGroup(productID int, groupName string) (*types.Group, error) {
+	group := &types.Group{}
+	sqlString := fmt.Sprintf("select id, name from host_group where name='%s' and product_id=%d", groupName, productID)
+	lg.Info(sqlString)
+	if err := s.QueryRow(sqlString).Scan(&group.ID, &group.Name); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return group, nil
+}
+
+func (s *Storage) createProductHostGroup(productID int, groupName string) (*types.Group, error) {
+	now := time.Now().Format(timeFomart)
+	sqlString := fmt.Sprintf("insert into host_group(name,description,creator,create_at, update_at, product_id) "+
+		" values('%s', '%s', '%s', '%s', '%s', %d)",
+		groupName, "auto_create_by_cfc", "cfc", now, now, productID)
+	lg.Info(sqlString)
+	res, err := s.Exec(sqlString)
+	if err != nil {
+		return nil, err
+	}
+	id64, err := res.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+	return &types.Group{
+		ID:   int(id64),
+		Name: groupName,
+	}, nil
+}
+
+func (s *Storage) addHost2Group(groupID int, hostID string) error {
+	sqlString := fmt.Sprintf("insert ignore into host_group_host(host_id, host_group_id) values('%s', %d)", hostID, groupID)
+	lg.Info(sqlString)
+	if _, err := s.Exec(sqlString); err != nil {
+		return err
+	}
+	return nil
+}

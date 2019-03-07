@@ -81,9 +81,6 @@ func (c *OpenTsdbClient) newQueryParams(start, end, rawTags, aggregator, metric 
 		tagsPairs := strings.Split(rawTags, ",")
 		for _, tagPair := range tagsPairs {
 			tagKV := strings.Split(tagPair, "=")
-			if tagKV[1] == "all" {
-				tagKV[1] = "*"
-			}
 			tags[tagKV[0]] = tagKV[1]
 		}
 	}
