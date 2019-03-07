@@ -69,12 +69,16 @@ func (this *Repeater) Forward() {
 		for index, b := range this.backend {
 			for {
 				if err = b.Write(tsd); err == nil {
+					lg.Notice("forward to %s %v", GlobalConfig.Backend[index], *tsd)
 					break
 				}
-				lg.Error("write backend %s failed, error:%s", GlobalConfig.Backend[index], err)
+				if GlobalConfig.BackendWriteFailedPolicy == SkippedPolicy {
+					lg.Error("write backend %s failed, error:%s, skipped", GlobalConfig.Backend[index], err)
+					break
+				}
+				lg.Error("write backend %s failed, error:%s, retry", GlobalConfig.Backend[index], err)
 				time.Sleep(time.Second * 5)
 			}
-			lg.Notice("forward to %s %v", GlobalConfig.Backend[index], *tsd)
 		}
 	}
 }
