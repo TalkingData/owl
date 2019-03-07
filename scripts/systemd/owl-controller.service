@@ -9,6 +9,7 @@ PIDFile=/usr/local/owl-controller/controller.pid
 Restart=always
 RestartSec=5
 StandardOutput=null
+LimitNOFILE=65535
 
 [Install]
 WantedBy=default.target

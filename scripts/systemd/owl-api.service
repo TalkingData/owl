@@ -8,6 +8,7 @@ Type=simple
 PIDFile=/usr/local/owl-api/api.pid
 Restart=always
 RestartSec=5
+LimitNOFILE=65535
 StandardOutput=null
 
 [Install]
