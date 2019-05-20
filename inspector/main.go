@@ -6,6 +6,7 @@ package main
 import (
 	"fmt"
 	"os"
+	chm "owl/common/chanMonitor"
 	"path/filepath"
 	"runtime"
 )
@@ -33,5 +34,9 @@ func main() {
 		fmt.Println("failed to init inspector:", err)
 		return
 	}
+
+	chm.AddNamed("inspector.resultPool.results", "owl-inspector", inspector.resultPool.results)
+	chm.AddNamed("inspector.taskPool.tasks", "owl-inspector", inspector.taskPool.tasks)
+	chm.New("owl-inspector", ":20001").Start()
 	select {}
 }
