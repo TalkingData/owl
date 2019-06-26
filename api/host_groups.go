@@ -61,10 +61,15 @@ func listNotInProductHostGroupHosts(c *gin.Context) {
 func listProductHostGroups(c *gin.Context) {
 	response := gin.H{"code": http.StatusOK}
 	defer c.JSON(http.StatusOK, response)
+	var username string
+	if c.DefaultQuery("my", "false") == "true" {
+		username = c.GetString("username")
+	}
 	total, hostGroups := mydb.getProductHostGroups(
 		c.GetInt("product_id"),
 		c.GetBool("paging"),
 		c.GetString("query"),
+		username,
 		c.GetString("order"),
 		c.GetInt("offset"),
 		c.GetInt("limit"),
