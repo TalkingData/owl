@@ -1551,13 +1551,14 @@ func (d *db) removeHostsFromProduct(productID int, ids []string) (err error) {
 }
 
 //获取产品线下的主机组
-func (d *db) getProductHostGroups(productID int, paging bool, query string, order string, offset, limit int) (int, []WarpHostGroup) {
+func (d *db) getProductHostGroups(productID int, paging bool, query string, user string, order string, offset, limit int) (int, []WarpHostGroup) {
 	var (
 		groups = make([]WarpHostGroup, 0)
 		err    error
 		cnt    int
+		rawSQL string
 	)
-	rawSQL := fmt.Sprintf("select hg.id, hg.name, hg.description, hg.creator, DATE_FORMAT(hg.create_at,'%s') as create_at,"+
+	rawSQL = fmt.Sprintf("select hg.id, hg.name, hg.description, hg.creator, DATE_FORMAT(hg.create_at,'%s') as create_at,"+
 		"DATE_FORMAT(hg.update_at,'%s') as update_at, count(distinct host_group_plugin.id) as plugin_cnt, "+
 		"count(distinct host_group_host.id) as host_cnt, count(distinct strategy_group.id) as strategy_cnt "+
 		" from host_group as hg left join host_group_plugin on hg.id = host_group_plugin.group_id left join host_group_host "+
@@ -1565,6 +1566,10 @@ func (d *db) getProductHostGroups(productID int, paging bool, query string, orde
 		" where hg.product_id=%d",
 		dbDateFormat, dbDateFormat, productID)
 	cntSQL := fmt.Sprintf("select count(*) from host_group where product_id = %d", productID)
+	if len(user) > 0 {
+		rawSQL = fmt.Sprintf("%s and hg.creator='%s'", rawSQL, user)
+		cntSQL = fmt.Sprintf("%s and creator='%s'", cntSQL, user)
+	}
 	if len(query) > 0 {
 		rawSQL = fmt.Sprintf("%s and hg.name like '%%%s%%'", rawSQL, query)
 		cntSQL = fmt.Sprintf("%s and name like '%%%s%%'", cntSQL, query)
