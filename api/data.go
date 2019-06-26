@@ -35,7 +35,7 @@ func queryTimeSeriesData(c *gin.Context) {
 	metric := c.Query("metric")
 	tags := c.Query("tags")
 	tagMap := types.ParseTags(tags)
-	if groupName, exist := tagMap["host_group"]; exist {
+	if groupNames, exist := tagMap["host_group"]; exist {
 		productIDStr, ok := c.GetQuery("product_id")
 		if !ok {
 			response["code"] = http.StatusNotFound
@@ -49,14 +49,21 @@ func queryTimeSeriesData(c *gin.Context) {
 			return
 		}
 		delete(tagMap, "host_group")
-		hostSet := getHostnameTagsFromProductGroup(productID, groupName)
+		var hostSet []string
+		for _, groupName := range strings.Split(groupNames, "|") {
+			hostSet = append(hostSet, getHostnameTagsFromProductGroup(productID, groupName)...)
+		}
 		if len(hostSet) == 0 {
 			response["code"] = http.StatusBadRequest
-			response["message"] = groupName + " has no host"
+			response["message"] = "all group has no host"
 			return
 		}
-
-		tagMap["host"] = strings.Join(hostSet, "|")
+		hosts := strings.Join(hostSet, "|")
+		// 如果存在 tag host， merge
+		if host, ok := tagMap["host"]; ok {
+			hosts = hosts + "|" + host
+		}
+		tagMap["host"] = hosts
 		tags = Tags2String(tagMap)
 	}
 
