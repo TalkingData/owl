@@ -450,7 +450,7 @@ func (d *db) GetAlarmRecords(eventID int64, order, limit string) (records []*Ala
 // GetTriggersRecords 获取报警事件下的表达式组
 func (d *db) GetTriggersRecords(eventID int64, count int) []*TriggerEventRecord {
 	triggers := []*TriggerEventRecord{}
-	rawSQL := "SELECT * FROM trigger_event_record WHERE strategy_event_id = ? AND count = ?"
+	rawSQL := "SELECT * FROM trigger_event_record WHERE strategy_event_id = ? AND count = ?  AND triggered=TRUE"
 	if err := d.Select(&triggers, rawSQL, eventID, count); err != nil {
 		log.Println(err)
 		return nil
