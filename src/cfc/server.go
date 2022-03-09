@@ -27,8 +27,8 @@ func InitCFC() error {
 func updatHostStatus() {
 	for {
 		for _, host := range mydb.getAllHosts() {
-			timeDiff := time.Now().Sub(host.UpdateAt).Seconds()
-			if timeDiff > 120 {
+			timeDiff := int(time.Now().Sub(host.UpdateAt).Seconds())
+			if timeDiff > GlobalConfig.CheckHostStatusIntervalSecs {
 				if host.IsAlive() {
 					lg.Info("set host(%s %s) status down, time difference:%0.2fs", host.IP, host.Hostname, timeDiff)
 					mydb.setHostAlive(host.ID, "0")

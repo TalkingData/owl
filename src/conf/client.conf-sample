@@ -1,0 +1,30 @@
+tcp_bind=127.0.0.1:10000
+metric_bind=127.0.0.1:10001
+
+cfc_addr=127.0.0.1:10020
+repeater_addr=127.0.0.1:10040
+
+buffer_size=100000
+report_metric_interval_minutes = 5
+
+#max_packet_size为0表示不限制包大小
+max_packet_size=0
+
+
+#meta_data = key1=val2,key2=val2
+
+plugin_dir = /usr/local/owl-plugin
+
+log_file=./logs/client.log
+log_expire_days=7
+log_level=7
+
+#日志设置
+#Emergency    -> 0
+#Alert        -> 1
+#Critical     -> 2
+#Error        -> 3
+#Warning      -> 4
+#Notice       -> 5
+#Info         -> 6
+#Debug        -> 7
