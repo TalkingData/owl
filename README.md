@@ -20,7 +20,7 @@
 - 自带 web 管理界面以及强大的自定义图表功能能
 
 ## Architecture
-![owl](./arch.png)
+![owl](./arch.jpg)
 
 
 ## Components
