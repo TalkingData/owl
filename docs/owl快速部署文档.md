@@ -6,6 +6,7 @@ kairosdb可以基于内存、cassandra、hbse等，演示建议使用内存存�
 
 ​
 cassandra:http://cassandra.apache.org/doc/latest/getting_started/installing.html#installation-from-binary-tarball-files
+- !!出于性能考虑，生产环境中我们建议您使用scyllDB，而非c*
 
 ​ Kairosdb: https://kairosdb.github.io/docs/build/html/GettingStarted.html#using-with-cassandra
 
