@@ -28,3 +28,7 @@
 # Others
 *.swp
 *.lock
+
+# Output files
+output/
+dist/
