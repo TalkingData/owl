@@ -1,0 +1,31 @@
+tcp_bind=0.0.0.0:10050
+http_server=0.0.0.0:10051
+
+mysql_addr=127.0.0.1:3306
+mysql_user=root
+mysql_dbname=owl
+mysql_password=""
+mysql_max_conn=20
+mysql_max_idle_conn=5
+
+log_file=./logs/controller.log
+log_expire_days=7
+log_level=7
+
+max_packet_size=409600
+load_strategies_interval=300
+task_pool_size=409600
+result_pool_size=409600
+event_pool_size = 1024
+task_size=100
+worker_count=20
+
+#日志设置
+#Emergency    -> 0
+#Alert        -> 1
+#Critical     -> 2
+#Error        -> 3
+#Warning      -> 4
+#Notice       -> 5
+#Info         -> 6
+#Debug        -> 7

@@ -19,6 +19,7 @@ const (
 	DefaultPluginDir                     = "./plugins"
 	DefaultCleanupExpiredMetricsInterval = 10
 	DefaultMetricExpiredCycle            = 10
+	DefaultCheckHostStatusIntervalSecs   = 60
 )
 
 var GlobalConfig *Config
@@ -47,6 +48,8 @@ type Config struct {
 	MetricExpiredCycle                  int //metric 过期时间
 	EnableCleanupExpiredMetric          bool
 	AutoCreateProduct                   bool
+
+	CheckHostStatusIntervalSecs int
 }
 
 func InitGlobalConfig() error {
@@ -70,9 +73,10 @@ func InitGlobalConfig() error {
 		PluginDir:        cfg.MustValue(goconfig.DEFAULT_SECTION, "plugin_dir", DefaultPluginDir),
 		CleanupExpiredMetricIntervalMinutes: cfg.MustInt(goconfig.DEFAULT_SECTION, "cleanup_expired_metric_interval",
 			DefaultCleanupExpiredMetricsInterval),
-		MetricExpiredCycle:         cfg.MustInt(goconfig.DEFAULT_SECTION, "metric_expired_cycle", DefaultMetricExpiredCycle),
-		EnableCleanupExpiredMetric: cfg.MustBool(goconfig.DEFAULT_SECTION, "enable_cleanup_expired_metric", false),
-		AutoCreateProduct:          cfg.MustBool(goconfig.DEFAULT_SECTION, "auto_create_product", false),
+		MetricExpiredCycle:          cfg.MustInt(goconfig.DEFAULT_SECTION, "metric_expired_cycle", DefaultMetricExpiredCycle),
+		EnableCleanupExpiredMetric:  cfg.MustBool(goconfig.DEFAULT_SECTION, "enable_cleanup_expired_metric", false),
+		AutoCreateProduct:           cfg.MustBool(goconfig.DEFAULT_SECTION, "auto_create_product", false),
+		CheckHostStatusIntervalSecs: cfg.MustInt(goconfig.DEFAULT_SECTION, "check_host_status_interval_secs", DefaultCheckHostStatusIntervalSecs),
 	}
 	return nil
 }
