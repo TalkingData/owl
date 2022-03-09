@@ -6,13 +6,13 @@ repeater_addr=127.0.0.1:10040
 collect_interval = 60
 legal_prefix = Gi,Et
 
-max_packet_size = 20480
+max_packet_size = 655350
 
-buffer_size = 10240
+buffer_size = 655350
 
 log_dir = ./logs
-log_level = 7
-log_expire_days = 1
+log_expire_days = 3
+log_level = 4
 
 snmp_port = 161
 snmp_version=2c

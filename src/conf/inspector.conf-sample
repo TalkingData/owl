@@ -1,12 +1,12 @@
 controller_addr=127.0.0.1:10050
 
 log_file=./logs/inspector.log
-log_expire_days=7
-log_level=7
+log_expire_days=3
+log_level=4
 
-max_packet_size=409600
-max_task_buffer=4096
-max_result_buffer=4096
+max_packet_size=655350
+max_task_buffer=655350
+max_result_buffer=655350
 worker_count=5
 
 tsdb_addr=127.0.0.1:8080
