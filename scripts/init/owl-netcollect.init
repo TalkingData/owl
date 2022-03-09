@@ -16,7 +16,7 @@
 . /etc/init.d/functions
 
 # Maximum number of open files
-MAX_OPEN_FILES=65535
+MAX_OPEN_FILES=655350
 
 # Default program options
 USER=root
