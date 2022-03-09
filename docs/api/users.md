@@ -1,12 +1,13 @@
 ## Users
 
-
 #### 1、获取用户列表
+
 ```
 GET /api/v1/users
 ```
 
 __Example request:__
+
 ```
 GET  /api/v1/users HTTP/1.1
 ```
@@ -69,17 +70,18 @@ __Query parameters:__
 + `q`:查询字符串,支持用户名名,手机号,微信号,邮箱地址过滤
 + `group_id`: 查询指定组下的用户, 不指定则为所有用户
 + `status`: 根据状态查询, 不指定表示所有状态
-+  `hasNull`: 非零值表示过滤出手机号,邮箱地址,微信有空值的用户,默认不过滤
++ `hasNull`: 非零值表示过滤出手机号,邮箱地址,微信有空值的用户,默认不过滤
 
 <br/>
 
-
 #### 2、创建用户
+
 ```
 PUT /api/v1/users HTTP/1.1
 ```
 
 __Example request:__
+
 ```
 PUT  /api/v1/users  HTTP/1.1
 Content-Type: application/json
@@ -101,6 +103,7 @@ Content-Type: application/json
 ```
 
 __Example response:__
+
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -127,10 +130,13 @@ Content-Type: application/json
 ```
 
 #### 3、更新主机组
+
 ```
 POST /api/v1/groups  HTTP/1.1
 ```
+
 __Example request:__
+
 ```
 POST  /api/v1/groups  HTTP/1.1
 Content-Type: application/json
@@ -153,6 +159,7 @@ Content-Type: application/json
 ```
 
 __Example response:__
+
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -179,10 +186,13 @@ Content-Type: application/json
 ```
 
 #### 4、删除主机组
+
 ```
 DELETE /api/v1/groups/:id  HTTP/1.1
 ```
+
 __Example request:__
+
 ```
 DELETE  /api/v1/groups/8  HTTP/1.1
 Content-Type: application/json
@@ -191,6 +201,7 @@ Content-Type: application/json
 ```
 
 __Example response:__
+
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json

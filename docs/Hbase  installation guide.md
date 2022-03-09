@@ -1,5 +1,6 @@
-﻿#  Hbase 基础与集群部署
+﻿# Hbase 基础与集群部署
 ------
+
     环境描述：
     System      :      Centos 7.1 x64
     Hbase       :       1.1.2
@@ -8,7 +9,7 @@
 ## ZooKeeper
 
 ### zookeeper作用
-    
+
     可以用来保证数据在zk集群之间的数据的事务性一致。
 
     如何搭建ZooKeeper服务器集群
@@ -17,12 +18,15 @@
     在conf目录下，修改文件 vi zoo_sample.cfg  zoo.cfg
     编辑该文件，执行vi zoo.cfg
     修改dataDir=/usr/local/zookpeer/zk_data
+
 新增
+
 ```python
    server.0=hadoop0:2888:3888
    server.1=hadoop1:2888:3888
    server.2=hadoop2:2888:3888
 ```
+
     创建文件夹mkdir /usr/local/zookpeer/zk_data
     在data目录下，创建文件myid，值为0
     把zk目录复制到hadoop1和hadoop2中
@@ -34,6 +38,7 @@
 ## Hbase 基础
 
 ### HBase(NoSQL)的数据模型
+
     表(table)，是存储管理数据的。
     行键(row key)，类似于MySQL中的主键。
     行键是HBase表天然自带的。 
@@ -47,7 +52,6 @@
     如果不指定时间戳或者版本，默认取最新的数据。
     存储的数据都是字节数组。
     表中的数据是按照行键的顺序物理存储的。
-
 
 ### HBase的物理模型
 
@@ -63,11 +67,14 @@
     HBase伪分布安装
     解压缩、重命名、设置环境变量
     修改$HBASE_HOME/conf/hbase-env.sh，修改内容如下：
+
 ```python
     export JAVA_HOME=/usr/local/jdk
     export HBASE_MANAGES_ZK=true
 ```
+
     修改$HBASE_HOME/conf/hbase-site.xml，修改内容如下：
+
 ```python
 <property>
         <name>hbase.rootdir</name>
@@ -89,6 +96,7 @@
         <value>1</value>
 </property>
 ```
+
     (可选)文件regionservers的内容为hadoop0
     启动hbase，执行命令start-hbase.sh
     ******启动hbase之前，确保hadoop是运行正常的，并且可以写入文件*******
@@ -97,9 +105,8 @@
     (1)执行jps，发现新增加了3个java进程，分别是HMaster、HRegionServer、HQuorumPeer 
     (2)使用浏览器访问http://hadoop0:16010
 
+## Hbase集群
 
-
-##  Hbase集群
     hbase的机群搭建过程(在原来的hadoop0上的hbase伪分布基础上进行搭建)
     集群结构，主节点(hmaster)是hadoop0，从节点(region server)是hadoop1和hadoop2
     
@@ -111,6 +118,7 @@
     复制hadoop0中的/etc/profile到hadoop1、hadoop2中，在hadoop1、hadoop2上执行source /etc/profile
     首先启动hadoop，然后启动zookeeper集群。
     最后在hadoop0上启动hbase集群。
+
 ```python
 [hadoop@master ~]$ start-hbase.sh
 ```

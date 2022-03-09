@@ -1,12 +1,13 @@
-#                 **OWL快速部署文档 v5.0.0**
+# **OWL快速部署文档 v5.0.0**
 
 #### 1. Kairosdb
 
 kairosdb可以基于内存、cassandra、hbse等，演示建议使用内存存储，生产建议使用cassandra，安装部署请参考官方文档。
 
-​	cassandra:http://cassandra.apache.org/doc/latest/getting_started/installing.html#installation-from-binary-tarball-files
+​
+cassandra:http://cassandra.apache.org/doc/latest/getting_started/installing.html#installation-from-binary-tarball-files
 
-​	Kairosdb: https://kairosdb.github.io/docs/build/html/GettingStarted.html#using-with-cassandra
+​ Kairosdb: https://kairosdb.github.io/docs/build/html/GettingStarted.html#using-with-cassandra
 
 #### 2. MySQL
 
@@ -24,8 +25,6 @@ mysql> source owl-5.0.0.sql;
 mysql> INSERT INTO `user` (username, password, role, status) VALUES ('admin', '21232f297a57a5a743894a0e4a801fc3', 1, 1);
 mysql> exit;
 ```
-
-
 
 #### 3. cfc
 
@@ -46,9 +45,7 @@ mysql_password=
 netstat -nltp | grep 10020  
 ```
 
-
-
-####4. repeater
+#### 4. repeater
 
 ```shell
 #安装
@@ -65,8 +62,6 @@ opentsdb_addr=127.0.0.1:4242  #修改为kairosdb安装的主机地址
 #检查服务
 netstat -nltp | grep repeater
 ```
-
-
 
 #### 5. api
 
@@ -109,8 +104,6 @@ kairosdb_addr=127.0.0.1:8080
 netstat -nltp | grep api
 ```
 
-
-
 #### 6. controller
 
 ```shell
@@ -131,8 +124,6 @@ mysql_password=
 #检查服务
 netstat -nltp | grep controller
 ```
-
-
 
 #### 7. inspector
 
@@ -156,8 +147,6 @@ tsdb_addr=127.0.0.1:8080
 ps -ef | grep inspector
 ```
 
-
-
 #### 8. client
 
 ```shell
@@ -179,10 +168,6 @@ ps -ef | grep client
 #查看日志是否有错误输出
 tail /usr/local/owl-client/logs/client.log  
 ```
-
-
-
-
 
 #### 9. frontend
 

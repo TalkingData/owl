@@ -1,12 +1,13 @@
 ## Groups
 
-
 #### 1、获取主机组列表
+
 ```
 GET /api/v1/groups
 ```
 
 __Example request:__
+
 ```
 GET  /api/v1/groups?q=data HTTP/1.1
 ```
@@ -34,13 +35,14 @@ __Query parameters:__
 
 <br/>
 
-
 #### 2、创建主机组
+
 ```
 PUT /api/v1/groups HTTP/1.1
 ```
 
 __Example request:__
+
 ```
 PUT  /api/v1/hosts/839787f0772e1a27/disable  HTTP/1.1
 Content-Type: application/json
@@ -62,6 +64,7 @@ Content-Type: application/json
 ```
 
 __Example response:__
+
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -88,10 +91,13 @@ Content-Type: application/json
 ```
 
 #### 3、更新主机组
+
 ```
 POST /api/v1/groups  HTTP/1.1
 ```
+
 __Example request:__
+
 ```
 POST  /api/v1/groups  HTTP/1.1
 Content-Type: application/json
@@ -114,6 +120,7 @@ Content-Type: application/json
 ```
 
 __Example response:__
+
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -140,10 +147,13 @@ Content-Type: application/json
 ```
 
 #### 4、删除主机组
+
 ```
 DELETE /api/v1/groups/:id  HTTP/1.1
 ```
+
 __Example request:__
+
 ```
 DELETE  /api/v1/groups/8  HTTP/1.1
 Content-Type: application/json
@@ -152,6 +162,7 @@ Content-Type: application/json
 ```
 
 __Example response:__
+
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
