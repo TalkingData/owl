@@ -3,22 +3,28 @@
 *.a
 *.so
 
-# Folders
-_obj
-_test
+# Mac OS
+.DS_Store
 
-# Architecture specific extensions/prefixes
-*.[568vq]
-[568vq].out
+# Redis db
+*.rdb
 
-*.cgo1.go
-*.cgo2.c
-_cgo_defun.c
-_cgo_gotypes.go
-_cgo_export.*
+# db
+*.db
 
-_testmain.go
+# CSV files
+*.csv
 
-*.exe
-*.test
-*.prof
+# Configs
+*.conf
+
+# IDE files
+.idea
+.vscode/
+
+# Log files
+*.log
+
+# Others
+*.swp
+*.lock

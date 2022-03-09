@@ -46,14 +46,6 @@
 **frontend**：web 管理页面，可以方便的进行系统管理维护工作
 
 
-## Demo
-
-http://54.223.127.87/
-
-普通用户：demo/demo </br>
-管理员：admin/111111 </br>
-注: demo 环境数据库每隔 1 个小时会自动恢复
-
 ## rpm包地址
 https://pan.baidu.com/s/1UTYOOB8YE8nng0guXOXkmg#list/path=%2Fowl
 
