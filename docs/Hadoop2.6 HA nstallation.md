@@ -2,13 +2,16 @@
 ----
 
     环境描述：
+
 ```python
 System		：  Centos 7.1 x64
 Hadoop		:   hadoop-2.6.0-cdh5.4.5
 Zookeeper   :   zookeeper-3.4.6
 JDK     	:       jdk1.7.0_80
 ```
+
     添加hosts记录：
+
 ```python
 10.10.3.179     hadoop0
 10.10.3.180     hadoop1
@@ -20,8 +23,8 @@ JDK     	:       jdk1.7.0_80
 	[root@hadoop0 ~]# ssh-keygen -t rsa
 	[root@hadoop0 ~]# cd .ssh/ ; cp id_rsa.pub authorized_keys
 
- Slave机器创建ssh目录 ： 
-        
+Slave机器创建ssh目录 ：
+
     [root@hadoop0 src]# mkdir -m 700 /root/.ssh
 
 将公钥复制到Slave机器上：
@@ -34,6 +37,7 @@ JDK     	:       jdk1.7.0_80
 
     添加环境变量
     [root@hadoop0 src]# more /etc/profile
+
 ```python
 export JAVA_HOME=/usr/java/jdk1.7.0_80
 export HADOOP_HOME=/usr/local/hadoop
@@ -41,8 +45,9 @@ export ZOOKEEPER_HOME=/usr/local/zookpeer
 PATH=/usr/local/cassandra/bin:$JAVA_HOME/bin:$ZOOKEEPER_HOME/bin:$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$PATH
 CLASSPATH=.:$JAVA_HOME/lib/dt.jar:$ZOOKEEPER_HOME/lib:$JAVA_HOME/lib/tools.jar
 ```
+
 ## 安装zookeeper
-    
+
     zookeeper具体安装过程请见hbase集群部署文档。
 
 ## 安装hadoop集群
@@ -82,7 +87,9 @@ export JAVA_HOME=/usr/local/jdk1.7.0_80
 </property>
 </configuration>
 ```
+
     [root@hadoop0 hadoop]# more hdfs-site.xml 
+
 ```python
 <configuration>
 <property>
@@ -177,7 +184,9 @@ export JAVA_HOME=/usr/local/jdk1.7.0_80
 </property>  
 </configuration>
 ```
+
     [root@hadoop0 hadoop]# more mapred-site.xml
+
 ```python
 <configuration>
 <property>
@@ -202,7 +211,9 @@ export JAVA_HOME=/usr/local/jdk1.7.0_80
 </property>
 </configuration>
 ```
+
     [root@hadoop0 hadoop]# more yarn-site.xml
+
 ```python
 <configuration>
  <property>
@@ -235,32 +246,44 @@ export JAVA_HOME=/usr/local/jdk1.7.0_80
 </property>
 </configuration>
 ```
+
     [root@hadoop0 hadoop]# more slaves
+
 ```python
 hadoop1
 hadoop2
 ```
+
     创建数据存储目录：
+
 ```python
 [root@hadoop0 hadoop]# mkdir -p /usr/local/hadoop/{nn，journal}
 ```
+
     将修改好的hadoop目录拷贝到各个节点：
+
 ```python
 [root@hadoop0 local]# scp -r hadoop hadoop1:/usr/local/
 为datanode节点创建数据目录：
 [root@hadoop0 sbin]# ./slaves.sh mkdir /data{0,1,2}/dfs/
 ```
+
     拷贝系统/环境变量到各个服务器：
+
 ```python
 [root@hadoop0 ~]# scp /etc/hosts /etc/profile hadoop1:/etc/
 [root@hadoop0 ~]# hdfs zkfc -formatZK
 ```
+
     第一次启动格式化HDFS
+
 ```python
 [root@hadoop0 ~]# hdfs namenode -format
 ```
+
     启动hdfs服务：
     通过start-dfs.sh 直接启动所有服务:
+
 ```python
 [root@hadoop0 sbin]# ./start-dfs.sh 
 [root@hadoop0 sbin]# jps
@@ -269,20 +292,25 @@ hadoop2
 18174 DFSZKFailoverController
 17595 NameNode
 ```
+
     访问 http://hadoop0:50070 会看到该节点已经成为active
     下面需要同步一次元数据：
+
 ```python
 [root@hadoop0 sbin]# hdfs namenode -bootstrapStandby
 ```    
+
     访问 http://hadoop1:50070/dfshealth.html#tab-overview  会看到该节点已经成为standby。
     
     然后kill掉hadoop0上的active NN进程，standby NN会成为active
     注意：手动切换时，会提示下面警告。所以一般在启动zkfc的情况下也无需进行切换。
+
 ```python
 [root@hadoop0 sbin]# hdfs haadmin -transitionToActive nn1
 ```
 
     启动yarn服务：
+
 ```python
 [root@hadoop1 sbin]# ./start-yarn.sh 
 

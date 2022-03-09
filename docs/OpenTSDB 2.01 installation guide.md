@@ -8,7 +8,7 @@
     OpenTSDB  :   OpenTSDB-2.0.1
     
     lzo压缩依赖包安装：
-    
+
 ```python
 yum -y install ant ant-nodeps lzo-devel
 git clone git://github.com/cloudera/hadoop-lzo.git 
@@ -21,25 +21,32 @@ cp -a build/hadoop-lzo-0.4.14/lib/native/* $hbasedir/lib/native
 ```
 
 ## HBase 安装
+
     OpenTSDB依赖于HBase作为底层存储，所以需要先安装HBase。
     hbase具体安装过程请见hbase集群部署文档。
 
 ## OpenTSDB安装
+
     我们选择源代码安装，需要做好心理准备，非常非常久。
+
 ```python
 git clone git://github.com/OpenTSDB/opentsdb.git
 cd opentsdb
 ./build.sh
 ```
+
     后来发现其实是因为OpenTSDB在build时候去maven中央仓库拉取第三方jar包，它不是通过标准的pom.xml指定依赖，所以即使你有本地setting.xml也没有生效。解决方案是修改maven地址：/Users/argan/tools/opentsdb/third_party /的所有include.mk文件中。
     
     Build成功之后可以将其make install到系统目录，不过这个是可选的。
     然后就要建表： 
+
 ```python
     env COMPRESSION=NONE HBASE_HOME=/home/hadoop/apache/hbase     
     ./src/create_table.sh
 ```
+
 显示信息：
+
 ```python
 HBase Shell; enter 'help<RETURN>' for list of supported commands.
 Type "exit<RETURN>" to leave the HBase Shell
@@ -64,6 +71,7 @@ Hbase::Table - tsdb-meta
 ```
 
     OK，现在我们可以准备启动TSD了。不过在这之前，我们需要配置一下OpenTSDB先 configuration ：
+
 ```python
 > 将 src/opentsdb.conf 拷贝到如下目录之一： 
 •	./opentsdb.conf 
@@ -73,7 +81,8 @@ Hbase::Table - tsdb-meta
 ```
 
 ---
->然后配置如下四个必须配置项： 
+> 然后配置如下四个必须配置项：
+
 ```python
 •	tsd.network.port=4242 
 •	tsd.http.cachedir=/tmp/tsd - Path to write temporary files to 
@@ -81,15 +90,19 @@ Hbase::Table - tsdb-meta
 •	tsd.storage.hbase.zk_quorum=localhost - A comma separated list of Zookeeper hosts to connect to, default is "localhost". If HBase and Zookeeper are not running on the same machine, specify the host and port here. 
 •	tsd.core.auto_create_metrics=True - Whether or not to automatically create UIDs for new metric types, default is False. 建议打开。 
 ```
+
 ```python
 mkdir –p /tmp/tsd 
 ```
 
-然后就可以简单启动TSD了： 
+然后就可以简单启动TSD了：
+
 ```python
 ./build/tsdb tsd
 ```
+
 当然，你也可以通过命令行指定（会覆盖opentsdb.conf的配置）：
+
 ```python
 Usage: tsd --port=PORT --staticroot=PATH --cachedir=PATH
 Starts the TSD, the Time Series Daemon
@@ -116,6 +129,7 @@ mkdir -p "$tsdtmp"             # your temporary directory uses tmpfs
     然后就可以通过 http://127.0.0.1:4242 访问TSD的web界面了
 
 通过http接口 写入数据
+
 ```python
 [root@master opentsdb]# curl -i  -H "Content-Type: application/json" -X POST -d '{"metric": "sys.cpu.nice", "timestamp": 1433989867597,"value": 18, "tags": { "host": "web01"}}' http://10.10.3.179:4242/api/put/?details               
 HTTP/1.1 200 OK
@@ -124,4 +138,5 @@ Content-Length: 36
 
 {"errors":[],"failed":0,"success":1}[root@master opentsdb]#
 ```
+
 然后就可以通过 http://127.0.0.1:4242 访问TSD的web界面了

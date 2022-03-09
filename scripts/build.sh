@@ -1,7 +1,7 @@
 #!/bin/bash
 
 pwd=`pwd`
-src="$pwd/.."
+src="$pwd/../src"
 output="$pwd/../output"
 
 function print_usage() {

@@ -1,12 +1,13 @@
 ## Hosts
 
-
 #### 1、获取主机列表
+
 ```
 GET /api/v1/hosts
 ```
 
 __Example request:__
+
 ```
 GET  /api/v1/hosts?page=1&pageSize=15&status=1&group_id=2&q=10.10.32.10  HTTP/1.1
 ```
@@ -74,12 +75,14 @@ __Query parameters:__
 
 <br/>
 
-
 #### 2、禁用主机
+
 ```
 POST /api/v1/hosts/host_id/disable  HTTP/1.1
 ```
+
 __Example request:__
+
 ```
 POST  /api/v1/hosts/839787f0772e1a27/disable  HTTP/1.1
 Content-Type: application/json
@@ -88,6 +91,7 @@ Content-Type: application/json
 ```
 
 __Example response:__
+
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -99,10 +103,13 @@ Content-Type: application/json
 ```
 
 #### 3、启用主机
+
 ```
 POST /api/v1/hosts/host_id/enable  HTTP/1.1
 ```
+
 __Example request:__
+
 ```
 POST  /api/v1/hosts/839787f0772e1a27/enable  HTTP/1.1
 Content-Type: application/json
@@ -111,6 +118,7 @@ Content-Type: application/json
 ```
 
 __Example response:__
+
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -122,10 +130,13 @@ Content-Type: application/json
 ```
 
 #### 4、重命名主机
+
 ```
 POST /api/v1/hosts/host_id/rename  HTTP/1.1
 ```
+
 __Example request:__
+
 ```
 POST  /api/v1/hosts/839787f0772e1a27/enable  HTTP/1.1
 Content-Type: application/json
@@ -136,6 +147,7 @@ Content-Type: application/json
 ```
 
 __Example response:__
+
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -146,12 +158,14 @@ Content-Type: application/json
 }
 ```
 
-
 #### 4、删除主机
+
 ```
 DELETE /api/v1/hosts/host_id  HTTP/1.1
 ```
+
 __Example request:__
+
 ```
 DELETE  /api/v1/hosts/839787f0772e1a27  HTTP/1.1
 Content-Type: application/json
@@ -160,6 +174,7 @@ Content-Type: application/json
 ```
 
 __Example response:__
+
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -170,8 +185,8 @@ Content-Type: application/json
 }
 ```
 
-
 #### 5、获取统计信息
+
 ```
 GET /api/v1/hosts/info  HTTP/1.1
 ```
@@ -179,6 +194,7 @@ GET /api/v1/hosts/info  HTTP/1.1
 > 包含主机数、主机组数、metric数
 
 __Example request:__
+
 ```
 GET  /api/v1/hosts/info  HTTP/1.1
 Content-Type: application/json
@@ -187,6 +203,7 @@ Content-Type: application/json
 ```
 
 __Example response:__
+
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -203,9 +220,8 @@ __Query parameters:__
 
 + `group_id`: 获取主机组下的统计信息
 
-
-
 #### 6、获取主机状态统计信息
+
 ```
 GET /api/v1/hosts/status  HTTP/1.1
 ```
@@ -213,6 +229,7 @@ GET /api/v1/hosts/status  HTTP/1.1
 > 包含正常、故障、禁用
 
 __Example request:__
+
 ```
 GET  /api/v1/hosts/status?group_id=2  HTTP/1.1
 Content-Type: application/json
@@ -221,6 +238,7 @@ Content-Type: application/json
 ```
 
 __Example response:__
+
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -238,8 +256,8 @@ __Query parameters:__
 
 + `group_id`: 获取主机组下的主机状态信息
 
-
 #### 6、获取主机下策略计数
+
 ```
 GET /api/v1/hosts/strategy/host_id  HTTP/1.1
 ```
@@ -247,11 +265,13 @@ GET /api/v1/hosts/strategy/host_id  HTTP/1.1
 > 包含全局策略数量、主机组策略数量、主机策略数量
 
 __Example request:__
+
 ```
 GET  /api/v1/hosts/strategy/839787f0772e1a27  HTTP/1.1
 ```
 
 __Example response:__
+
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -276,16 +296,19 @@ __Query parameters:__
 + `group_id`: 获取主机组下的主机状态信息
 
 #### 7、获取主机下metric列表
+
 ```
 GET /api/v1/hosts/metric/host_id  HTTP/1.1
 ```
 
 __Example request:__
+
 ```
 GET  /api/v1/hosts/metric/839787f0772e1a27  HTTP/1.1
 ```
 
 __Example response:__
+
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
