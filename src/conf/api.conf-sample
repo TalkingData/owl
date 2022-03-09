@@ -24,6 +24,6 @@ opentsdb_timeout=10
 #kairosdb_addr=127.0.0.1:8080
 
 log_file=./logs/api.log
-log_expire_days=7
-log_level=7
+log_expire_days=3
+log_level=4
 

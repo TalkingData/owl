@@ -14,12 +14,12 @@ repeater_addr=
 brokers = 
 topics = owl
 
-max_packet_size=4096
-buffer_size=1048576
+max_packet_size=655350
+buffer_size=6553500
 
 log_file=./logs/repeater.log
-log_expire_days=7
-log_level=7
+log_expire_days=3
+log_level=4
 
 
 #日志设置
