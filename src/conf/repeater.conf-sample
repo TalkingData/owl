@@ -1,4 +1,4 @@
-# opentsdb, repeater, kafka
+# opentsdb, repeater, kafka, rest-kairosdb
 backend=opentsdb
 tcp_bind=0.0.0.0:10040
 metric_bind=0.0.0.0:10041

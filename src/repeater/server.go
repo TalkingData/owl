@@ -38,6 +38,8 @@ func InitRepeater() error {
 			bk, err = backend.NewOpentsdbBackend(GlobalConfig.OpentsdbAddr)
 		case "kairosdb":
 			bk, err = backend.NewOpentsdbBackend(GlobalConfig.KairosdbAddr)
+		case "rest-kairosdb":
+			bk, err = backend.NewRestKairosdbBackend(GlobalConfig.RestKairosdbAddr)
 		case "repeater":
 			bk, err = backend.NewRepeaterBackend(GlobalConfig.RepeaterAddr)
 		case "kafka":
