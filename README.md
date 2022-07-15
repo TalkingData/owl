@@ -49,10 +49,6 @@
 
 **frontend**：web 管理页面，可以方便的进行系统管理维护工作
 
-
-## rpm包地址
-https://pan.baidu.com/s/1UTYOOB8YE8nng0guXOXkmg#list/path=%2Fowl
-
 ## 前端源码地址
 https://github.com/TalkingData/owl-frontend
 
