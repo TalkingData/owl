@@ -101,7 +101,7 @@ func cpuMetrics(cycle int) []*types.TimeSeriesData {
 			},
 			&types.TimeSeriesData{
 				Metric:    "system.cpu.softirq",
-				Value:     (v2.Softirq - v1.Stolen) / total * 100,
+				Value:     (v2.Softirq - v1.Softirq) / total * 100,
 				Cycle:     cycle,
 				Timestamp: ts,
 				DataType:  "GAUGE",
