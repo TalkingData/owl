@@ -19,38 +19,25 @@
 - 原始数据永久存储，支持发送到 opentsdb、kairosdb、kafka
 - 自带 web 管理界面以及强大的自定义图表功能能
 
-## Architecture
+## 什么是v6：
+- OWL v6是在v5版本上进行一定的组件优化、策略优化、协议优化后的兼容修订版本
 
-![owl](./arch.jpg)
-
-## Demo
-
-![demo](./docs/demo_1.png)
-
-## Components
-
-**agent**：安装在每台被监控机器上，用于采集监控数据
-
-**netcollect**：通过 SNMP V2 采集网络设备的接口数据
-
-**repeater**：接收 `agent` 发送过来的监控数据，并写入后端存储
-
-**cfc**：维护客户端需要执行的插件列表，主机名 、ip地址更新以及采集到的指标列表
-
-**controller**：从数据库加载告警策略，生成任务发送给 `inspector`，并且根据执行结果进行告警
-
-**inspector**：从 `controller` 获取监控任务，根据 `tsdb` 中的数据进行计算，并将结果返回 `controller`
-
-**api**：对外提供 http rest api接口，web 页面就是通过它来获取数据
-
-**MySQL**：所有配置信息的持久化存储，包含主机信息，告警策略，主机组，人员等
-
-**TSDB**：时序数据库(time seires database)，用于存储采集到的监控数据
-
-**frontend**：web 管理页面，可以方便的进行系统管理维护工作
-
-## 前端源码地址
-https://github.com/TalkingData/owl-frontend
-
-## QQ Group
-492850035
+## OWL V6 Roadmap && ChangeLogs
+- [x] Repeater通讯方式改用gRPC，使用context管理协程和服务；  
+- [x] CFC通讯方式改用gRPC，使用context管理协程和服务；  
+- [x] CFC操作数据库的方法被封装入dao层，同时加入gorm，解决v5版本中存在的数据库注入问题；
+- [x] Agent改用gRPC Client与CFC和Repeater通讯，使用context管理协程和服务；
+- [x] Agent内部库shirou/gopsutil更换为v3.22.6；
+  - [x] 修复对system.cpu.softirq采集逻辑的错误；
+  - [x] 不再支持采集内部指标：system.cpu.stolen；
+- [x] 移除Netcollect组件（计划后续采用agent的http上报方式替代）；
+- [ ] 使Proxy可同时具有CFC和Repeater的代理功能；
+- [ ] Agent支持使用http协议主动上报ts data方式；
+- [ ] Inspector与Controller组件业务逻辑优化（计划整合、支持分布式方式部署和运行）；
+- [ ] Api操作数据库的方法被封装入dao层，同时加入gorm，解决v5版本中存在的数据库注入问题；
+- [ ] 【Draft】增加对不同OS和Arch的支持；
+- [ ] host数据库表扩充OS和Arch字段，标识Agent所在主机的操作系统和架构；
+- [ ] plugin库表扩充其支持的OS和Arch字段；
+- [ ] 处理Agent发来的插件下载请求时，CFC会根据其OS和Arch做出相应下载返回；
+- [ ] Proxy组件更新并适配此功能；
+- [ ] 【Draft】Agent改为只与Proxy通讯，Proxy利用服务注册机制寻找CFC和Repeater并做相应负载均衡策略；
