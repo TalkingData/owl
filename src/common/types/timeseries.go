@@ -43,17 +43,17 @@ type TimeSeriesData struct {
 	Tags      map[string]string `json:"tags"` //{"product":"app01", "group":"dev02"}
 }
 
-func (m *TimeSeriesData) Validate() error {
-	if !MetricReg.MatchString(m.Metric) || m.Metric == "" {
-		return fmt.Errorf("invalid metric %s, must complie %s", m.Metric, MetricReg)
+func (tsData *TimeSeriesData) Validate() error {
+	if !MetricReg.MatchString(tsData.Metric) || tsData.Metric == "" {
+		return fmt.Errorf("invalid metric %s, must complie %s", tsData.Metric, MetricReg)
 	}
-	switch strings.ToLower(m.DataType) {
+	switch strings.ToLower(tsData.DataType) {
 	case "gauge", "counter", "derive":
 	default:
-		return fmt.Errorf("invalid data type %s, only allowed [gauge, counter, derive]", m.DataType)
+		return fmt.Errorf("invalid data type %s, only allowed [gauge, counter, derive]", tsData.DataType)
 	}
 	//check tags
-	for tagk, tagv := range m.Tags {
+	for tagk, tagv := range tsData.Tags {
 		if !TagkReg.MatchString(tagk) {
 			return fmt.Errorf("invalid tag key %s, must complie %s", tagk, TagkReg)
 		}
@@ -64,81 +64,81 @@ func (m *TimeSeriesData) Validate() error {
 	return nil
 }
 
-func (tsd *TimeSeriesData) Encode() []byte {
-	data, _ := json.Marshal(tsd)
+func (tsData *TimeSeriesData) Encode() []byte {
+	data, _ := json.Marshal(tsData)
 	return data
 }
 
-func (tsd *TimeSeriesData) Decode(data []byte) error {
-	return json.Unmarshal(data, &tsd)
+func (tsData *TimeSeriesData) Decode(data []byte) error {
+	return json.Unmarshal(data, &tsData)
 }
 
-func (tsd TimeSeriesData) String() string {
+func (tsData TimeSeriesData) String() string {
 	return fmt.Sprintf("{metric:%s, data_type:%s, value:%.2f, time:%d, cycle:%d, tags:%s}",
-		tsd.Metric,
-		tsd.DataType,
-		tsd.Value,
-		tsd.Timestamp,
-		tsd.Cycle,
-		tsd.Tags2String(),
+		tsData.Metric,
+		tsData.DataType,
+		tsData.Value,
+		tsData.Timestamp,
+		tsData.Cycle,
+		tsData.Tags2String(),
 	)
 }
 
-func (tsd *TimeSeriesData) Tags2String() string {
-	if len(tsd.Tags) == 0 {
+func (tsData *TimeSeriesData) Tags2String() string {
+	if len(tsData.Tags) == 0 {
 		return ""
 	}
-	taglen := len(tsd.Tags)
-	keys := make([]string, taglen)
+	tagLen := len(tsData.Tags)
+	keys := make([]string, tagLen)
 	i := 0
-	for k := range tsd.Tags {
+	for k := range tsData.Tags {
 		keys[i] = k
 		i++
 	}
 	sort.Strings(keys)
 	ret := ""
 	for _, k := range keys {
-		ret += fmt.Sprintf("%s=%s,", strings.TrimSpace(k), strings.TrimSpace(tsd.Tags[k]))
+		ret += fmt.Sprintf("%s=%s,", strings.TrimSpace(k), strings.TrimSpace(tsData.Tags[k]))
 	}
 	return strings.Trim(ret, ",")
 }
 
-func (tsd *TimeSeriesData) PK() string {
-	return fmt.Sprintf("%s.%s", tsd.Metric, tsd.Tags2String())
+func (tsData *TimeSeriesData) PK() string {
+	return fmt.Sprintf("%s.%s", tsData.Metric, tsData.Tags2String())
 }
 
-func (tsd *TimeSeriesData) GetMetric() string {
-	metric := tsd.Metric
-	if len(tsd.Tags2String()) > 0 {
-		metric = fmt.Sprintf("%s/%s", metric, tsd.Tags2String())
+func (tsData *TimeSeriesData) GetMetric() string {
+	metric := tsData.Metric
+	if len(tsData.Tags2String()) > 0 {
+		metric = fmt.Sprintf("%s/%s", metric, tsData.Tags2String())
 	}
 	return metric
 }
 
-func (tsd *TimeSeriesData) AddTags(tags map[string]string) {
-	if tsd.Tags == nil {
-		tsd.Tags = tags
+func (tsData *TimeSeriesData) AddTags(tags map[string]string) {
+	if tsData.Tags == nil {
+		tsData.Tags = tags
 		return
 	}
 	for k, v := range tags {
-		tsd.Tags[k] = v
+		tsData.Tags[k] = v
 	}
 }
 
-func (tsd *TimeSeriesData) AddTag(tagk, tagv string) {
-	tsd.Tags[tagk] = tagv
+func (tsData *TimeSeriesData) AddTag(tagk, tagv string) {
+	tsData.Tags[tagk] = tagv
 }
 
-func (tsd *TimeSeriesData) HasTag(tagk string) bool {
-	_, exist := tsd.Tags[tagk]
+func (tsData *TimeSeriesData) HasTag(tagk string) bool {
+	_, exist := tsData.Tags[tagk]
 	return exist
 }
 
-func (tsd *TimeSeriesData) RemoveTag(tagk string) {
-	if tsd.Tags == nil {
+func (tsData *TimeSeriesData) RemoveTag(tagk string) {
+	if tsData.Tags == nil {
 		return
 	}
-	delete(tsd.Tags, tagk)
+	delete(tsData.Tags, tagk)
 }
 
 //tag1=v1,tag2=v2,tag3=v3

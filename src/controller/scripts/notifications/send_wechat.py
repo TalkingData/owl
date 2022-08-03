@@ -55,7 +55,7 @@ def send(receiver, content, token):
         data = json.dumps(data, ensure_ascii=False).encode("utf-8")
         response = urllib2.urlopen(url, data)
         result  = json.loads(response.read())
-        if result["errcode"] != 0 or result["invaliduser"] != "" or result["errmsg"] != "ok":
+        if result["errcode"] != 0 or result.get("invaliduser") or result["errmsg"] != "ok":
             return False, result
     except Exception as e:
         return False, e

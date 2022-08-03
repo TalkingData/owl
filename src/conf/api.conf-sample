@@ -4,7 +4,7 @@ public_key=./certs/owl-api.key.pub
 private_key =./certs/owl-api.key
 
 auth_type=mysql
-#单位天
+# 单位天
 token_expired=7
 
 alarm_health_check_url=http://127.0.0.1:10051
@@ -16,14 +16,23 @@ mysql_password=
 mysql_max_conn=20
 mysql_max_idle_conn=5
 
-#timeseirs_storage 支持opentsdb和kairosdb，默认opentsdb
+# timeseirs_storage 支持opentsdb和kairosdb，默认opentsdb
 timeseirs_storage=opentsdb
 opentsdb_addr=127.0.0.1:4242
 opentsdb_timeout=10
 
-#kairosdb_addr=127.0.0.1:8080
+# kairosdb_addr=127.0.0.1:8080
 
 log_file=./logs/api.log
 log_expire_days=3
 log_level=4
 
+# 日志设置
+# Emergency    -> 0
+# Alert        -> 1
+# Critical     -> 2
+# Error        -> 3
+# Warning      -> 4
+# Notice       -> 5
+# Info         -> 6
+# Debug        -> 7

@@ -2,37 +2,85 @@ package main
 
 import (
 	"fmt"
-	"net/http"
-	_ "net/http/pprof"
 	"os"
-	"path/filepath"
+	"os/signal"
+	"owl/common/logger"
+	"owl/repeater/component"
+	"owl/repeater/conf"
 	"runtime"
+	"syscall"
 )
 
-func init() {
-	os.Chdir(filepath.Dir(os.Args[0]))
-	os.Mkdir("logs", 0755)
-	runtime.GOMAXPROCS(runtime.NumCPU())
-}
+var (
+	repeater component.Component
+
+	repConf    *conf.Conf
+	repeaterLg *logger.Logger
+)
 
 func main() {
-	var err error
-	if err = InitGlobalConfig(); err != nil {
-		fmt.Println(err)
+	repeater = component.NewRepeaterComponent(repConf, repeaterLg)
+	if repeater == nil {
+		repeaterLg.ErrorWithFields(logger.Fields{
+			"error": fmt.Errorf("nil repeater error"),
+		}, "An error occurred while main.")
 		return
 	}
-	if err = InitLog(); err != nil {
-		fmt.Println("failed to init log.")
-		return
-	}
+
+	e := make(chan error)
 	go func() {
-		fmt.Printf("start metric interface %s\n", GlobalConfig.MetricBind)
-		fmt.Printf("%s\n", http.ListenAndServe(GlobalConfig.MetricBind, nil))
+		e <- repeater.Start()
 	}()
-	if err = InitRepeater(); err != nil {
-		lg.Error("init repeater error, %s", err)
-		return
+
+	// 等待退出信号
+	quit := make(chan os.Signal)
+	signal.Notify(quit, syscall.SIGKILL, syscall.SIGQUIT, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
+
+	for {
+		select {
+		case err := <-e:
+			if err != nil {
+				repeaterLg.ErrorWithFields(logger.Fields{
+					"error": err,
+				}, "An error occurred while repeater.Start.")
+			}
+			closeAll()
+			return
+		case sig := <-quit:
+			repeaterLg.InfoWithFields(logger.Fields{
+				"signal": sig.String(),
+			}, "Got quit signal.")
+			closeAll()
+			return
+		}
 	}
-	go repeater.Forward()
-	select {}
+}
+
+// closeAll
+func closeAll() {
+	if repeater != nil {
+		repeater.Stop()
+	}
+	if repeaterLg != nil {
+		repeaterLg.Close()
+	}
+}
+
+func init() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	// 初始化配置
+	repConf = conf.NewConfig()
+
+	// 生成Logger
+	lg, err := logger.NewLogger(
+		logger.LogLevel(repConf.LogLevel),
+		logger.LogPath(repConf.LogPath),
+		logger.ServiceName(repConf.Const.ServiceName),
+	)
+	if err != nil {
+		fmt.Println("An error occurred while logger.NewLogger, error:", err.Error())
+		panic(err)
+	}
+	repeaterLg = lg
 }
