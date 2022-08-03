@@ -1,0 +1,15 @@
+[Unit]
+Description=owl-kubecollect
+After=network.target
+
+[Service]
+ExecStart=/usr/local/owl-kubecollect/kubecollect
+Type=simple
+PIDFile=/usr/local/owl-kubecollect/kubecollect.pid
+Restart=always
+RestartSec=5
+StandardOutput=null
+LimitNOFILE=655350
+
+[Install]
+WantedBy=default.target

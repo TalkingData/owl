@@ -12,7 +12,7 @@ address = ""
 
 def send(subject, content, phone):
     conn = httplib.HTTPConnection(address, timeout=60)
-    url = "/sendalart?severity=1&subject={0}&msg={1}&phones={2}".format(subject, content, phone)
+    url = "/sendalart?severity=1&subject={0}&msg={1}&phones={2}".format(subject, content.replace("&&", "and"), phone)
     conn.request("GET", urllib.quote(url, ":/=&()?,>."))
     response = conn.getresponse()
     return response.status, response.reason, response.read()
@@ -31,3 +31,4 @@ if __name__ == "__main__":
         sys.exit("{0} {1} {2}".format(status, reason, response))
 
     print status, reason, response
+

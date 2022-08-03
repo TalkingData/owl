@@ -1,0 +1,17 @@
+[Unit]
+Description=OWL Agent
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/usr/local/owl-agent/bin
+ExecStart=/usr/local/owl-agent/bin/owl-agent
+Restart=always
+RestartSec=5
+StandardOutput=null
+LimitNOFILE=655350
+
+[Install]
+WantedBy=multi-user.target
