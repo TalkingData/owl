@@ -9,7 +9,7 @@ PIDFile=/usr/local/owl-proxy/proxy.pid
 Restart=always
 RestartSec=5
 StandardOutput=null
-LimitNOFILE=65535
+LimitNOFILE=655350
 
 [Install]
 WantedBy=default.target

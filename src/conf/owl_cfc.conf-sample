@@ -1,0 +1,26 @@
+[main]
+listen = 127.0.0.1:19576
+plugin_dir = ../plugins
+
+# refresh_host_status_interval_secs = 0 for disable it
+refresh_host_status_interval_secs = 90
+
+host_down_status_threshold_secs = 180
+
+# clean_expired_metric_interval_secs = 0 for disable
+clean_expired_metric_interval_secs = 300
+
+clean_expired_metric_cycle_expired_ratio = 5
+allow_create_product_auto = true
+
+[log]
+level = debug
+path = ../logs
+
+[mysql]
+address = 127.0.0.1:3306
+db_name = owl_v5
+user = owl
+password = owl
+max_idle_conns = 20
+max_open_conns = 500
