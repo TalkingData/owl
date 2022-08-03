@@ -37,8 +37,8 @@
 - [ ] Inspector与Controller组件业务逻辑优化（计划整合、支持分布式方式部署和运行）；
 - [ ] Api操作数据库的方法被封装入dao层，同时加入gorm，解决v5版本中存在的数据库注入问题；
 - [ ] 【Draft】增加对不同OS和Arch的支持；
-- [ ] host数据库表扩充OS和Arch字段，标识Agent所在主机的操作系统和架构；
-- [ ] plugin库表扩充其支持的OS和Arch字段；
-- [ ] 处理Agent发来的插件下载请求时，CFC会根据其OS和Arch做出相应下载返回；
-- [ ] Proxy组件更新并适配此功能；
+  - [ ] host数据库表扩充OS和Arch字段，标识Agent所在主机的操作系统和架构；
+  - [ ] plugin库表扩充其支持的OS和Arch字段；
+  - [ ] 处理Agent发来的插件下载请求时，CFC会根据其OS和Arch做出相应下载返回；
+  - [ ] Proxy组件更新并适配此功能；
 - [ ] 【Draft】Agent改为只与Proxy通讯，Proxy利用服务注册机制寻找CFC和Repeater并做相应负载均衡策略；
