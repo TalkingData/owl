@@ -21,6 +21,7 @@
 
 ## 什么是v6：
 - OWL v6是在v5版本上进行一定的组件优化、策略优化、协议优化后的兼容修订版本
+- 目前OWL v6只有Cfc、Repeater和Agent组件开发完成，其余组件尚处于开发状态
 
 ## OWL V6 Roadmap && ChangeLogs
 - [x] Repeater通讯方式改用gRPC，使用context管理协程和服务；  
