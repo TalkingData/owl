@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+package cfc_proto;
+
+service OwlCfcService {
+  // RegisterAgent 客户端注册
+  rpc RegisterAgent(AgentInfo) returns(google.protobuf.Empty);
+  // ListAgentPlugins 列出客户端需要执行的插件
+  rpc ListAgentPlugins(HostIdReq) returns(Plugins);
+  // DownloadPluginFile 下载插件文件
+  rpc DownloadPluginFile(PluginIdReq) returns(stream PluginFile);
+  // ReceiveAgentHeartbeat 接收客户端上报的心跳
+  rpc ReceiveAgentHeartbeat(AgentInfo) returns(google.protobuf.Empty);
+  // ReceiveAgentMetric 接收客户端上报的Metric
+  rpc ReceiveAgentMetric(Metric) returns(google.protobuf.Empty);
+}
+
+message HostIdReq {
+  string host_id = 1;
+}
+
+message PluginIdReq {
+  uint32 plugin_id = 1;
+}
+
+message AgentInfo {
+  string host_id = 1;
+  string ip = 2;
+  string hostname = 3;
+  string agent_version = 4;
+  string agent_os = 5;
+  string agent_arch = 6;
+  double uptime = 7;
+  double idle_pct = 8;
+  map<string, string> metadata = 9;
+}
+
+message Plugins {
+  repeated Plugin plugins = 1;
+}
+
+message Plugin {
+  uint32 id = 1;
+  string name = 2;
+  string path = 3;
+  string checksum = 4;
+  string args = 5;
+  int32 interval = 6;
+  int32 timeout = 7;
+  string comment = 8;
+}
+
+message Metric {
+  string host_id = 1;
+  string metric = 2;
+  string data_type = 3;
+  int32 cycle = 4;
+  map<string, string> tags = 5;
+}
+
+message PluginFile {
+  bytes buffer = 1;
+}

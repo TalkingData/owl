@@ -1,46 +1,102 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"net/http"
-	_ "net/http/pprof"
 	"os"
-	"path/filepath"
+	"os/signal"
+	"owl/cfc/component"
+	"owl/cfc/conf"
+	"owl/common/logger"
+	"owl/common/orm"
+	"owl/dao"
 	"runtime"
+	"syscall"
 )
 
-func init() {
-	os.Chdir(filepath.Dir(os.Args[0]))
-	os.Mkdir("logs", 0755)
-	runtime.GOMAXPROCS(runtime.NumCPU())
-}
+var (
+	cfc component.Component
+
+	cfcDao  *dao.Dao
+	cfcConf *conf.Conf
+	cfcLg   *logger.Logger
+)
 
 func main() {
-	var err error
-	if err = InitGlobalConfig(); err != nil {
-		fmt.Println(err)
+	cfc = component.NewCfcComponent(context.Background(), cfcDao, cfcConf, cfcLg)
+	if cfc == nil {
+		cfcLg.ErrorWithFields(logger.Fields{
+			"error": fmt.Errorf("nil cfc error"),
+		}, "An error occurred while main.")
 		return
 	}
-	if err = InitLog(); err != nil {
-		fmt.Println("InitLog ", err)
-		return
-	}
+
+	e := make(chan error)
 	go func() {
-		fmt.Printf("start metric interface %s\n", GlobalConfig.MetricBind)
-		fmt.Printf("%s\n", http.ListenAndServe(GlobalConfig.MetricBind, nil))
+		e <- cfc.Start()
 	}()
-	if err = InitMysqlConnPool(); err != nil {
-		fmt.Println("init mysql error: ", err.Error())
-		return
+
+	// 等待退出信号
+	quit := make(chan os.Signal)
+	signal.Notify(quit, syscall.SIGKILL, syscall.SIGQUIT, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
+
+	for {
+		select {
+		case err := <-e:
+			if err != nil {
+				cfcLg.ErrorWithFields(logger.Fields{
+					"error": err,
+				}, "An error occurred while cfc.Start.")
+			}
+			closeAll()
+			return
+		case sig := <-quit:
+			cfcLg.InfoWithFields(logger.Fields{
+				"signal": sig.String(),
+			}, "Got quit signal.")
+			closeAll()
+			return
+		}
 	}
-	if err = InitCFC(); err != nil {
-		fmt.Println(err)
-		return
+}
+
+// closeAll
+func closeAll() {
+	if cfc != nil {
+		cfc.Stop()
 	}
-	lg.Info("start cfc on %s ", GlobalConfig.TCPBind)
-	go updatHostStatus()
-	if GlobalConfig.EnableCleanupExpiredMetric {
-		go cleanupExpiredMetrics()
+	if cfcDao != nil {
+		cfcDao.Close()
 	}
-	select {}
+	if cfcLg != nil {
+		cfcLg.Close()
+	}
+}
+
+func init() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	// 初始化配置
+	cfcConf = conf.NewConfig()
+
+	// 生成Logger
+	lg, err := logger.NewLogger(
+		logger.LogLevel(cfcConf.LogLevel),
+		logger.LogPath(cfcConf.LogPath),
+		logger.ServiceName(cfcConf.Const.ServiceName),
+	)
+	if err != nil {
+		fmt.Println("An error occurred while logger.NewLogger, error:", err.Error())
+		panic(err)
+	}
+	cfcLg = lg
+
+	cfcDao = dao.NewDao(orm.NewMysqlGorm(
+		cfcConf.MysqlAddress,
+		cfcConf.MysqlUser,
+		cfcConf.MysqlPassword,
+		cfcConf.MysqlDbName,
+		orm.MysqlMaxIdleConns(cfcConf.MysqlMaxIdleConns),
+		orm.MysqlMaxOpenConns(cfcConf.MysqlMaxOpenConns),
+	), cfcLg)
 }

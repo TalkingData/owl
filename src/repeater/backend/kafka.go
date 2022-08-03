@@ -1,33 +1,35 @@
 package backend
 
 import (
-	"owl/common/types"
-
 	"gopkg.in/Shopify/sarama.v1"
+	"owl/dto"
 )
 
-type KafkaBackend struct {
+// kafkaBackend struct
+type kafkaBackend struct {
 	Producer sarama.SyncProducer
 	Topic    string
 }
 
-func NewKafkaBackend(brokers []string, topic string) (*KafkaBackend, error) {
-	producer, err := sarama.NewSyncProducer(brokers, nil)
+// newKafkaBackend
+func newKafkaBackend(addresses []string, topic string) (Backend, error) {
+	producer, err := sarama.NewSyncProducer(addresses, nil)
 	if err != nil {
 		return nil, err
 	}
-	backend := &KafkaBackend{
+	bEnd := &kafkaBackend{
 		Producer: producer,
 		Topic:    topic,
 	}
-	return backend, nil
+	return bEnd, nil
 }
 
-func (backend *KafkaBackend) Write(data *types.TimeSeriesData) error {
+// Write
+func (kfk *kafkaBackend) Write(data *dto.TsData) error {
 	message := &sarama.ProducerMessage{
-		Topic: backend.Topic,
-		Value: sarama.StringEncoder(string(data.Encode())),
+		Topic: kfk.Topic,
+		Value: sarama.StringEncoder(data.Encode()),
 	}
-	_, _, err := backend.Producer.SendMessage(message)
+	_, _, err := kfk.Producer.SendMessage(message)
 	return err
 }

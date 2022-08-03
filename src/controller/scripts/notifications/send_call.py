@@ -136,6 +136,5 @@ if __name__ == "__main__":
     receiver = json.loads(args.receiver)
     vps = VoicePromptSender(VoicePromptSender.appid, VoicePromptSender.appkey)
     status, response = vps.send(86, receiver["phone"], 2, "{0}{1}".format(VoicePromptSender.template, args.content), "")
-    if not status:
-        sys.exit("{0} {1}".format(status, response))
-    print status, response
+    print status,response
+

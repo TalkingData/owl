@@ -1,22 +1,19 @@
-# go-kairosdb
-
+#go-kairosdb
 A go client for [KairosDB](http://kairosdb.github.io/).
 
 ## Introduction
+*go-kairosdb* is a package that aims to provide wrapper APIs around the REST APIs exposed by KairosDB.
+These APIs can be used to store the metrics collected and query them back in different ways.
 
-*go-kairosdb* is a package that aims to provide wrapper APIs around the REST APIs exposed by KairosDB. These APIs can be
-used to store the metrics collected and query them back in different ways.
+The code structure/APIs are based on the original KairosDB client that has been implemented in Java.
+More info about the original client can be found [here](https://github.com/kairosdb/kairosdb-client).
 
-The code structure/APIs are based on the original KairosDB client that has been implemented in Java. More info about the
-original client can be found [here](https://github.com/kairosdb/kairosdb-client).
-
-Like the Java based client, *go-kairosdb* also employs a builder pattern to construct the JSON objects that are sent to
-KairosDB using an http client.
+Like the Java based client, *go-kairosdb* also employs a builder pattern to construct the JSON objects
+that are sent to KairosDB using an http client.
 
 NOTE: THIS IS STILL WORK IN PROGRESS.
 
 ## Getting go-kairosdb
-
 *go-kairosdb* is written in golang and hence it's assumed that the user has setup the golang programming environment
 correctly. In order to get access to the package the following commands need to be executed:
 
@@ -25,17 +22,15 @@ go get github.com/ajityagaty/go-kairosdb
 go get github.com/stretchr/testify/assert
 ```
 
-[assert](https://github.com/stretchr/testify) is a package that's available under testify project. It provides a very
-friendly API to perform validations. This package has been employed in the unit tests.
+[assert](https://github.com/stretchr/testify) is a package that's available under testify project. It
+provides a very friendly API to perform validations. This package has been employed in the unit tests.
 
 ## Usage
-
 The following sections describe the way the APIs can be used.
 
 ### Sending Metrics
-
-The MetricBuilder interface is primarily used to stitch the metrics together and send them to KairosDB. One can add
-metrics, their associated tags and the data points using the builder.
+The MetricBuilder interface is primarily used to stitch the metrics together and send them to KairosDB.
+One can add metrics, their associated tags and the data points using the builder.
 
 ```
 // Instantiate the MetricBuilder
@@ -60,10 +55,9 @@ pushResp, _ := cli.PushMetrics(mb)
 ```
 
 ### Querying Metrics
-
-The QueryBuilder is used to build the query. Every query requires a date range wherein the start date is mandatory while
-the end date defaults to NOW. A specific metric can be queried for by specifying the metric's name and tags can be added
-to narrow down the search.
+The QueryBuilder is used to build the query. Every query requires a date range wherein the start date
+is mandatory while the end date defaults to NOW. A specific metric can be queried for by specifying the
+metric's name and tags can be added to narrow down the search.
 
 ```
 // Instantiate a QueryBuilder
@@ -86,7 +80,6 @@ queryResp, _ := cli.Query(qb)
 ```
 
 ### Query Metric Names
-
 One can get a list of all the metric names stored in KairosDB.
 
 ```
@@ -103,7 +96,6 @@ for _, metric := range resp.Results {
 ```
 
 ### Query Tag Names and Values
-
 Similarly one can get a list of all tag names and values stored in KairosDB.
 
 ```
@@ -128,9 +120,9 @@ for _, tagVal := range resp.Results {
 ```
 
 ### Delete Metric
-
-One can delete a metric and all its associated data points from KairosDB. On success - *StatusNoContent* is returned. On
-failure - *StatusBadRequest* or *StatusInternalServerError* is returned.
+One can delete a metric and all its associated data points from KairosDB.
+On success - *StatusNoContent* is returned.
+On failure - *StatusBadRequest* or *StatusInternalServerError* is returned.
 
 ```
 // Get an instance of the client.
@@ -147,7 +139,6 @@ if delResp.GetStatusCode() == http.StatusNoContent {
 ```
 
 ### Health Check
-
 One can also query the health of the KairosDB server. An HTTP *StatusNoContent*
 return code indicates that all is well. If there is any problem then an HTTP
 *StatusInternalServerError* will be returned.

@@ -35,7 +35,7 @@ function build() {
 
   # 切换目录经并开始构建
   cd "$src/$1"
-  CGO_ENABLED=0 go build -a -installsuffix cgo -ldflags '-w' -o "$output/$1"
+  CGO_ENABLED=0 go build -a -installsuffix cgo -ldflags '-w' -o "$output/owl-$1"
 
   # 构建是否成功
   if [ $? -eq 0 ]; then
