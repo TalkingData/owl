@@ -4,6 +4,7 @@ import (
 	"owl/model"
 )
 
+// ListHostGroupsPluginsByHostId 根据HostId列出主机组的所有插件
 func (d *Dao) ListHostGroupsPluginsByHostId(hostId string) (plugins []*model.Plugin, err error) {
 	subQuery := d.db.Raw("SELECT host_group_id FROM host_group_host AS hgh WHERE hgh.host_id=?", hostId)
 	res := d.db.Model(model.HostGroupPlugin{}).

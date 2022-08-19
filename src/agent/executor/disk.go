@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func (e *Executor) ExecCollectDisk(cycle int32) (res []*dto.TsData) {
+func (e *Executor) ExecCollectDisk(cycle int32) (res dto.TsDataArray) {
 	e.logger.Info("Executor.ExecCollectDisk called.")
 	defer e.logger.Info("Executor.ExecCollectDisk end.")
 
@@ -15,7 +15,7 @@ func (e *Executor) ExecCollectDisk(cycle int32) (res []*dto.TsData) {
 	return append(res, e.getAllDiskIo(cycle)...)
 }
 
-func (e *Executor) getAllDiskIo(cycle int32) (res []*dto.TsData) {
+func (e *Executor) getAllDiskIo(cycle int32) (res dto.TsDataArray) {
 	e.logger.Info("Executor.getAllDiskIo called.")
 	defer e.logger.Info("Executor.getAllDiskIo end.")
 
@@ -84,7 +84,7 @@ func (e *Executor) getAllDiskIo(cycle int32) (res []*dto.TsData) {
 	return
 }
 
-func (e *Executor) getAllDiskPartition(cycle int32) (res []*dto.TsData) {
+func (e *Executor) getAllDiskPartition(cycle int32) (res dto.TsDataArray) {
 	e.logger.Info("Executor.getAllDiskPartition called.")
 	defer e.logger.Info("Executor.getAllDiskPartition end.")
 

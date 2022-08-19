@@ -3,6 +3,7 @@ package dto
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/shopspring/decimal"
 	"owl/common/utils"
 	repProto "owl/repeater/proto"
 	"regexp"
@@ -29,11 +30,11 @@ var (
 )
 
 type TsData struct {
-	Metric    string            `json:"metric"`
-	DataType  string            `json:"data_type"`
-	Value     float64           `json:"value"`
+	Metric    string            `json:"metric" binding:"required"`
+	DataType  string            `json:"data_type" binding:"required"`
+	Value     float64           `json:"value" binding:"required"`
 	Timestamp int64             `json:"timestamp"`
-	Cycle     int32             `json:"cycle,omitempty"`
+	Cycle     int32             `json:"cycle,omitempty" binding:"required"`
 	Tags      map[string]string `json:"tags"`
 }
 
@@ -80,6 +81,8 @@ func (tsData *TsData) Validate() error {
 func (tsData *TsData) arrange() {
 	tsData.DataType = strings.ToUpper(tsData.DataType)
 	tsData.Timestamp = utils.AlignTimestamp(tsData.Timestamp, tsData.Cycle)
+	// 使tsData.Value只保留两位小数
+	tsData.Value, _ = decimal.NewFromFloat(tsData.Value).Round(2).Float64()
 }
 
 // MergeTags 依照map[string]string合并tag，Key相同的会被覆盖

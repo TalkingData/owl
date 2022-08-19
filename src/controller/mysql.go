@@ -29,6 +29,7 @@ func InitMysqlConnPool() error {
 	return nil
 }
 
+// OK
 func (this *db) GetProducts() []*types.Product {
 	products := []*types.Product{}
 	if err := this.Select(&products, "SELECT id, name FROM `product` WHERE is_delete=0"); err != nil {
@@ -38,6 +39,7 @@ func (this *db) GetProducts() []*types.Product {
 	return products
 }
 
+// OK
 func (this *db) GetDeletedProducts() []*types.Product {
 	products := []*types.Product{}
 	if err := this.Select(&products, "SELECT id, name FROM `product` WHERE is_delete=1"); err != nil {
@@ -47,6 +49,7 @@ func (this *db) GetDeletedProducts() []*types.Product {
 	return products
 }
 
+// Ok
 func (this *db) GetStrategies(product_id int) []*types.Strategy {
 	strategies := []*types.Strategy{}
 	if err := this.Select(&strategies, "SELECT * FROM `strategy` WHERE product_id=?", product_id); err != nil {
@@ -56,6 +59,7 @@ func (this *db) GetStrategies(product_id int) []*types.Strategy {
 	return strategies
 }
 
+// ok
 func (this *db) GetHostsExByStrategyID(strategy_id int) map[string]string {
 	ids := make([]string, 0)
 	if err := this.Select(&ids, "SELECT host_id FROM strategy_host_exclude WHERE strategy_id=?", strategy_id); err != nil {
@@ -69,6 +73,7 @@ func (this *db) GetHostsExByStrategyID(strategy_id int) map[string]string {
 	return exHosts
 }
 
+// ok
 func (this *db) GetGroupsByStrategyID(strategy_id int) []*types.Group {
 	groups := []*types.Group{}
 	if err := this.Select(&groups, "SELECT `id`, `name` FROM `host_group` WHERE `id` IN (SELECT `group_id` FROM `strategy_group` WHERE `strategy_id`=?)", strategy_id); err != nil {
@@ -78,6 +83,7 @@ func (this *db) GetGroupsByStrategyID(strategy_id int) []*types.Group {
 	return groups
 }
 
+// Ok
 func (this *db) GetHostsByGroupID(group_id int) []*types.Host {
 	hosts := []*types.Host{}
 	if err := this.Select(&hosts, "SELECT `id`, `ip`, `hostname`, `status`, `mute_time` FROM host WHERE id IN (SELECT host_id FROM host_group_host WHERE host_group_id = ?)", group_id); err != nil {
@@ -87,6 +93,7 @@ func (this *db) GetHostsByGroupID(group_id int) []*types.Host {
 	return hosts
 }
 
+// OK
 func (this *db) GetTriggersByStrategyID(strategy_id int) map[string]*types.Trigger {
 	rows, err := this.Query("SELECT `id`, `strategy_id`, `metric`, `tags`, `number`, `index`, `method`, `symbol`, `threshold`, `description` FROM `trigger` WHERE `strategy_id` = ?", strategy_id)
 	if err != nil {
@@ -106,6 +113,7 @@ func (this *db) GetTriggersByStrategyID(strategy_id int) map[string]*types.Trigg
 	return triggers
 }
 
+// OK
 func (this *db) GetActions(strategy_id, action_type int) []*types.Action {
 	actions := []*types.Action{}
 	if err := this.Select(&actions, "SELECT * FROM `action` WHERE `strategy_id` = ? AND `type` = ?", strategy_id, action_type); err != nil {
@@ -115,6 +123,7 @@ func (this *db) GetActions(strategy_id, action_type int) []*types.Action {
 	return actions
 }
 
+// Ok
 func (this *db) GetAllActions(strategy_id int) []*types.Action {
 	actions := []*types.Action{}
 	if err := this.Select(&actions, "SELECT * FROM `action` WHERE `strategy_id` = ?", strategy_id); err != nil {
@@ -124,6 +133,7 @@ func (this *db) GetAllActions(strategy_id int) []*types.Action {
 	return actions
 }
 
+// TODO
 func (this *db) CreateStrategyEvent(strategy_event *types.StrategyEvent, trigger_events map[string]*types.TriggerEvent) (int64, error) {
 	tx, err := this.Begin()
 	defer tx.Rollback()
@@ -192,6 +202,7 @@ func (this *db) CreateStrategyEvent(strategy_event *types.StrategyEvent, trigger
 	return last_id, nil
 }
 
+// OK
 func (this *db) CreateStrategyEventFailed(strategyID int, hostID string, status int, message string) error {
 	_, err := this.Exec("REPLACE INTO strategy_event_failed VALUES (?, ?, ?, ?, DEFAULT, DEFAULT)", strategyID, hostID, status, message)
 	if err != nil {
@@ -201,6 +212,7 @@ func (this *db) CreateStrategyEventFailed(strategyID int, hostID string, status 
 	return err
 }
 
+// TODO
 func (this *db) UpdateStrategyEvent(strategy_event *types.StrategyEvent, trigger_events map[string]*types.TriggerEvent) error {
 	tx, err := this.Begin()
 	defer tx.Rollback()
@@ -269,6 +281,7 @@ func (this *db) UpdateStrategyEvent(strategy_event *types.StrategyEvent, trigger
 	return nil
 }
 
+// OK
 func (this *db) GetStrategyEvent(strategy_id, status int, host_id string) *types.StrategyEvent {
 	strategy_event := types.StrategyEvent{}
 	if err := this.Get(&strategy_event, "SELECT * FROM `strategy_event` WHERE `strategy_id` = ? AND `host_id` = ? AND `status` = ?", strategy_id, host_id, status); err != nil {
@@ -281,6 +294,7 @@ func (this *db) GetStrategyEvent(strategy_id, status int, host_id string) *types
 	return &strategy_event
 }
 
+// OK
 func (this *db) GetTriggeredTriggerEvents(strategy_event_id int64) []*types.TriggerEvent {
 	trigger_events := []*types.TriggerEvent{}
 	if err := this.Select(&trigger_events, "SELECT * FROM trigger_event WHERE strategy_event_id = ? and triggered=1", strategy_event_id); err != nil {
@@ -290,6 +304,7 @@ func (this *db) GetTriggeredTriggerEvents(strategy_event_id int64) []*types.Trig
 	return trigger_events
 }
 
+// OK
 func (this *db) GetUsersByGroups(action_id int) []*types.User {
 	users := []*types.User{}
 	if err := this.Select(&users, "SELECT `id`, `username`, `phone`, `mail`, `wechat` FROM `user` WHERE `id` IN (SELECT `user_id` FROM `user_group_user` WHERE `user_group_id` IN (SELECT `user_group_id` FROM action_user_group WHERE action_id = ?))", action_id); err != nil {
@@ -299,6 +314,7 @@ func (this *db) GetUsersByGroups(action_id int) []*types.User {
 	return users
 }
 
+// NO NEED
 func (this *db) GetUsers(action_id int) []*types.User {
 	users := []*types.User{}
 	if err := this.Select(&users, "SELECT `id`, `username`, `phone`, `mail`, `wechat` FROM `user` WHERE `id` IN (SELECT `user_id` FROM action_user WHERE action_id = ?)", action_id); err != nil {
@@ -308,6 +324,7 @@ func (this *db) GetUsers(action_id int) []*types.User {
 	return users
 }
 
+// TODO
 func (this *db) CreateActionResult(action_result *types.ActionResult) error {
 	stmt, err := this.Prepare("INSERT INTO `action_result` VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
 	if err != nil {
@@ -337,6 +354,7 @@ func (this *db) CreateActionResult(action_result *types.ActionResult) error {
 	return nil
 }
 
+// TODO
 func (this *db) CreateStrategyEventRecord(strategy_event *types.StrategyEvent, trigger_events map[string]*types.TriggerEvent) error {
 	tx, err := this.Begin()
 	defer tx.Rollback()
@@ -401,6 +419,7 @@ func (this *db) CreateStrategyEventRecord(strategy_event *types.StrategyEvent, t
 	return nil
 }
 
+// OK
 func (this *db) GetScript(script_id int) *types.Script {
 	script := types.Script{}
 	if err := this.Get(&script, "SELECT * FROM `scripts` WHERE `id` = ?", script_id); err != nil {
@@ -410,6 +429,7 @@ func (this *db) GetScript(script_id int) *types.Script {
 	return &script
 }
 
+// OK
 func (this *db) DeleteStrategyFailed(strategy_id int, host_id string) error {
 	_, err := this.Exec("DELETE FROM strategy_event_failed WHERE strategy_id = ? AND host_id = ?", strategy_id, host_id)
 	if err != nil {
@@ -419,6 +439,7 @@ func (this *db) DeleteStrategyFailed(strategy_id int, host_id string) error {
 	return err
 }
 
+// OK
 func (this *db) CreateStrategyEventProcess(strategy_event_id int64, strategy_event_status int, process_user, process_comments, process_time string) error {
 	_, err := this.Exec("INSERT INTO strategy_event_process VALUES(?, ?, ?, ?, DEFAULT)", strategy_event_id, strategy_event_status, process_user, process_comments)
 	if err != nil {

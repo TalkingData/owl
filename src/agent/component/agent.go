@@ -3,6 +3,8 @@ package component
 import (
 	"context"
 	"fmt"
+	"github.com/shopspring/decimal"
+	"net/http"
 	"os"
 	"owl/agent/conf"
 	"owl/agent/executor"
@@ -13,11 +15,14 @@ import (
 	metricList "owl/dto/metric_list"
 	pluginList "owl/dto/plugin_list"
 	repProto "owl/repeater/proto"
+	"sync"
 	"time"
 )
 
 // agent struct
 type agent struct {
+	httpServer *http.Server
+
 	cfcCli cfcProto.OwlCfcServiceClient
 	repCli repProto.OwlRepeaterServiceClient
 
@@ -30,6 +35,7 @@ type agent struct {
 	conf   *conf.Conf
 	logger *logger.Logger
 
+	wg         *sync.WaitGroup
 	ctx        context.Context
 	cancelFunc context.CancelFunc
 }
@@ -43,6 +49,8 @@ func newAgent(ctx context.Context, conf *conf.Conf, lg *logger.Logger) (*agent, 
 
 		conf:   conf,
 		logger: lg,
+
+		wg: new(sync.WaitGroup),
 	}
 
 	agt.ctx, agt.cancelFunc = context.WithCancel(ctx)
@@ -56,7 +64,10 @@ func newAgent(ctx context.Context, conf *conf.Conf, lg *logger.Logger) (*agent, 
 }
 
 func (agent *agent) Start() error {
-	agent.logger.Info(fmt.Sprintf("Starting owl agent %s", global.Version))
+	agent.logger.Info(fmt.Sprintf("Starting owl agent %s...", global.Version))
+
+	agent.wg.Add(1)
+	defer agent.wg.Done()
 
 	// 首次启动首先需要注册Agent
 	_ = agent.registerAgent()
@@ -64,8 +75,29 @@ func (agent *agent) Start() error {
 	reportHbTk := time.Tick(agent.conf.ReportHeartbeatIntervalSecs)
 	listPluginsTk := time.Tick(agent.conf.ListPluginsIntervalSecs)
 	reportAgentMetricsTk := time.Tick(agent.conf.ReportMetricIntervalSecs)
-	execBuiltinMetricsTk := time.Tick(time.Duration(agent.conf.ExecBuiltinMetricsIntervalSecs) * time.Second)
+	execBuiltinMetricsTk := time.Tick(
+		time.Duration(agent.conf.ExecBuiltinMetricsIntervalSecs) * time.Second,
+	)
 
+	// 启动httpServer
+	go func() {
+		agent.wg.Add(1)
+		defer agent.Stop()
+		defer agent.wg.Done()
+
+		agent.logger.Info(fmt.Sprintf("Owl agent's http server listening on: %s", agent.conf.Listen))
+
+		if err := agent.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			agent.logger.ErrorWithFields(logger.Fields{
+				"error": err,
+			}, "An error occurred while httpServer.ListenAndServe.")
+			return
+		}
+
+		agent.logger.Info("Owl agent's http server closed.")
+	}()
+
+	// 启动主服务
 	for {
 		select {
 		case <-reportHbTk:
@@ -81,7 +113,7 @@ func (agent *agent) Start() error {
 			go agent.reportAgentAllMetrics()
 
 		case <-execBuiltinMetricsTk:
-			go agent.execBuiltinMetrics(int32(agent.conf.ExecBuiltinMetricsIntervalSecs))
+			go agent.execBuiltinMetrics()
 
 		case <-agent.ctx.Done():
 			agent.logger.InfoWithFields(logger.Fields{
@@ -93,9 +125,20 @@ func (agent *agent) Start() error {
 }
 
 func (agent *agent) Stop() {
+	defer agent.wg.Wait()
+
+	// 关闭httpServer
+	if agent.httpServer != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), agent.conf.Const.HttpServerShutdownTimeoutSecs)
+		defer cancel()
+		_ = agent.httpServer.Shutdown(ctx)
+	}
+
+	// 关闭插件采集任务
 	if agent.pluginList != nil {
 		agent.pluginList.StopAllPluginTask()
 	}
+
 	agent.cancelFunc()
 }
 
@@ -104,6 +147,9 @@ func (agent *agent) refreshAgentInfo() {
 	agent.agentInfo.Hostname = agent.executor.GetHostname()
 	agent.agentInfo.AgentVersion = global.Version
 	agent.agentInfo.Uptime, agent.agentInfo.IdlePct = agent.executor.GetHostUptimeAndIdle()
+
+	// 使IdlePct只保留两位小数
+	agent.agentInfo.IdlePct, _ = decimal.NewFromFloat(agent.agentInfo.IdlePct).Round(2).Float64()
 
 	// Get local ip with cfc
 	if ip := agent.executor.GetLocalIp(agent.conf.CfcAddress); len(ip) > 0 {
@@ -116,6 +162,11 @@ func (agent *agent) refreshAgentInfo() {
 }
 
 func (agent *agent) init() (err error) {
+	agent.httpServer = &http.Server{
+		Addr:    agent.conf.Listen,
+		Handler: agent.newHttpHandler(),
+	}
+
 	// 连接Cfc
 	agent.cfcCli, err = cli.NewCfcClient(agent.conf.CfcAddress)
 	if err != nil {
