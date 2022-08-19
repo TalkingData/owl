@@ -6,14 +6,12 @@ import (
 )
 
 func (d *Dao) GetPlugin(query orm.Query) (p *model.Plugin, err error) {
-	db := query.Where(d.db)
-	res := db.Limit(1).Find(&p)
+	res := query.Where(d.db).Limit(1).Find(&p)
 	return p, res.Error
 }
 
 func (d *Dao) GetPluginCount(query orm.Query) (count int64, err error) {
-	db := query.Where(d.db.Model(&model.Plugin{}))
-	res := db.Count(&count)
+	res := query.Where(d.db.Model(&model.Plugin{})).Count(&count)
 	return count, res.Error
 }
 

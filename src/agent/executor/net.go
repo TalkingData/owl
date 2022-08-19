@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func (e *Executor) ExecCollectNet(cycle int32) (res []*dto.TsData) {
+func (e *Executor) ExecCollectNet(cycle int32) (res dto.TsDataArray) {
 	e.logger.Info("Executor.ExecCollectNet called.")
 	defer e.logger.Info("Executor.ExecCollectNet end.")
 

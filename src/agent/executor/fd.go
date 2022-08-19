@@ -14,7 +14,7 @@ const (
 	fdFile = "/proc/sys/fs/file-nr"
 )
 
-func (e *Executor) ExecCollectFd(cycle int32) []*dto.TsData {
+func (e *Executor) ExecCollectFd(cycle int32) dto.TsDataArray {
 	e.logger.Info("Executor.ExecCollectFd called.")
 	defer e.logger.Info("Executor.ExecCollectFd end.")
 
@@ -57,7 +57,7 @@ func (e *Executor) ExecCollectFd(cycle int32) []*dto.TsData {
 	max, _ = strconv.ParseFloat(fields[2], 64)
 
 	currTs := time.Now().Unix()
-	return []*dto.TsData{
+	return dto.TsDataArray{
 		{
 			Metric:    "system.fd.allocated",
 			DataType:  dto.TsDataTypeGauge,

@@ -24,6 +24,6 @@ func (agent *agent) sendTimeSeriesData(tsData *repProto.TsData) {
 			"host_id": agent.agentInfo.HostId,
 			"metrics": tsData.Metric,
 			"error":   err,
-		}, "An error occurred while repCli.ReceiveTimeSeriesData in agent.sendTimeSeriesData")
+		}, "An error occurred while repCli.ReceiveTimeSeriesData in agent.sendTimeSeriesData.")
 	}
 }

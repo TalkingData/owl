@@ -14,14 +14,14 @@ import (
 var (
 	repeater component.Component
 
-	repConf    *conf.Conf
-	repeaterLg *logger.Logger
+	repConf *conf.Conf
+	repLg   *logger.Logger
 )
 
 func main() {
-	repeater = component.NewRepeaterComponent(repConf, repeaterLg)
+	repeater = component.NewRepeaterComponent(repConf, repLg)
 	if repeater == nil {
-		repeaterLg.ErrorWithFields(logger.Fields{
+		repLg.ErrorWithFields(logger.Fields{
 			"error": fmt.Errorf("nil repeater error"),
 		}, "An error occurred while main.")
 		return
@@ -40,14 +40,14 @@ func main() {
 		select {
 		case err := <-e:
 			if err != nil {
-				repeaterLg.ErrorWithFields(logger.Fields{
+				repLg.ErrorWithFields(logger.Fields{
 					"error": err,
 				}, "An error occurred while repeater.Start.")
 			}
 			closeAll()
 			return
 		case sig := <-quit:
-			repeaterLg.InfoWithFields(logger.Fields{
+			repLg.InfoWithFields(logger.Fields{
 				"signal": sig.String(),
 			}, "Got quit signal.")
 			closeAll()
@@ -61,8 +61,8 @@ func closeAll() {
 	if repeater != nil {
 		repeater.Stop()
 	}
-	if repeaterLg != nil {
-		repeaterLg.Close()
+	if repLg != nil {
+		repLg.Close()
 	}
 }
 
@@ -82,5 +82,5 @@ func init() {
 		fmt.Println("An error occurred while logger.NewLogger, error:", err.Error())
 		panic(err)
 	}
-	repeaterLg = lg
+	repLg = lg
 }

@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func (e *Executor) ExecCollectCpu(cycle int32) (res []*dto.TsData) {
+func (e *Executor) ExecCollectCpu(cycle int32) (res dto.TsDataArray) {
 	e.logger.Info("Executor.ExecCollectCpu called.")
 	defer e.logger.Info("Executor.ExecCollectCpu end.")
 
@@ -29,9 +29,9 @@ func getAllCpuTimesStat() []cpu.TimesStat {
 	return append(cts1, cts2...)
 }
 
-func processCpuTimeSeriesData(currTs int64, cycle int32, data1, data2 *cpu.TimesStat) []*dto.TsData {
+func processCpuTimeSeriesData(currTs int64, cycle int32, data1, data2 *cpu.TimesStat) dto.TsDataArray {
 	total := data2.Total() - data1.Total()
-	return []*dto.TsData{
+	return dto.TsDataArray{
 		{
 			Metric:    "system.cpu.user",
 			DataType:  dto.TsDataTypeGauge,
