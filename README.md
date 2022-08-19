@@ -33,7 +33,7 @@
   - [x] 不再支持采集内部指标：system.cpu.stolen；
 - [x] 移除Netcollect组件（计划后续采用agent的http上报方式替代）；
 - [ ] 使Proxy可同时具有CFC和Repeater的代理功能；
-- [ ] Agent支持使用http协议主动上报ts data方式；
+- [x] Agent支持使用http协议主动上报ts data方式；
 - [ ] Inspector与Controller组件业务逻辑优化（计划整合、支持分布式方式部署和运行）；
 - [ ] Api操作数据库的方法被封装入dao层，同时加入gorm，解决v5版本中存在的数据库注入问题；
 - [ ] 【Draft】增加对不同OS和Arch的支持；
