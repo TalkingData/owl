@@ -45,7 +45,7 @@ func newCfc(ctx context.Context, dao *dao.Dao, conf *conf.Conf, lg *logger.Logge
 }
 
 func (cfc *cfc) Start() (err error) {
-	cfc.logger.Info(fmt.Sprintf("Starting owl cfc %s", global.Version))
+	cfc.logger.Info(fmt.Sprintf("Starting owl cfc %s...", global.Version))
 
 	// 开启RPC监听端口
 	cfc.listener, err = net.Listen("tcp", cfc.conf.Listen)
@@ -62,7 +62,7 @@ func (cfc *cfc) Start() (err error) {
 		service.NewOwlCfcService(cfc.biz, cfc.dao, cfc.conf, cfc.logger),
 	)
 
-	cfc.logger.Info(fmt.Sprintf("Owl cfc starting at: %s", cfc.listener.Addr().String()))
+	cfc.logger.Info(fmt.Sprintf("Owl cfc listening on: %s", cfc.listener.Addr().String()))
 
 	// 启动一些常驻后台的操作
 	go cfc.biz.RefreshHostStatus(cfc.ctx)

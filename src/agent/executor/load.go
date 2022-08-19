@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func (e *Executor) ExecCollectLoad(cycle int32) []*dto.TsData {
+func (e *Executor) ExecCollectLoad(cycle int32) dto.TsDataArray {
 	e.logger.Info("Executor.ExecCollectLoad called.")
 	defer e.logger.Info("Executor.ExecCollectLoad end.")
 
@@ -21,7 +21,7 @@ func (e *Executor) ExecCollectLoad(cycle int32) []*dto.TsData {
 	}
 
 	currTs := time.Now().Unix()
-	return []*dto.TsData{
+	return dto.TsDataArray{
 		{
 			Metric:    "system.load.1min",
 			DataType:  dto.TsDataTypeGauge,

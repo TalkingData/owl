@@ -5,8 +5,8 @@ import (
 	"time"
 )
 
-func (e *Executor) ExecCollectAlive(cycle int32) []*dto.TsData {
-	return []*dto.TsData{{
+func (e *Executor) ExecCollectAlive(cycle int32) dto.TsDataArray {
+	return dto.TsDataArray{{
 		Metric:    "agent.alive",
 		DataType:  dto.TsDataTypeGauge,
 		Value:     1,

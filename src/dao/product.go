@@ -40,14 +40,12 @@ func (d *Dao) SetProduct(id uint, name, description string) (p *model.Product, e
 }
 
 func (d *Dao) GetProduct(query orm.Query) (p *model.Product, err error) {
-	db := query.Where(d.db)
-	res := db.Limit(1).Find(&p)
+	res := query.Where(d.db).Limit(1).Find(&p)
 	return p, res.Error
 }
 
 func (d *Dao) GetProductCount(query orm.Query) (count int64, err error) {
-	db := query.Where(d.db.Model(&model.Product{}))
-	res := db.Count(&count)
+	res := query.Where(d.db.Model(&model.Product{})).Count(&count)
 	return count, res.Error
 }
 

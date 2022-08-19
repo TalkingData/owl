@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func (e *Executor) ExecCollectCmd(ctx context.Context, command string, args ...string) []*dto.TsData {
+func (e *Executor) ExecCollectCmd(ctx context.Context, command string, args ...string) dto.TsDataArray {
 	e.logger.InfoWithFields(logger.Fields{
 		"command": command,
 		"args":    args,
@@ -61,7 +61,7 @@ func (e *Executor) ExecCollectCmd(ctx context.Context, command string, args ...s
 		}
 
 		currTs := time.Now().Unix()
-		res := make([]*dto.TsData, 0)
+		res := dto.TsDataArray{}
 		if err = json.Unmarshal(out.Bytes(), &res); err != nil {
 			e.logger.ErrorWithFields(logger.Fields{
 				"command": command,

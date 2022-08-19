@@ -15,24 +15,36 @@ func (d *Dao) NewHostGroupHost(hostGroupId uint, hostId string) (*model.HostGrou
 	return &hgh, res.Error
 }
 
-func (d *Dao) GetHostGroupHost(hostGroupId uint, hostID string) (ph *model.HostGroupHost, err error) {
+func (d *Dao) GetHostGroupHost(hostGroupId uint, hostId string) (ph *model.HostGroupHost, err error) {
 	res := d.db.Where(map[string]interface{}{
 		"host_group_id": hostGroupId,
-		"host_id":       hostID,
+		"host_id":       hostId,
 	}).Limit(1).Find(&ph)
 	return ph, res.Error
 }
 
-func (d *Dao) GetHostGroupHostCount(hostGroupId uint, hostID string) (count int64, err error) {
+func (d *Dao) GetHostGroupHostCount(hostGroupId uint, hostId string) (count int64, err error) {
 	query := orm.Query{
 		"host_group_id": hostGroupId,
-		"host_id":       hostID,
+		"host_id":       hostId,
 	}
 	res := query.Where(d.db.Model(&model.HostGroupHost{})).Count(&count)
 	return count, res.Error
 }
 
-func (d *Dao) IsHostInHostGroup(hostGroupId uint, hostID string) (exist bool, err error) {
-	count, err := d.GetHostGroupHostCount(hostGroupId, hostID)
+// ListHostsByHostGroupId 根据HostGroupId列出所有Host
+func (d *Dao) ListHostsByHostGroupId(hostGroupId uint) (hosts []*model.Host, err error) {
+	subQuery := d.db.Model(&model.HostGroupHost{}).
+		Select("host_id").
+		Where("host_group_id=?", hostGroupId)
+
+	res := d.db.Where("id IN (?)", subQuery).
+		Find(&hosts)
+
+	return hosts, res.Error
+}
+
+func (d *Dao) IsHostInHostGroup(hostGroupId uint, hostId string) (exist bool, err error) {
+	count, err := d.GetHostGroupHostCount(hostGroupId, hostId)
 	return count > 0, err
 }

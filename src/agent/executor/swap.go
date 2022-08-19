@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func (e *Executor) ExecCollectSwap(cycle int32) (res []*dto.TsData) {
+func (e *Executor) ExecCollectSwap(cycle int32) (res dto.TsDataArray) {
 	e.logger.Info("Executor.ExecCollectSwap called.")
 	defer e.logger.Info("Executor.ExecCollectSwap end.")
 
@@ -20,7 +20,7 @@ func (e *Executor) ExecCollectSwap(cycle int32) (res []*dto.TsData) {
 		return nil
 	}
 	currTs := time.Now().Unix()
-	return []*dto.TsData{
+	return dto.TsDataArray{
 		{
 			Metric:    "system.swap.total",
 			DataType:  dto.TsDataTypeGauge,

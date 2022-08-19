@@ -129,7 +129,7 @@ func (cfcSrv *OwlCfcService) DownloadPluginFile(req *cfcProto.PluginIdReq, strea
 		}, "An error occurred while filepath.Abs in cfcSrv.DownloadPluginFile.")
 	}
 
-	cfcSrv.logger.ErrorWithFields(logger.Fields{
+	cfcSrv.logger.InfoWithFields(logger.Fields{
 		"plugin_pathname": pluginPathname,
 	}, "cfcSrv.DownloadPluginFile prepare send plugin file.")
 	err = cfcSrv.grpcDownloader.Download(pluginPathname, func(buffer []byte) error {

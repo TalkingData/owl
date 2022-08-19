@@ -40,7 +40,7 @@ func newRepeater(conf *conf.Conf, lg *logger.Logger) *repeater {
 }
 
 func (rep *repeater) Start() (err error) {
-	rep.logger.Info(fmt.Sprintf("Starting owl repeater %s", global.Version))
+	rep.logger.Info(fmt.Sprintf("Starting owl repeater %s...", global.Version))
 
 	// 开启RPC监听端口
 	rep.listener, err = net.Listen("tcp", rep.conf.Listen)
@@ -57,7 +57,7 @@ func (rep *repeater) Start() (err error) {
 		service.NewOwlRepeaterService(rep.backend, rep.logger),
 	)
 
-	rep.logger.Info(fmt.Sprintf("Owl repeater starting at: %s", rep.listener.Addr().String()))
+	rep.logger.Info(fmt.Sprintf("Owl repeater listening on: %s", rep.listener.Addr().String()))
 
 	return rep.grpcServer.Serve(rep.listener)
 }

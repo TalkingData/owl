@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func (e *Executor) ExecCollectMem(cycle int32) []*dto.TsData {
+func (e *Executor) ExecCollectMem(cycle int32) dto.TsDataArray {
 	e.logger.Info("Executor.ExecCollectMem called.")
 	defer e.logger.Info("Executor.ExecCollectMem end.")
 
@@ -21,7 +21,7 @@ func (e *Executor) ExecCollectMem(cycle int32) []*dto.TsData {
 	}
 
 	currTs := time.Now().Unix()
-	return []*dto.TsData{
+	return dto.TsDataArray{
 		{
 			Metric:    "system.mem.active",
 			DataType:  dto.TsDataTypeGauge,

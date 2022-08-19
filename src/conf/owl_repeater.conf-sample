@@ -1,23 +1,12 @@
 [main]
 listen = 127.0.0.1:19577
+# Supported 'kairosdb' backend only
+backend = kairosdb
 
 [log]
 level = debug
 path = ../logs
 
-[backend]
-# opentsdb, kairosdb, kairosdb-rest, kafka
-backend = opentsdb
-
-# Enable when backend = opentsdb
-opentsdb_address = 127.0.0.1:4242
-
+[kairosdb]
 # Enable when backend = kairosdb
 kairosdb_address = 127.0.0.1:4242
-
-# Enable when backend = kairosdb-rest
-rest_kairosdb_address = 127.0.0.1:8080
-
-# Enable when backend==kafka
-kafka_addresses = 127.0.0.1:9092,127.0.0.1:9092,127.0.0.1:9092
-kafka_topics = owl

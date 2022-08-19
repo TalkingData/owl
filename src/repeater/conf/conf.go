@@ -7,17 +7,13 @@ import (
 type Conf struct {
 	Const *constConf
 
-	Listen string
+	Listen  string
+	Backend string
 
 	LogPath  string
 	LogLevel string
 
-	Backend             string
-	OpentsdbAddress     string
-	KairosdbAddress     string
-	KairosdbRestAddress string
-	KafkaAddresses      []string
-	KafkaTopic          string
+	KairosDbAddress string
 }
 
 func NewConfig() *Conf {
@@ -29,16 +25,12 @@ func NewConfig() *Conf {
 	return &Conf{
 		Const: newConstConf(),
 
-		Listen: cfg.MustValue("main", "listen", defaultListen),
+		Listen:  cfg.MustValue("main", "listen", defaultListen),
+		Backend: cfg.MustValue("main", "backend", defaultBackend),
 
 		LogLevel: cfg.MustValue("log", "log_level", defaultLogLevel),
 		LogPath:  cfg.MustValue("log", "log_path", defaultLogPath),
 
-		Backend:             cfg.MustValue("backend", "backend", defaultBackend),
-		OpentsdbAddress:     cfg.MustValue("backend", "opentsdb_address", defaultOpentsdbAddress),
-		KairosdbAddress:     cfg.MustValue("backend", "kairosdb_address", defaultKairosdbAddress),
-		KairosdbRestAddress: cfg.MustValue("backend", "rest_kairosdb_address", defaultKairosdbRestAddress),
-		KafkaAddresses:      cfg.MustValueArray("backend", "kafka_address", defaultKfkAddresses),
-		KafkaTopic:          cfg.MustValue("backend", "kafka_topic", defaultKfkTopic),
+		KairosDbAddress: cfg.MustValue("kairosdb", "kairosdb_address", defaultKairosDbAddress),
 	}
 }
