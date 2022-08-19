@@ -14,14 +14,8 @@ type Backend interface {
 // NewBackend
 func NewBackend(conf *conf.Conf) (Backend, error) {
 	switch conf.Backend {
-	case "opentsdb":
-		return newOpentsdbBackend(conf.OpentsdbAddress)
 	case "kairosdb":
-		return newOpentsdbBackend(conf.KairosdbAddress)
-	case "kairosdb-rest":
-		return newKairosdbRestBackend(conf.KairosdbRestAddress)
-	case "kafka":
-		return newKafkaBackend(conf.KafkaAddresses, conf.KafkaTopic)
+		return newKairosDbBackend(conf.KairosDbAddress)
 	}
 
 	return nil, fmt.Errorf("unsupported backend %s", conf.Backend)

@@ -63,7 +63,7 @@ func (agent *agent) listPluginsProcess() {
 				for _, data := range dataArr {
 					data.Cycle = cycle
 				}
-				agent.sendManyTsData(dataArr)
+				agent.sendTsDataArray(dataArr, true)
 			},
 		)
 
@@ -200,7 +200,6 @@ func (agent *agent) downloadPluginFile(pluginId uint32, pathname string) error {
 		}, "An error occurred while os.OpenFile in agent.downloadPluginFile.")
 		return err
 	}
-
 	defer func() {
 		_ = fp.Close()
 	}()
@@ -227,7 +226,7 @@ func (agent *agent) downloadPluginFile(pluginId uint32, pathname string) error {
 			return err
 		}
 
-		mob, err := fp.Write(rsp.Buffer)
+		br, err := fp.Write(rsp.Buffer)
 		if err != nil {
 			agent.logger.ErrorWithFields(logger.Fields{
 				"plugin_id": pluginId,
@@ -237,9 +236,9 @@ func (agent *agent) downloadPluginFile(pluginId uint32, pathname string) error {
 			return err
 		}
 		agent.logger.DebugWithFields(logger.Fields{
-			"plugin_id":       pluginId,
-			"pathname":        pathname,
-			"number_of_bytes": mob,
+			"plugin_id":      pluginId,
+			"pathname":       pathname,
+			"bytes_received": br,
 		}, "agent.downloadPluginFile received some data.")
 	}
 }

@@ -6,11 +6,12 @@ import (
 	metricList "owl/dto/metric_list"
 )
 
-func (agent *agent) sendManyTsData(in []*dto.TsData) {
+// sendTsDataArray 发送数组形式的Ts数据，若fillAgentInfo为true将向tags中覆盖填充当前agentInfo的host和uuid
+func (agent *agent) sendTsDataArray(in dto.TsDataArray, fillAgentInfo bool) {
 	agent.logger.InfoWithFields(logger.Fields{
 		"length": len(in),
-	}, "agent.sendManyTsData called.")
-	defer agent.logger.Info("agent.sendManyTsData end.")
+	}, "agent.sendTsDataArray called.")
+	defer agent.logger.Info("agent.sendTsDataArray end.")
 
 	go func() {
 		for _, currTsData := range in {
@@ -22,7 +23,7 @@ func (agent *agent) sendManyTsData(in []*dto.TsData) {
 					"current_ts_data_cycle":  currTsData.Cycle,
 					"current_ts_data_tags":   currTsData.Tags,
 					"error":                  err,
-				}, "Ts data validate failed in agent.sendManyTsData, skipped this.")
+				}, "Ts data validate failed in agent.sendTsDataArray, skipped this.")
 			}
 
 			// 取出旧数据
@@ -70,7 +71,7 @@ func (agent *agent) sendManyTsData(in []*dto.TsData) {
 						"current_ts_data_cycle":  currTsData.Cycle,
 						"current_ts_data_tags":   currTsData.Tags,
 						"previous_ts_data_value": previousMetric.Value,
-					}, "An error occurred while agent.sendManyTsData, the cycle value of ts data can not be 'ZERO'.")
+					}, "An error occurred while agent.sendTsDataArray, the cycle value of ts data can not be 'ZERO'.")
 					continue
 				}
 
@@ -103,8 +104,13 @@ func (agent *agent) sendManyTsData(in []*dto.TsData) {
 				currTsData.Value = currTsData.Value - previousMetric.Value
 			}
 
+			fillTags := map[string]string{}
 			// 向tags中追加uuid和host属性
-			currTsData.MergeTags(map[string]string{"uuid": agent.agentInfo.HostId, "host": agent.agentInfo.Hostname})
+			if fillAgentInfo {
+				fillTags["uuid"] = agent.agentInfo.HostId
+				fillTags["host"] = agent.agentInfo.Hostname
+			}
+			currTsData.MergeTags(fillTags)
 			agent.sendTimeSeriesData(currTsData.Trans2RepTsData())
 		}
 	}()

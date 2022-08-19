@@ -6,11 +6,11 @@ import (
 )
 
 func (d *Dao) ListHostPlugins(query orm.Query) (hPlugins []*model.HostPlugin, err error) {
-	db := query.Where(d.db)
-	res := db.Limit(1).Find(&hPlugins)
+	res := query.Where(d.db).Limit(1).Find(&hPlugins)
 	return hPlugins, res.Error
 }
 
+// ListHostsPluginsByHostId 根据HostId列出主机的所有插件
 func (d *Dao) ListHostsPluginsByHostId(hostId string) (plugins []*model.Plugin, err error) {
 	res := d.db.Model(&model.HostPlugin{}).
 		Select("host_plugin.plugin_id AS id, "+
