@@ -11,12 +11,11 @@
 ## Features
 
 - Go语言开发，部署维护简单
-- 分布式，支持多机房
-- 多维的数据模型，类opentsdb
+- 基于Go-micro框架，实现负载均衡并支持分布式部署方式，支持多机房
 - 支持多种报警算法，支持多条件组合、时间范围、报警模板等
 - 灵活的插件机制，支持任意语言编写，支持传参，自动同步到客户端
 - 丰富的报警渠道，邮件、企业微信、短信、电话以及自定义脚本
-- 原始数据永久存储，支持发送到 opentsdb、kairosdb、kafka
+- 原始数据永久存储，支持发送到 kairosdb
 - 自带 web 管理界面以及强大的自定义图表功能能
 
 ## 什么是v6：
@@ -32,8 +31,9 @@
   - [x] 修复对system.cpu.softirq采集逻辑的错误；
   - [x] 不再支持采集内部指标：system.cpu.stolen；
 - [x] 移除Netcollect组件（计划后续采用agent的http上报方式替代）；
-- [ ] 使Proxy可同时具有CFC和Repeater的代理功能；
+- [x] 使Proxy可同时具有CFC和Repeater的代理功能；
 - [x] Agent支持使用http协议主动上报ts data方式；
+- [x] Agent改为只与Proxy通讯，Proxy利用服务注册机制寻找CFC和Repeater并做相应负载均衡策略；
 - [ ] Inspector与Controller组件业务逻辑优化（计划整合、支持分布式方式部署和运行）；
 - [ ] Api操作数据库的方法被封装入dao层，同时加入gorm，解决v5版本中存在的数据库注入问题；
 - [ ] 【Draft】增加对不同OS和Arch的支持；
@@ -41,4 +41,3 @@
   - [ ] plugin库表扩充其支持的OS和Arch字段；
   - [ ] 处理Agent发来的插件下载请求时，CFC会根据其OS和Arch做出相应下载返回；
   - [ ] Proxy组件更新并适配此功能；
-- [ ] 【Draft】Agent改为只与Proxy通讯，Proxy利用服务注册机制寻找CFC和Repeater并做相应负载均衡策略；

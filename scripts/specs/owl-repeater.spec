@@ -1,5 +1,5 @@
 Name:      owl-repeater
-Version:   6.0.0
+Version:   6.0.2
 Release:   1%{?dist}
 Summary:   TalkingData OWL Repeater
 
@@ -40,8 +40,6 @@ fi
 %post
 if [ $1 == 1 ];then
 systemctl daemon-reload
-systemctl enable owl-repeater
-systemctl restart owl-repeater
 fi
 
 # 卸载前执行的脚本

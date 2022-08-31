@@ -1,5 +1,7 @@
 package conf
 
+import "owl/common/global"
+
 type constConf struct {
 	ServiceName string
 
@@ -11,7 +13,7 @@ type constConf struct {
 
 func newConstConf() *constConf {
 	return &constConf{
-		ServiceName: "owl-cfc",
+		ServiceName: global.OwlCfcServiceName,
 
 		CleanExpiredMetricBatchLimit:      500,
 		CleanExpiredMetricBatchIntervalMs: 100,

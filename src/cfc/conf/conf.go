@@ -2,6 +2,7 @@ package conf
 
 import (
 	"github.com/Unknwon/goconfig"
+	"owl/common/global"
 	"time"
 )
 
@@ -9,7 +10,8 @@ type Conf struct {
 	Const *constConf
 
 	Listen                              string
-	PluginDir                           string
+	MicroRegisterTtl                    time.Duration
+	MicroRegisterInterval               time.Duration
 	RefreshHostStatusIntervalSecs       time.Duration
 	HostDownStatusThresholdSecs         int
 	CleanExpiredMetricIntervalSecs      time.Duration
@@ -18,6 +20,10 @@ type Conf struct {
 
 	LogPath  string
 	LogLevel string
+
+	EtcdAddresses []string
+	EtcdUsername  string
+	EtcdPassword  string
 
 	MysqlAddress      string
 	MysqlDbName       string
@@ -36,8 +42,13 @@ func NewConfig() *Conf {
 	return &Conf{
 		Const: newConstConf(),
 
-		Listen:    cfg.MustValue("main", "listen", defaultListen),
-		PluginDir: cfg.MustValue("main", "plugin_dir", defaultPluginDir),
+		Listen: cfg.MustValue("main", "listen", defaultListen),
+		MicroRegisterTtl: time.Duration(cfg.MustInt(
+			"main", "micro_register_ttl", defaultMicroRegisterTtl,
+		)) * time.Second,
+		MicroRegisterInterval: time.Duration(cfg.MustInt(
+			"main", "micro_register_interval", defaultMicroRegisterInterval,
+		)) * time.Second,
 		RefreshHostStatusIntervalSecs: time.Duration(cfg.MustInt(
 			"main", "refresh_host_status_interval_secs", defaultRefreshHostStatusIntervalSecs,
 		)) * time.Second,
@@ -56,6 +67,10 @@ func NewConfig() *Conf {
 
 		LogLevel: cfg.MustValue("log", "log_level", defaultLogLevel),
 		LogPath:  cfg.MustValue("log", "log_path", defaultLogPath),
+
+		EtcdAddresses: cfg.MustValueArray("etcd", "addresses", global.DefaultConfigSeparator),
+		EtcdUsername:  cfg.MustValue("etcd", "username", defaultEtcdUsername),
+		EtcdPassword:  cfg.MustValue("etcd", "password", defaultEtcdPassword),
 
 		MysqlAddress:      cfg.MustValue("mysql", "address", defaultMysqlAddress),
 		MysqlDbName:       cfg.MustValue("mysql", "db_name", defaultMysqlDbName),

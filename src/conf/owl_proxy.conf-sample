@@ -1,0 +1,12 @@
+[main]
+listen = 127.0.0.1:19577
+plugin_dir = ../plugins
+
+[log]
+level = debug
+path = ../logs
+
+[etcd]
+addresses = 127.0.0.1:2379,127.0.0.1:2379,127.0.0.1:2379
+username =
+password =

@@ -210,7 +210,7 @@ func (q *Queue) Size() int {
 }
 
 func (q *Queue) isempty() bool {
-	return (q.size() == 0)
+	return q.size() == 0
 }
 
 // Return true if Queue is empty.
@@ -221,7 +221,7 @@ func (q *Queue) IsEmpty() bool {
 }
 
 func (q *Queue) isfull() bool {
-	return (q.maxSize > 0 && q.maxSize <= q.size())
+	return q.maxSize > 0 && q.maxSize <= q.size()
 }
 
 // Return true if Queue is full.

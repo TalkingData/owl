@@ -2,7 +2,7 @@ package metric_list
 
 import (
 	"fmt"
-	cfcProto "owl/cfc/proto"
+	proxyProto "owl/proxy/proto"
 	"sort"
 	"strings"
 	"sync"
@@ -34,11 +34,11 @@ func NewMetric(hostId, _metric, dataType string, val float64, ts int64, cycle in
 	}
 }
 
-func (m *metric) ToCfcMetric() *cfcProto.Metric {
+func (m *metric) ToProxyMetric() *proxyProto.Metric {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	return &cfcProto.Metric{
+	return &proxyProto.Metric{
 		HostId:   m.HostId,
 		Metric:   m.Metric,
 		DataType: m.DataType,

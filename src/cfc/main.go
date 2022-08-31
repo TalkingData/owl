@@ -3,10 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/micro/go-micro/v2"
+	"github.com/micro/go-micro/v2/registry"
+	"github.com/micro/go-plugins/registry/etcdv3/v2"
 	"os"
 	"os/signal"
-	"owl/cfc/component"
 	"owl/cfc/conf"
+	cfcProto "owl/cfc/proto"
+	"owl/cfc/service"
 	"owl/common/logger"
 	"owl/common/orm"
 	"owl/dao"
@@ -15,7 +19,7 @@ import (
 )
 
 var (
-	cfc component.Component
+	cfcSrv micro.Service
 
 	cfcDao  *dao.Dao
 	cfcConf *conf.Conf
@@ -23,17 +27,27 @@ var (
 )
 
 func main() {
-	cfc = component.NewCfcComponent(context.Background(), cfcDao, cfcConf, cfcLg)
-	if cfc == nil {
-		cfcLg.ErrorWithFields(logger.Fields{
-			"error": fmt.Errorf("nil cfc error"),
-		}, "An error occurred while main.")
-		return
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	etcdReg := etcdv3.NewRegistry(
+		registry.Addrs(cfcConf.EtcdAddresses...),
+		etcdv3.Auth(cfcConf.EtcdUsername, cfcConf.EtcdPassword),
+	)
+
+	cfcSrv = micro.NewService(
+		micro.Name(cfcConf.Const.ServiceName),
+		micro.Address(cfcConf.Listen),
+		micro.Version("v1"),
+		micro.Registry(etcdReg),
+		micro.RegisterTTL(cfcConf.MicroRegisterTtl),
+		micro.RegisterInterval(cfcConf.MicroRegisterInterval),
+		micro.Context(ctx),
+	)
+
+	_ = cfcProto.RegisterOwlCfcServiceHandler(cfcSrv.Server(), service.NewOwlCfcService(cfcDao, cfcConf, cfcLg))
 
 	e := make(chan error)
 	go func() {
-		e <- cfc.Start()
+		e <- cfcSrv.Run()
 	}()
 
 	// 等待退出信号
@@ -46,7 +60,7 @@ func main() {
 			if err != nil {
 				cfcLg.ErrorWithFields(logger.Fields{
 					"error": err,
-				}, "An error occurred while cfc.Start.")
+				}, "An error occurred while cfcSrv.Start.")
 			}
 			closeAll()
 			return
@@ -54,7 +68,7 @@ func main() {
 			cfcLg.InfoWithFields(logger.Fields{
 				"signal": sig.String(),
 			}, "Got quit signal.")
-			closeAll()
+			cancel()
 			return
 		}
 	}
@@ -62,9 +76,6 @@ func main() {
 
 // closeAll
 func closeAll() {
-	if cfc != nil {
-		cfc.Stop()
-	}
 	if cfcDao != nil {
 		cfcDao.Close()
 	}

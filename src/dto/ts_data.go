@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/shopspring/decimal"
 	"owl/common/utils"
-	repProto "owl/repeater/proto"
+	proxyProto "owl/proxy/proto"
 	"regexp"
 	"sort"
 	"strings"
@@ -121,8 +121,8 @@ func (tsData *TsData) Tags2Str() (res string) {
 	return strings.Join(keyArr, ",")
 }
 
-func (tsData *TsData) Trans2RepTsData() *repProto.TsData {
-	return &repProto.TsData{
+func (tsData *TsData) Trans2ProxyTsData() *proxyProto.TsData {
+	return &proxyProto.TsData{
 		Metric:    tsData.Metric,
 		DataType:  tsData.DataType,
 		Value:     tsData.Value,

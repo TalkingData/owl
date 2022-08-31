@@ -1,34 +1,44 @@
-package component
+package main
 
 import (
 	"context"
 	"fmt"
-	"github.com/shopspring/decimal"
 	"net/http"
 	"os"
 	"owl/agent/conf"
 	"owl/agent/executor"
-	cfcProto "owl/cfc/proto"
 	"owl/cli"
 	"owl/common/global"
 	"owl/common/logger"
 	metricList "owl/dto/metric_list"
 	pluginList "owl/dto/plugin_list"
-	repProto "owl/repeater/proto"
+	proxyProto "owl/proxy/proto"
 	"sync"
 	"time"
 )
+
+// Agent 客户端
+type Agent interface {
+	// Start 启动Component服务
+	Start() error
+	// Stop 关闭Component服务
+	Stop()
+}
+
+// NewAgent 创建Agent组件
+func NewAgent(ctx context.Context, conf *conf.Conf, lg *logger.Logger) (Agent, error) {
+	return newAgent(ctx, conf, lg)
+}
 
 // agent struct
 type agent struct {
 	httpServer *http.Server
 
-	cfcCli cfcProto.OwlCfcServiceClient
-	repCli repProto.OwlRepeaterServiceClient
+	proxyCli proxyProto.OwlProxyServiceClient
 
 	executor *executor.Executor
 
-	agentInfo  cfcProto.AgentInfo
+	agentInfo  proxyProto.AgentInfo
 	pluginList *pluginList.PluginList
 	metricList *metricList.MetricList
 
@@ -41,7 +51,7 @@ type agent struct {
 }
 
 func newAgent(ctx context.Context, conf *conf.Conf, lg *logger.Logger) (*agent, error) {
-	agt := &agent{
+	a := &agent{
 		executor: executor.NewExecutor(lg),
 
 		pluginList: pluginList.NewPluginList(),
@@ -53,14 +63,14 @@ func newAgent(ctx context.Context, conf *conf.Conf, lg *logger.Logger) (*agent, 
 		wg: new(sync.WaitGroup),
 	}
 
-	agt.ctx, agt.cancelFunc = context.WithCancel(ctx)
+	a.ctx, a.cancelFunc = context.WithCancel(ctx)
 
 	// 初始化失败时，不返回agent对象
-	if err := agt.init(); err != nil {
+	if err := a.init(); err != nil {
 		return nil, err
 	}
 
-	return agt, nil
+	return a, nil
 }
 
 func (agent *agent) Start() error {
@@ -118,7 +128,7 @@ func (agent *agent) Start() error {
 		case <-agent.ctx.Done():
 			agent.logger.InfoWithFields(logger.Fields{
 				"context_error": agent.ctx.Err(),
-			}, "owl agent exited by context done.")
+			}, "Owl agent exited by context done.")
 			return agent.ctx.Err()
 		}
 	}
@@ -142,39 +152,14 @@ func (agent *agent) Stop() {
 	agent.cancelFunc()
 }
 
-func (agent *agent) refreshAgentInfo() {
-	agent.agentInfo.HostId = agent.executor.GetHostID()
-	agent.agentInfo.Hostname = agent.executor.GetHostname()
-	agent.agentInfo.AgentVersion = global.Version
-	agent.agentInfo.Uptime, agent.agentInfo.IdlePct = agent.executor.GetHostUptimeAndIdle()
-
-	// 使IdlePct只保留两位小数
-	agent.agentInfo.IdlePct, _ = decimal.NewFromFloat(agent.agentInfo.IdlePct).Round(2).Float64()
-
-	// Get local ip with cfc
-	if ip := agent.executor.GetLocalIp(agent.conf.CfcAddress); len(ip) > 0 {
-		agent.agentInfo.Ip = ip
-		return
-	}
-
-	// Get local ip with repeater
-	agent.agentInfo.Ip = agent.executor.GetLocalIp(agent.conf.RepeaterAddress)
-}
-
 func (agent *agent) init() (err error) {
 	agent.httpServer = &http.Server{
 		Addr:    agent.conf.Listen,
 		Handler: agent.newHttpHandler(),
 	}
 
-	// 连接Cfc
-	agent.cfcCli, err = cli.NewCfcClient(agent.conf.CfcAddress)
-	if err != nil {
-		return err
-	}
-
-	// 连接Repeater
-	agent.repCli, err = cli.NewRepeaterClient(agent.conf.RepeaterAddress)
+	// 连接Proxy
+	agent.proxyCli, err = cli.NewProxyClient(agent.conf.ProxyAddress)
 	if err != nil {
 		return err
 	}

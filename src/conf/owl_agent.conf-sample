@@ -6,17 +6,13 @@ exec_builtin_metrics_interval_secs = 60
 level = debug
 path = ../logs
 
-[cfc]
-address = 127.0.0.1:19576
-call_cfc_timeout_secs = 10
+[proxy]
+address = 127.0.0.1:19577
+call_proxy_timeout_secs = 10
 download_plugin_timeout_secs = 90
 list_plugins_interval_secs = 300
 report_metric_interval_secs = 300
 report_heartbeat_interval_secs = 60
-
-[repeater]
-address = 127.0.0.1:19577
-call_repeater_timeout_secs = 10
 
 [plugin]
 plugin_dir = ../plugins

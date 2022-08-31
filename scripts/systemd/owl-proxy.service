@@ -1,15 +1,17 @@
 [Unit]
-Description=owl-proxy
+Description=OWL Proxy
 After=network.target
 
 [Service]
-ExecStart=/usr/local/owl-proxy/proxy
 Type=simple
-PIDFile=/usr/local/owl-proxy/proxy.pid
+User=root
+Group=root
+WorkingDirectory=/usr/local/owl-proxy/bin
+ExecStart=/usr/local/owl-proxy/bin/owl-proxy
 Restart=always
 RestartSec=5
 StandardOutput=null
 LimitNOFILE=655350
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target
