@@ -3,11 +3,8 @@ package utils
 import (
 	"database/sql/driver"
 	"fmt"
+	"owl/common/global"
 	"time"
-)
-
-const (
-	timestampFormat = "2006-01-02 15:04:05"
 )
 
 type LocalTime struct {
@@ -20,7 +17,7 @@ func NewLocalTimeByTimestamp(ts int64) *LocalTime {
 }
 
 func (t *LocalTime) MarshalJSON() ([]byte, error) {
-	formatted := fmt.Sprintf("\"%s\"", t.Format(timestampFormat))
+	formatted := fmt.Sprintf("\"%s\"", t.Format(global.TimestampFormat))
 	return []byte(formatted), nil
 }
 
@@ -44,11 +41,11 @@ func (t *LocalTime) Scan(v interface{}) error {
 }
 
 func (t *LocalTime) UnmarshalJSON(data []byte) (err error) {
-	now, err := time.ParseInLocation(`"`+timestampFormat+`"`, string(data), time.Local)
+	now, err := time.ParseInLocation(`"`+global.TimestampFormat+`"`, string(data), time.Local)
 	*t = LocalTime{Time: now}
 	return
 }
 
 func (t *LocalTime) String() string {
-	return t.Format(timestampFormat)
+	return t.Format(global.TimestampFormat)
 }

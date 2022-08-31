@@ -18,6 +18,10 @@ require (
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/golang/protobuf v1.5.2
 	github.com/itsjamie/gin-cors v0.0.0-20220228161158-ef28d3d2a0a8
+		github.com/micro/go-micro/v2 v2.9.1
+    	github.com/micro/go-plugins/broker/kafka/v2 v2.9.1
+    	github.com/micro/go-plugins/registry/etcdv3/v2 v2.9.1
+    	github.com/micro/go-plugins/wrapper/trace/opentracing/v2 v2.9.1
 	github.com/jmoiron/sqlx v1.3.4
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect

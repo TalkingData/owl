@@ -39,7 +39,7 @@ const (
 	MsgRepeaterPostTimeSeriesData
 )
 
-var MsgTextMap map[tcp.PacketType]string = map[tcp.PacketType]string{
+var MsgTextMap = map[tcp.PacketType]string{
 	MsgAgentRegister:              "MsgAgentRegister",
 	MsgAgentSendMetricInfo:        "MsgAgentSendMetricInfo",
 	MsgAgentSendTimeSeriesData:    "MsgAgentSendTimeSeriesData",

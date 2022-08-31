@@ -1,11 +1,19 @@
 [main]
-listen = 127.0.0.1:19577
+listen = 127.0.0.1:0
+micro_register_ttl = 10
+micro_register_interval = 3
+
 # Supported 'kairosdb' backend only
 backend = kairosdb
 
 [log]
 level = debug
 path = ../logs
+
+[etcd]
+addresses = 127.0.0.1:2379,127.0.0.1:2379,127.0.0.1:2379
+username =
+password =
 
 [kairosdb]
 # Enable when backend = kairosdb

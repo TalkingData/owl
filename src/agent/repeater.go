@@ -1,13 +1,13 @@
-package component
+package main
 
 import (
 	"context"
 	"owl/common/logger"
-	repProto "owl/repeater/proto"
+	proxyProto "owl/proxy/proto"
 )
 
-func (agent *agent) sendTimeSeriesData(tsData *repProto.TsData) {
-	ctx, cancel := context.WithTimeout(agent.ctx, agent.conf.CallRepeaterTimeoutSecs)
+func (agent *agent) sendTimeSeriesData(tsData *proxyProto.TsData) {
+	ctx, cancel := context.WithTimeout(agent.ctx, agent.conf.CallProxyTimeoutSecs)
 	defer cancel()
 
 	agent.logger.DebugWithFields(logger.Fields{
@@ -17,13 +17,13 @@ func (agent *agent) sendTimeSeriesData(tsData *repProto.TsData) {
 		"timestamp": tsData.Timestamp,
 		"cycle":     tsData.Cycle,
 		"tags":      tsData.Tags,
-	}, "Finished repCli.ReceiveTimeSeriesData.")
+	}, "Finished proxyCli.ReceiveTimeSeriesData.")
 
-	if _, err := agent.repCli.ReceiveTimeSeriesData(ctx, tsData); err != nil {
+	if _, err := agent.proxyCli.ReceiveTimeSeriesData(ctx, tsData); err != nil {
 		agent.logger.ErrorWithFields(logger.Fields{
 			"host_id": agent.agentInfo.HostId,
 			"metrics": tsData.Metric,
 			"error":   err,
-		}, "An error occurred while repCli.ReceiveTimeSeriesData in agent.sendTimeSeriesData.")
+		}, "An error occurred while proxyCli.ReceiveTimeSeriesData in agent.proxyCli.sendTimeSeriesData.")
 	}
 }

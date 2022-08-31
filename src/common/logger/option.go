@@ -1,5 +1,7 @@
 package logger
 
+import "owl/common/global"
+
 const (
 	defaultServiceName = "undefined"
 
@@ -11,7 +13,7 @@ const (
 	defaultLogBackups        = 7
 	defaultLogBackupCompress = true
 
-	defaultTimestampFormat  = "2006-01-02 15:04:05"
+	defaultTimestampFormat  = global.TimestampFormat
 	defaultLogDataSeparator = "; "
 	defaultSourceCodePath   = "/src/"
 

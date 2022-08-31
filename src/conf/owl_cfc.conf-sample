@@ -1,6 +1,7 @@
 [main]
-listen = 127.0.0.1:19576
-plugin_dir = ../plugins
+listen = 127.0.0.1:0
+micro_register_ttl = 10
+micro_register_interval = 3
 
 # refresh_host_status_interval_secs = 0 for disable it
 refresh_host_status_interval_secs = 90
@@ -16,6 +17,11 @@ allow_create_product_auto = true
 [log]
 level = debug
 path = ../logs
+
+[etcd]
+addresses = 127.0.0.1:2379,127.0.0.1:2379,127.0.0.1:2379
+username =
+password =
 
 [mysql]
 address = 127.0.0.1:3306

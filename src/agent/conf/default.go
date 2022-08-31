@@ -11,15 +11,12 @@ const (
 	defaultLogLevel = "debug"
 	defaultLogPath  = "../logs"
 
-	defaultCfcAddress                  = "127.0.0.1:19576"
-	defaultCallCfcTimeoutSecs          = 10
+	defaultProxyAddress                = "127.0.0.1:19577"
+	defaultCallProxyTimeoutSecs        = 10
 	defaultDownloadPluginTimeoutSecs   = 90
 	defaultListPluginsIntervalSecs     = 300
 	defaultReportMetricIntervalSecs    = 300
 	defaultReportHeartbeatIntervalSecs = 60
-
-	defaultRepeaterAddress         = "127.0.0.1:19577"
-	defaultCallRepeaterTimeoutSecs = 10
 
 	defaultPluginDir              = "../plugins"
 	defaultExecuteUntrustedPlugin = false

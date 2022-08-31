@@ -1,38 +1,86 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"net/http"
-	_ "net/http/pprof"
 	"os"
-	"path/filepath"
+	"os/signal"
+	"owl/common/logger"
+	"owl/proxy/conf"
 	"runtime"
+	"syscall"
 )
 
-func init() {
-	os.Chdir(filepath.Dir(os.Args[0]))
-	os.Mkdir("logs", 0755)
-	runtime.GOMAXPROCS(runtime.NumCPU())
-}
+var (
+	proxy Proxy
+
+	proxyConf *conf.Conf
+	proxyLg   *logger.Logger
+)
 
 func main() {
-	var err error
-	if err = InitGlobalConfig(); err != nil {
-		fmt.Println(err)
+	proxy = NewProxy(context.Background(), proxyConf, proxyLg)
+	if proxy == nil {
+		proxyLg.ErrorWithFields(logger.Fields{
+			"error": fmt.Errorf("nil proxy error"),
+		}, "An error occurred while main.")
 		return
 	}
-	if err = InitLog(); err != nil {
-		fmt.Println("failed to init log.")
-		return
-	}
+
+	e := make(chan error)
 	go func() {
-		fmt.Printf("start metric interface %s\n", GlobalConfig.MetricBind)
-		fmt.Printf("%s\n", http.ListenAndServe(":10031", nil))
+		e <- proxy.Start()
 	}()
-	if err = InitCfcProxy(); err != nil {
-		fmt.Println(err)
-		return
+
+	// 等待退出信号
+	quit := make(chan os.Signal)
+	signal.Notify(quit, syscall.SIGKILL, syscall.SIGQUIT, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
+
+	for {
+		select {
+		case err := <-e:
+			if err != nil {
+				proxyLg.ErrorWithFields(logger.Fields{
+					"error": err,
+				}, "An error occurred while proxy.Start.")
+			}
+			closeAll()
+			return
+		case sig := <-quit:
+			proxyLg.InfoWithFields(logger.Fields{
+				"signal": sig.String(),
+			}, "Got quit signal.")
+			closeAll()
+			return
+		}
 	}
-	go proxy.DialCFC()
-	select {}
+}
+
+// closeAll
+func closeAll() {
+	if proxy != nil {
+		proxy.Stop()
+	}
+	if proxyLg != nil {
+		proxyLg.Close()
+	}
+}
+
+func init() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	// 初始化配置
+	proxyConf = conf.NewConfig()
+
+	// 生成Logger
+	lg, err := logger.NewLogger(
+		logger.LogLevel(proxyConf.LogLevel),
+		logger.LogPath(proxyConf.LogPath),
+		logger.ServiceName(proxyConf.Const.ServiceName),
+	)
+	if err != nil {
+		fmt.Println("An error occurred while logger.NewLogger, error:", err.Error())
+		panic(err)
+	}
+	proxyLg = lg
 }
