@@ -17,7 +17,7 @@ func (l *Logger) Debug(args ...interface{}) {
 
 func (l *Logger) DebugWithFields(f Fields, args ...interface{}) {
 	if l.lg.Level >= logrus.DebugLevel {
-		entry := l.lg.WithFields(f.RusFields(l))
+		entry := l.lg.WithFields(f.Trans2LogrusFields(l))
 		entry.Data["file"] = l.getFileInfo()
 		entry.Debug(args...)
 	}
@@ -33,7 +33,7 @@ func (l *Logger) Info(args ...interface{}) {
 
 func (l *Logger) InfoWithFields(f Fields, args ...interface{}) {
 	if l.lg.Level >= logrus.InfoLevel {
-		entry := l.lg.WithFields(f.RusFields(l))
+		entry := l.lg.WithFields(f.Trans2LogrusFields(l))
 		entry.Data["file"] = l.getFileInfo()
 		entry.Info(args...)
 	}
@@ -49,7 +49,7 @@ func (l *Logger) Warn(args ...interface{}) {
 
 func (l *Logger) WarnWithFields(f Fields, args ...interface{}) {
 	if l.lg.Level >= logrus.WarnLevel {
-		entry := l.lg.WithFields(f.RusFields(l))
+		entry := l.lg.WithFields(f.Trans2LogrusFields(l))
 		entry.Data["file"] = l.getFileInfo()
 		entry.Warn(args...)
 	}
@@ -65,7 +65,7 @@ func (l *Logger) Error(args ...interface{}) {
 
 func (l *Logger) ErrorWithFields(f Fields, args ...interface{}) {
 	if l.lg.Level >= logrus.ErrorLevel {
-		entry := l.lg.WithFields(f.RusFields(l))
+		entry := l.lg.WithFields(f.Trans2LogrusFields(l))
 		entry.Data["file"] = l.getFileInfo()
 		entry.Error(args...)
 	}
@@ -81,7 +81,7 @@ func (l *Logger) Fatal(args ...interface{}) {
 
 func (l *Logger) FatalWithFields(f Fields, args ...interface{}) {
 	if l.lg.Level >= logrus.FatalLevel {
-		entry := l.lg.WithFields(f.RusFields(l))
+		entry := l.lg.WithFields(f.Trans2LogrusFields(l))
 		entry.Data["file"] = l.getFileInfo()
 		entry.Fatal(args...)
 	}
@@ -94,7 +94,7 @@ func (l *Logger) Panic(args ...interface{}) {
 }
 
 func (l *Logger) PanicWithFields(f Fields, args ...interface{}) {
-	entry := l.lg.WithFields(f.RusFields(l))
+	entry := l.lg.WithFields(f.Trans2LogrusFields(l))
 	entry.Data["file"] = l.getFileInfo()
 	entry.Panic(args...)
 }

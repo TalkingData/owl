@@ -4,7 +4,7 @@ import "google/protobuf/empty.proto";
 
 package repeater_proto;
 
-service OwlRepeaterService {
+service OwlRepeater {
   // ReceiveTimeSeriesData 中继器接收数据
   rpc ReceiveTimeSeriesData(TsData) returns(google.protobuf.Empty);
 }

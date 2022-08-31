@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"owl/agent/component"
 	"owl/agent/conf"
 	"owl/common/logger"
 	"runtime"
@@ -13,24 +12,24 @@ import (
 )
 
 var (
-	agent component.Component
+	agt Agent
 
-	agentConf *conf.Conf
-	agentLg   *logger.Logger
+	agtConf *conf.Conf
+	agtLg   *logger.Logger
 )
 
 func main() {
 	var err error
 
-	agent, err = component.NewAgentComponent(context.Background(), agentConf, agentLg)
+	agt, err = NewAgent(context.Background(), agtConf, agtLg)
 	if err != nil {
-		agentLg.ErrorWithFields(logger.Fields{
+		agtLg.ErrorWithFields(logger.Fields{
 			"error": err,
 		}, "An error occurred while main.")
 		return
 	}
-	if agent == nil {
-		agentLg.ErrorWithFields(logger.Fields{
+	if agt == nil {
+		agtLg.ErrorWithFields(logger.Fields{
 			"error": fmt.Errorf("nil agent error"),
 		}, "An error occurred while main.")
 		return
@@ -38,7 +37,7 @@ func main() {
 
 	e := make(chan error)
 	go func() {
-		e <- agent.Start()
+		e <- agt.Start()
 	}()
 
 	// 等待退出信号
@@ -49,14 +48,14 @@ func main() {
 		select {
 		case err = <-e:
 			if err != nil {
-				agentLg.ErrorWithFields(logger.Fields{
+				agtLg.ErrorWithFields(logger.Fields{
 					"error": err,
 				}, "An error occurred while agent.Start.")
 			}
 			closeAll()
 			return
 		case sig := <-quit:
-			agentLg.InfoWithFields(logger.Fields{
+			agtLg.InfoWithFields(logger.Fields{
 				"signal": sig.String(),
 			}, "Got quit signal.")
 			closeAll()
@@ -66,11 +65,11 @@ func main() {
 }
 
 func closeAll() {
-	if agent != nil {
-		agent.Stop()
+	if agt != nil {
+		agt.Stop()
 	}
-	if agentLg != nil {
-		agentLg.Close()
+	if agtLg != nil {
+		agtLg.Close()
 	}
 }
 
@@ -78,17 +77,17 @@ func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	// 初始化配置
-	agentConf = conf.NewConfig()
+	agtConf = conf.NewConfig()
 
 	// 生成Logger
 	lg, err := logger.NewLogger(
-		logger.LogLevel(agentConf.LogLevel),
-		logger.LogPath(agentConf.LogPath),
-		logger.ServiceName(agentConf.Const.ServiceName),
+		logger.LogLevel(agtConf.LogLevel),
+		logger.LogPath(agtConf.LogPath),
+		logger.ServiceName(agtConf.Const.ServiceName),
 	)
 	if err != nil {
 		fmt.Println("An error occurred while logger.NewLogger, error:", err.Error())
 		panic(err)
 	}
-	agentLg = lg
+	agtLg = lg
 }

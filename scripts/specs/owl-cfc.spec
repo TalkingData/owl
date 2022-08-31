@@ -1,5 +1,5 @@
 Name:      owl-cfc
-Version:   6.0.0
+Version:   6.0.2
 Release:   1%{?dist}
 Summary:   TalkingData OWL CFC
 
@@ -40,8 +40,6 @@ fi
 %post
 if [ $1 == 1 ];then
 systemctl daemon-reload
-systemctl enable owl-cfc
-systemctl restart owl-cfc
 fi
 
 # 卸载前执行的脚本

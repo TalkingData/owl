@@ -12,13 +12,13 @@ import (
 type PluginTaskFunc func(ctx context.Context, cycle int32, command string, args ...string)
 
 type Plugin struct {
-	Id       uint32
-	Name     string
-	Pathname string
-	Checksum string
-	Args     []string
-	Interval int32
-	Timeout  int32
+	Id        uint32
+	Name      string
+	LocalPath string
+	Checksum  string
+	Args      []string
+	Interval  int32
+	Timeout   int32
 
 	mu *sync.RWMutex
 
@@ -36,7 +36,7 @@ type Plugin struct {
 func NewPlugin(
 	ctx context.Context,
 	id uint32,
-	name, pathname, checksum string,
+	name, localPath, checksum string,
 	args []string,
 	interval, timeout int32,
 	execUntrusted bool,
@@ -44,13 +44,13 @@ func NewPlugin(
 ) *Plugin {
 
 	return &Plugin{
-		Id:       id,
-		Name:     name,
-		Pathname: pathname,
-		Checksum: checksum,
-		Args:     args,
-		Interval: interval,
-		Timeout:  timeout,
+		Id:        id,
+		Name:      name,
+		LocalPath: localPath,
+		Checksum:  checksum,
+		Args:      args,
+		Interval:  interval,
+		Timeout:   timeout,
 
 		mu: new(sync.RWMutex),
 
@@ -84,7 +84,7 @@ func (p *Plugin) StartTask() {
 			select {
 			case <-tk:
 				tkCtx, tkCancelFunc := context.WithTimeout(p.ctx, time.Second*time.Duration(p.Timeout))
-				p.taskFunc(tkCtx, p.Interval, p.Pathname, p.Args...)
+				p.taskFunc(tkCtx, p.Interval, p.LocalPath, p.Args...)
 				tkCancelFunc()
 			case <-p.ctx.Done():
 				return
@@ -115,7 +115,7 @@ func (p *Plugin) IsValidChecksum() bool {
 
 // GetFileChecksum 获得插件文件的校验
 func (p *Plugin) GetFileChecksum() string {
-	cs, err := utils.GetFileMD5(p.Pathname)
+	cs, err := utils.GetFileMD5(p.LocalPath)
 	if err != nil {
 		return ""
 	}
@@ -126,7 +126,7 @@ func (p *Plugin) GetFileChecksum() string {
 func (p *Plugin) GetPk() string {
 	return fmt.Sprintf(
 		"%s.%d.%d.%s",
-		p.Pathname,
+		p.LocalPath,
 		p.Interval,
 		p.Timeout,
 		strings.Join(p.Args, ","),

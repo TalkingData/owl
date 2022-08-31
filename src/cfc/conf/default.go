@@ -5,8 +5,9 @@ const (
 )
 
 const (
-	defaultListen                              = "127.0.0.1:19576"
-	defaultPluginDir                           = "../plugins"
+	defaultListen                              = "127.0.0.1:0"
+	defaultMicroRegisterTtl                    = 10
+	defaultMicroRegisterInterval               = 3
 	defaultRefreshHostStatusIntervalSecs       = 90
 	defaultHostDownStatusThresholdSecs         = 90
 	defaultCleanExpiredMetricIntervalSecs      = 300
@@ -15,6 +16,10 @@ const (
 
 	defaultLogLevel = "debug"
 	defaultLogPath  = "../logs"
+
+	// Etcd默认配置
+	defaultEtcdUsername = ""
+	defaultEtcdPassword = ""
 
 	// Mysql默认配置
 	defaultMysqlAddress      = "127.0.0.1:3306"

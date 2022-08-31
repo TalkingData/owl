@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"time"
 
-	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/dgrijalva/jwt-go"
 )
 
 var (

@@ -1,5 +1,5 @@
 Name:      owl-agent
-Version:   6.0.0
+Version:   6.0.2
 Release:   1%{?dist}
 Summary:   TalkingData OWL Agent
 
@@ -40,8 +40,6 @@ fi
 %post
 if [ $1 == 1 ];then
 systemctl daemon-reload
-systemctl enable owl-agent
-systemctl restart owl-agent
 fi
 
 # 卸载前执行的脚本

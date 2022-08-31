@@ -18,8 +18,8 @@ func (f Fields) String(l *Logger) string {
 	return strings.Join(data, l.opts.LogDataSeparator)
 }
 
-// RusFields 将logger.Fields转换为logrus.Fields
-func (f Fields) RusFields(l *Logger) logrus.Fields {
+// Trans2LogrusFields 将logger.Fields转换为logrus.Fields
+func (f Fields) Trans2LogrusFields(l *Logger) logrus.Fields {
 	res := logrus.Fields{}
 
 	// 从data中提取code字段，code字段不会出现在最终输入的data中

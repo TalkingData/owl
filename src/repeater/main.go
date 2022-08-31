@@ -1,35 +1,50 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"github.com/micro/go-micro/v2"
+	"github.com/micro/go-micro/v2/registry"
+	"github.com/micro/go-plugins/registry/etcdv3/v2"
 	"os"
 	"os/signal"
 	"owl/common/logger"
-	"owl/repeater/component"
 	"owl/repeater/conf"
+	repProto "owl/repeater/proto"
+	"owl/repeater/service"
 	"runtime"
 	"syscall"
 )
 
 var (
-	repeater component.Component
+	repSrv micro.Service
 
 	repConf *conf.Conf
 	repLg   *logger.Logger
 )
 
 func main() {
-	repeater = component.NewRepeaterComponent(repConf, repLg)
-	if repeater == nil {
-		repLg.ErrorWithFields(logger.Fields{
-			"error": fmt.Errorf("nil repeater error"),
-		}, "An error occurred while main.")
-		return
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	etcdReg := etcdv3.NewRegistry(
+		registry.Addrs(repConf.EtcdAddresses...),
+		etcdv3.Auth(repConf.EtcdUsername, repConf.EtcdPassword),
+	)
+
+	repSrv = micro.NewService(
+		micro.Name(repConf.Const.ServiceName),
+		micro.Address(repConf.Listen),
+		micro.Version("v1"),
+		micro.Registry(etcdReg),
+		micro.RegisterTTL(repConf.MicroRegisterTtl),
+		micro.RegisterInterval(repConf.MicroRegisterInterval),
+		micro.Context(ctx),
+	)
+
+	_ = repProto.RegisterOwlRepeaterHandler(repSrv.Server(), service.NewOwlRepeaterService(repConf, repLg))
 
 	e := make(chan error)
 	go func() {
-		e <- repeater.Start()
+		e <- repSrv.Run()
 	}()
 
 	// 等待退出信号
@@ -42,7 +57,7 @@ func main() {
 			if err != nil {
 				repLg.ErrorWithFields(logger.Fields{
 					"error": err,
-				}, "An error occurred while repeater.Start.")
+				}, "An error occurred while repSrv.Start.")
 			}
 			closeAll()
 			return
@@ -50,7 +65,7 @@ func main() {
 			repLg.InfoWithFields(logger.Fields{
 				"signal": sig.String(),
 			}, "Got quit signal.")
-			closeAll()
+			cancel()
 			return
 		}
 	}
@@ -58,9 +73,6 @@ func main() {
 
 // closeAll
 func closeAll() {
-	if repeater != nil {
-		repeater.Stop()
-	}
 	if repLg != nil {
 		repLg.Close()
 	}
