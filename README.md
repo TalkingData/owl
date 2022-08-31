@@ -40,4 +40,8 @@
   - [ ] host数据库表扩充OS和Arch字段，标识Agent所在主机的操作系统和架构；
   - [ ] plugin库表扩充其支持的OS和Arch字段；
   - [ ] 处理Agent发来的插件下载请求时，CFC会根据其OS和Arch做出相应下载返回；
-  - [ ] Proxy组件更新并适配此功能；
+  - [ ] Proxy组件更新并适配此功能；  
+  
+
+## Architecture
+![owl](./arch.jpg)
