@@ -1,83 +1,82 @@
 package main
 
 import (
-	"owl/common/types"
-	"sync"
-	"time"
-
-	"github.com/wuyingsong/tcp"
+	"context"
+	"fmt"
+	"google.golang.org/grpc"
+	"net"
+	"owl/common/logger"
+	"owl/proxy/conf"
+	proxyProto "owl/proxy/proto"
+	"owl/proxy/service"
 )
 
-var (
-	proxy *CFCProxy
-)
-
-type CFCProxy struct {
-	srv *tcp.AsyncTCPServer
-	cfc *tcp.TCPConn
-
-	connMap map[string]string //hostid -> tcpaddr1
-	lock    sync.RWMutex
+// Proxy interface
+type Proxy interface {
+	// Start 启动Proxy
+	Start() error
+	// Stop 关闭Proxy
+	Stop()
 }
 
-func InitCfcProxy() error {
-	protocol := &tcp.DefaultProtocol{}
-	protocol.SetMaxPacketSize(uint32(GlobalConfig.MaxPacketSize))
-	s := tcp.NewAsyncTCPServer(GlobalConfig.TCPBind, &callback{}, protocol)
-	proxy = &CFCProxy{
-		s,
-		&tcp.TCPConn{},
-		make(map[string]string),
-		sync.RWMutex{},
-	}
-	return proxy.srv.ListenAndServe()
+type defaultProxy struct {
+	listener   net.Listener
+	grpcServer *grpc.Server
+
+	conf   *conf.Conf
+	logger *logger.Logger
+
+	ctx        context.Context
+	cancelFunc context.CancelFunc
 }
 
-// 发送插件同步请求
-func (proxy *CFCProxy) sendSyncPluginRequest(hostID string, p types.Plugin) error {
-	lg.Debug("send sync plugin request, %s", p.Path)
-	spr := types.SyncPluginRequest{
-		hostID,
-		p,
+func NewProxy(ctx context.Context, conf *conf.Conf, logger *logger.Logger) Proxy {
+	pCtx, pCancel := context.WithCancel(ctx)
+
+	return &defaultProxy{
+		conf:   conf,
+		logger: logger,
+
+		ctx:        pCtx,
+		cancelFunc: pCancel,
 	}
-	return proxy.cfc.AsyncWritePacket(
-		tcp.NewDefaultPacket(types.MsgAgentRequestSyncPlugins, spr.Encode()),
-	)
 }
 
-func (proxy *CFCProxy) DialCFC() {
-	var (
-		tempDelay time.Duration
-		err       error
-		cfc       *tcp.TCPConn
-		reconnect bool
-	)
-
-retry:
-	if reconnect {
-		lg.Error("cfc session is closed, retry.")
-	}
-	cfc, err = proxy.srv.Connect(GlobalConfig.CFCAddr, nil, nil)
+func (p *defaultProxy) Start() (err error) {
+	// 开启RPC监听端口
+	p.listener, err = net.Listen("tcp", p.conf.Listen)
 	if err != nil {
-		if tempDelay == 0 {
-			tempDelay = 5 * time.Millisecond
-		} else {
-			tempDelay *= 2
-		}
-		if max := 5 * time.Second; tempDelay > max {
-			tempDelay = max
-		}
-		time.Sleep(tempDelay)
-		reconnect = true
-		goto retry
+		p.logger.ErrorWithFields(logger.Fields{
+			"error": err,
+		}, "An error occurred while net.Listen.")
+		return err
 	}
-	lg.Info("connect cfc %s successfully.", GlobalConfig.CFCAddr)
-	proxy.cfc = cfc
-	for {
-		if proxy.cfc.IsClosed() {
-			reconnect = true
-			goto retry
-		}
-		time.Sleep(time.Second)
+	listenerAddrStr := p.listener.Addr().String()
+
+	// 创建proxy的grpc server
+	p.grpcServer = grpc.NewServer()
+	// 注册GRPC服务
+	proxyProto.RegisterOwlProxyServiceServer(
+		p.grpcServer,
+		service.NewOwlProxyService(p.conf, p.logger),
+	)
+
+	p.logger.Info(fmt.Sprintf("Owl proxy listening on: %s", listenerAddrStr))
+
+	return p.grpcServer.Serve(p.listener)
+}
+
+func (p *defaultProxy) Stop() {
+	defer p.logger.Info("Owl proxy Stopped.")
+
+	// 关闭grpc server
+	if p.grpcServer != nil {
+		p.grpcServer.Stop()
 	}
+
+	// 等待所有任务结束
+	if p.listener != nil {
+		_ = p.listener.Close()
+	}
+	p.cancelFunc()
 }

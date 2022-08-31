@@ -256,7 +256,7 @@ func runScript(file_path string, params []string) (string, error) {
 	var (
 		stderr bytes.Buffer
 		stdout bytes.Buffer
-		done   chan error = make(chan error, 1)
+		done   = make(chan error, 1)
 	)
 
 	cmd := exec.Command(file_path, params...)

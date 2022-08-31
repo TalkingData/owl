@@ -19,7 +19,7 @@ const (
 )
 
 //报警服务消息类型可读映射
-var AlarmMessageTypeText map[tcp.PacketType]string = map[tcp.PacketType]string{
+var AlarmMessageTypeText = map[tcp.PacketType]string{
 	ALAR_MESS_INSPECTOR_HEARTBEAT:    "inspector heartbeat",
 	ALAR_MESS_INSPECTOR_TASK_REQUEST: "inspector task request",
 	ALAR_MESS_INSPECTOR_TASKS:        "inspector tasks",

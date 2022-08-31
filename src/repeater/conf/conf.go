@@ -2,16 +2,24 @@ package conf
 
 import (
 	"github.com/Unknwon/goconfig"
+	"owl/common/global"
+	"time"
 )
 
 type Conf struct {
 	Const *constConf
 
-	Listen  string
-	Backend string
+	Listen                string
+	MicroRegisterTtl      time.Duration
+	MicroRegisterInterval time.Duration
+	Backend               string
 
 	LogPath  string
 	LogLevel string
+
+	EtcdAddresses []string
+	EtcdUsername  string
+	EtcdPassword  string
 
 	KairosDbAddress string
 }
@@ -25,11 +33,21 @@ func NewConfig() *Conf {
 	return &Conf{
 		Const: newConstConf(),
 
-		Listen:  cfg.MustValue("main", "listen", defaultListen),
+		Listen: cfg.MustValue("main", "listen", defaultListen),
+		MicroRegisterTtl: time.Duration(cfg.MustInt(
+			"main", "micro_register_ttl", defaultMicroRegisterTtl,
+		)) * time.Second,
+		MicroRegisterInterval: time.Duration(cfg.MustInt(
+			"main", "micro_register_interval", defaultMicroRegisterInterval,
+		)) * time.Second,
 		Backend: cfg.MustValue("main", "backend", defaultBackend),
 
 		LogLevel: cfg.MustValue("log", "log_level", defaultLogLevel),
 		LogPath:  cfg.MustValue("log", "log_path", defaultLogPath),
+
+		EtcdAddresses: cfg.MustValueArray("etcd", "addresses", global.DefaultConfigSeparator),
+		EtcdUsername:  cfg.MustValue("etcd", "username", defaultEtcdUsername),
+		EtcdPassword:  cfg.MustValue("etcd", "password", defaultEtcdPassword),
 
 		KairosDbAddress: cfg.MustValue("kairosdb", "kairosdb_address", defaultKairosDbAddress),
 	}

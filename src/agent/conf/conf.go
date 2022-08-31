@@ -14,15 +14,12 @@ type Conf struct {
 	LogPath  string
 	LogLevel string
 
-	CfcAddress                  string
-	CallCfcTimeoutSecs          time.Duration
+	ProxyAddress                string
+	CallProxyTimeoutSecs        time.Duration
 	DownloadPluginTimeoutSecs   time.Duration
 	ListPluginsIntervalSecs     time.Duration
 	ReportMetricIntervalSecs    time.Duration
 	ReportHeartbeatIntervalSecs time.Duration
-
-	RepeaterAddress         string
-	CallRepeaterTimeoutSecs time.Duration
 
 	PluginDir              string
 	ExecuteUntrustedPlugin bool
@@ -45,26 +42,21 @@ func NewConfig() *Conf {
 		LogLevel: cfg.MustValue("log", "log_level", defaultLogLevel),
 		LogPath:  cfg.MustValue("log", "log_path", defaultLogPath),
 
-		CfcAddress: cfg.MustValue("cfc", "address", defaultCfcAddress),
-		CallCfcTimeoutSecs: time.Duration(cfg.MustInt(
-			"cfc", "call_cfc_timeout_secs", defaultCallCfcTimeoutSecs,
+		ProxyAddress: cfg.MustValue("proxy", "address", defaultProxyAddress),
+		CallProxyTimeoutSecs: time.Duration(cfg.MustInt(
+			"proxy", "call_proxy_timeout_secs", defaultCallProxyTimeoutSecs,
 		)) * time.Second,
 		DownloadPluginTimeoutSecs: time.Duration(cfg.MustInt(
-			"cfc", "download_plugin_timeout_secs", defaultDownloadPluginTimeoutSecs,
+			"proxy", "download_plugin_timeout_secs", defaultDownloadPluginTimeoutSecs,
 		)) * time.Second,
 		ListPluginsIntervalSecs: time.Duration(cfg.MustInt(
-			"cfc", "list_plugins_interval_secs", defaultListPluginsIntervalSecs,
+			"proxy", "list_plugins_interval_secs", defaultListPluginsIntervalSecs,
 		)) * time.Second,
 		ReportMetricIntervalSecs: time.Duration(cfg.MustInt(
-			"cfc", "report_metric_interval_secs", defaultReportMetricIntervalSecs,
+			"proxy", "report_metric_interval_secs", defaultReportMetricIntervalSecs,
 		)) * time.Second,
 		ReportHeartbeatIntervalSecs: time.Duration(cfg.MustInt(
-			"cfc", "report_heartbeat_interval_secs", defaultReportHeartbeatIntervalSecs,
-		)) * time.Second,
-
-		RepeaterAddress: cfg.MustValue("repeater", "address", defaultRepeaterAddress),
-		CallRepeaterTimeoutSecs: time.Duration(cfg.MustInt(
-			"repeater", "call_repeater_timeout_secs", defaultCallRepeaterTimeoutSecs,
+			"proxy", "report_heartbeat_interval_secs", defaultReportHeartbeatIntervalSecs,
 		)) * time.Second,
 
 		PluginDir: cfg.MustValue("plugin", "plugin_dir", defaultPluginDir),

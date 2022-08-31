@@ -87,7 +87,7 @@ func (c *OpenTsdbClient) newQueryParams(start, end, rawTags, aggregator, metric 
 	if isRelative {
 		start = fmt.Sprintf("%sm-ago", start)
 	}
-	queries := []Query{Query{Aggregator: aggregator, Metric: metric, Tags: tags}}
+	queries := []Query{{Aggregator: aggregator, Metric: metric, Tags: tags}}
 	return &QueryParams{Start: start, End: end, Queries: queries}
 }
 

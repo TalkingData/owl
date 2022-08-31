@@ -1,4 +1,4 @@
-package component
+package main
 
 import (
 	"owl/common/logger"
@@ -40,7 +40,7 @@ func (agent *agent) sendTsDataArray(in dto.TsDataArray, fillAgentInfo bool) {
 
 			// 对于不存在的Metric，立即上报
 			if !exist {
-				agent.reportAgentMetric(newMetric.ToCfcMetric())
+				agent.reportAgentMetric(newMetric.ToProxyMetric())
 				// 更新metric list
 				agent.metricList.Put(newMetric.GetPk(), newMetric)
 			} else if previousMetric.Timestamp+int64(currTsData.Cycle) <= currTsData.Timestamp {
@@ -111,7 +111,7 @@ func (agent *agent) sendTsDataArray(in dto.TsDataArray, fillAgentInfo bool) {
 				fillTags["host"] = agent.agentInfo.Hostname
 			}
 			currTsData.MergeTags(fillTags)
-			agent.sendTimeSeriesData(currTsData.Trans2RepTsData())
+			agent.sendTimeSeriesData(currTsData.Trans2ProxyTsData())
 		}
 	}()
 }

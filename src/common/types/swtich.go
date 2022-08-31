@@ -13,7 +13,7 @@ import (
 	"github.com/wuyingsong/utils"
 )
 
-var oids []string = []string{
+var oids = []string{
 	"ifHCOutOctets",
 	"ifHCInOctets",
 	"inErrors",
@@ -48,7 +48,7 @@ func newCounter() Counter {
 }
 
 func (c *Counter) getValue(i uint64) float64 {
-	return float64((c.Last - c.Prev)) / float64(i)
+	return float64(c.Last-c.Prev) / float64(i)
 }
 
 type Switch struct {
