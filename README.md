@@ -51,6 +51,3 @@
 
 ## 前端源码地址
 https://github.com/TalkingData/owl-frontend
-
-## QQ Group
-492850035
