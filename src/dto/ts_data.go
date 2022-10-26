@@ -18,11 +18,11 @@ const (
 )
 
 var (
-	RegMetric   = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_.-]+$`)
-	RegTagKey   = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_.-]+$`)
-	RegTagValue = regexp.MustCompile(`[a-zA-Z0-9_.-/]+$`)
+	regMetric   = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_.-]+$`)
+	regTagKey   = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_.-]+$`)
+	regTagValue = regexp.MustCompile(`[a-zA-Z0-9_.-/]+$`)
 
-	AllowedTsDataType = map[string]string{
+	allowedTsDataType = map[string]string{
 		TsDataTypeGauge:   "",
 		TsDataTypeCounter: "",
 		TsDataTypeDerive:  "",
@@ -57,20 +57,20 @@ func (tsData *TsData) Encode() []byte {
 func (tsData *TsData) Validate() error {
 	tsData.arrange()
 
-	if !RegMetric.MatchString(tsData.Metric) || tsData.Metric == "" {
-		return fmt.Errorf("invalid metric %s, must complie %s", tsData.Metric, RegMetric)
+	if !regMetric.MatchString(tsData.Metric) || tsData.Metric == "" {
+		return fmt.Errorf("invalid metric %s, must complie %s", tsData.Metric, regMetric)
 	}
 
-	if _, ok := AllowedTsDataType[tsData.DataType]; !ok {
+	if _, ok := allowedTsDataType[tsData.DataType]; !ok {
 		return fmt.Errorf("invalid data type %s, only allowed [GAUGE, COUNTER, DERIVE]", tsData.DataType)
 	}
 
 	for tKey, tVal := range tsData.Tags {
-		if !RegTagKey.MatchString(tKey) {
-			return fmt.Errorf("invalid tag key %s, must complie %s", tKey, RegTagKey)
+		if !regTagKey.MatchString(tKey) {
+			return fmt.Errorf("invalid tag key %s, must complie %s", tKey, regTagKey)
 		}
-		if !RegTagValue.MatchString(tVal) {
-			return fmt.Errorf("invalid tag value %s, must complie %s", tVal, RegTagValue)
+		if !regTagValue.MatchString(tVal) {
+			return fmt.Errorf("invalid tag value %s, must complie %s", tVal, regTagValue)
 		}
 	}
 

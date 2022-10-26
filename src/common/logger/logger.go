@@ -28,7 +28,7 @@ func NewLogger(options ...Option) (*Logger, error) {
 	lg := &Logger{
 		lg: logrus.New(),
 		fw: &lumberjack.Logger{
-			Filename: filepath.Join(opts.LogPath, opts.ServiceName+".log"),
+			Filename: filepath.Join(opts.LogPath, opts.Filename+".log"),
 
 			MaxSize:    opts.LogSize,
 			MaxAge:     opts.LogAge,

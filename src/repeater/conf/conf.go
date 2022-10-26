@@ -42,8 +42,8 @@ func NewConfig() *Conf {
 		)) * time.Second,
 		Backend: cfg.MustValue("main", "backend", defaultBackend),
 
-		LogLevel: cfg.MustValue("log", "log_level", defaultLogLevel),
-		LogPath:  cfg.MustValue("log", "log_path", defaultLogPath),
+		LogLevel: cfg.MustValue("log", "level", defaultLogLevel),
+		LogPath:  cfg.MustValue("log", "path", defaultLogPath),
 
 		EtcdAddresses: cfg.MustValueArray("etcd", "addresses", global.DefaultConfigSeparator),
 		EtcdUsername:  cfg.MustValue("etcd", "username", defaultEtcdUsername),

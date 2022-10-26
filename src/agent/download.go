@@ -22,7 +22,7 @@ func (agent *agent) downloadPluginFile(relPath string, pathname string) error {
 	if err != nil {
 		agent.logger.ErrorWithFields(logger.Fields{
 			"error": err,
-		}, "An error occurred while agent.proxyCli.DownloadPluginFile.")
+		}, "An error occurred while agent.proxyCli.DownloadPluginFile in agent.downloadPluginFile.")
 		return err
 	}
 
