@@ -1,5 +1,5 @@
 [main]
-listen = 127.0.0.1:0
+listen = 0.0.0.0:0
 micro_register_ttl = 10
 micro_register_interval = 3
 
@@ -7,7 +7,7 @@ micro_register_interval = 3
 backend = kairosdb
 
 [log]
-level = debug
+level = info
 path = ../logs
 
 [etcd]

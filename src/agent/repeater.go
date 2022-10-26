@@ -17,13 +17,13 @@ func (agent *agent) sendTimeSeriesData(tsData *proxyProto.TsData) {
 		"timestamp": tsData.Timestamp,
 		"cycle":     tsData.Cycle,
 		"tags":      tsData.Tags,
-	}, "Finished proxyCli.ReceiveTimeSeriesData.")
+	}, "agent.sendTimeSeriesData called.")
 
 	if _, err := agent.proxyCli.ReceiveTimeSeriesData(ctx, tsData); err != nil {
 		agent.logger.ErrorWithFields(logger.Fields{
 			"host_id": agent.agentInfo.HostId,
 			"metrics": tsData.Metric,
 			"error":   err,
-		}, "An error occurred while proxyCli.ReceiveTimeSeriesData in agent.proxyCli.sendTimeSeriesData.")
+		}, "An error occurred while proxyCli.ReceiveTimeSeriesData in agent.sendTimeSeriesData.")
 	}
 }

@@ -76,7 +76,7 @@ func init() {
 	lg, err := logger.NewLogger(
 		logger.LogLevel(proxyConf.LogLevel),
 		logger.LogPath(proxyConf.LogPath),
-		logger.ServiceName(proxyConf.Const.ServiceName),
+		logger.Filename(proxyConf.Const.ServiceName),
 	)
 	if err != nil {
 		fmt.Println("An error occurred while logger.NewLogger, error:", err.Error())

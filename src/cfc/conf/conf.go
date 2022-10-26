@@ -65,8 +65,8 @@ func NewConfig() *Conf {
 			"main", "allow_create_product_auto", defaultAllowCreateProductAuto,
 		),
 
-		LogLevel: cfg.MustValue("log", "log_level", defaultLogLevel),
-		LogPath:  cfg.MustValue("log", "log_path", defaultLogPath),
+		LogLevel: cfg.MustValue("log", "level", defaultLogLevel),
+		LogPath:  cfg.MustValue("log", "path", defaultLogPath),
 
 		EtcdAddresses: cfg.MustValueArray("etcd", "addresses", global.DefaultConfigSeparator),
 		EtcdUsername:  cfg.MustValue("etcd", "username", defaultEtcdUsername),
