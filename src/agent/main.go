@@ -83,7 +83,7 @@ func init() {
 	lg, err := logger.NewLogger(
 		logger.LogLevel(agtConf.LogLevel),
 		logger.LogPath(agtConf.LogPath),
-		logger.ServiceName(agtConf.Const.ServiceName),
+		logger.Filename(agtConf.Const.ServiceName),
 	)
 	if err != nil {
 		fmt.Println("An error occurred while logger.NewLogger, error:", err.Error())

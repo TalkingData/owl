@@ -5,8 +5,10 @@ const (
 )
 
 const (
-	defaultListen    = "127.0.0.1:19577"
-	defaultPluginDir = "../plugins"
+	defaultListen              = "127.0.0.1:19577"
+	defaultCallCfcRetries      = 0
+	defaultCallRepeaterRetries = 0
+	defaultPluginDir           = "../plugins"
 
 	defaultLogLevel = "debug"
 	defaultLogPath  = "../logs"
