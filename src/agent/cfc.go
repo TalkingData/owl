@@ -3,12 +3,12 @@ package main
 import (
 	"context"
 	"owl/common/logger"
+	"owl/common/utils"
 	pluginList "owl/dto/plugin_list"
 	proxyProto "owl/proxy/proto"
 	"path"
 	"path/filepath"
 	"runtime"
-	"strings"
 )
 
 // reportHeartbeat 发送当前Agent心跳数据
@@ -35,7 +35,7 @@ func (agent *agent) reportHeartbeat() {
 	if err != nil {
 		agent.logger.ErrorWithFields(logger.Fields{
 			"error": err,
-		}, "An error occurred while agent.proxyCli.ReceiveAgentHeartbeat.")
+		}, "An error occurred while agent.proxyCli.ReceiveAgentHeartbeat in agent.reportHeartbeat.")
 	}
 }
 
@@ -84,7 +84,7 @@ func (agent *agent) registerAgent() error {
 	if err != nil {
 		agent.logger.ErrorWithFields(logger.Fields{
 			"error": err,
-		}, "An error occurred while agent.proxyCli.RegisterAgent.")
+		}, "An error occurred while agent.proxyCli.RegisterAgent in agent.registerAgent.")
 		return err
 	}
 
@@ -103,7 +103,7 @@ func (agent *agent) listPluginsProcess() {
 	if err != nil {
 		agent.logger.ErrorWithFields(logger.Fields{
 			"error": err,
-		}, "An error occurred while agent.proxyCli.ListAgentPlugins.")
+		}, "An error occurred while agent.proxyCli.ListAgentPlugins in agent.listPluginsProcess.")
 		return
 	}
 
@@ -132,7 +132,7 @@ func (agent *agent) listPluginsProcess() {
 			agent.ctx,
 			p.Id,
 			p.Name, localAbsPath, p.Checksum,
-			strings.Split(p.Args, " "),
+			utils.ParseCommandArgs(p.Args),
 			p.Interval, p.Timeout,
 			agent.conf.ExecuteUntrustedPlugin,
 			func(ctx context.Context, cycle int32, command string, args ...string) {
