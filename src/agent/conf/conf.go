@@ -39,8 +39,8 @@ func NewConfig() *Conf {
 			"main", "exec_builtin_metrics_interval_secs", defaultExecBuiltinMetricsIntervalSecs,
 		),
 
-		LogLevel: cfg.MustValue("log", "log_level", defaultLogLevel),
-		LogPath:  cfg.MustValue("log", "log_path", defaultLogPath),
+		LogLevel: cfg.MustValue("log", "level", defaultLogLevel),
+		LogPath:  cfg.MustValue("log", "path", defaultLogPath),
 
 		ProxyAddress: cfg.MustValue("proxy", "address", defaultProxyAddress),
 		CallProxyTimeoutSecs: time.Duration(cfg.MustInt(

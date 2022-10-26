@@ -1,5 +1,5 @@
 [main]
-listen = 127.0.0.1:0
+listen = 0.0.0.0:0
 micro_register_ttl = 10
 micro_register_interval = 3
 
@@ -15,7 +15,7 @@ clean_expired_metric_cycle_expired_ratio = 5
 allow_create_product_auto = true
 
 [log]
-level = debug
+level = info
 path = ../logs
 
 [etcd]

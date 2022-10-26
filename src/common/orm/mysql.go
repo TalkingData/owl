@@ -9,7 +9,7 @@ import (
 )
 
 // NewMysqlGorm 新建MysqlGorm
-func NewMysqlGorm(address, user, password, dbName string, opts ...OrmOption) *gorm.DB {
+func NewMysqlGorm(address, user, password, dbName string, opts ...Option) *gorm.DB {
 	dsn := fmt.Sprintf(
 		"%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		user,
@@ -38,7 +38,7 @@ func NewMysqlGorm(address, user, password, dbName string, opts ...OrmOption) *go
 }
 
 // MysqlDefaultLogMode 设置Mysql默认LogMode
-func MysqlDefaultLogMode(level logger.LogLevel) OrmOption {
+func MysqlDefaultLogMode(level logger.LogLevel) Option {
 	return func(d *gorm.DB) {
 		if d == nil {
 			return
@@ -48,7 +48,7 @@ func MysqlDefaultLogMode(level logger.LogLevel) OrmOption {
 }
 
 // MysqlMaxIdleConns 设置Mysql最大空闲连接数量
-func MysqlMaxIdleConns(count int) OrmOption {
+func MysqlMaxIdleConns(count int) Option {
 	return func(d *gorm.DB) {
 		if d == nil {
 			return
@@ -59,7 +59,7 @@ func MysqlMaxIdleConns(count int) OrmOption {
 }
 
 // MysqlMaxOpenConns 设置Mysql最大打开连接数量
-func MysqlMaxOpenConns(count int) OrmOption {
+func MysqlMaxOpenConns(count int) Option {
 	return func(d *gorm.DB) {
 		if d == nil {
 			return
@@ -70,7 +70,7 @@ func MysqlMaxOpenConns(count int) OrmOption {
 }
 
 // MysqlConnMaxLifetime 设置Mysql连接可复用的最大时间
-func MysqlConnMaxLifetime(secs int) OrmOption {
+func MysqlConnMaxLifetime(secs int) Option {
 	return func(d *gorm.DB) {
 		if d == nil {
 			return
@@ -81,7 +81,7 @@ func MysqlConnMaxLifetime(secs int) OrmOption {
 }
 
 // SkipDefaultTransaction 是否忽略默认事务
-func SkipDefaultTransaction(skip bool) OrmOption {
+func SkipDefaultTransaction(skip bool) Option {
 	return func(d *gorm.DB) {
 		if d == nil {
 			return

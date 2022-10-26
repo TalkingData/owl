@@ -1,16 +1,20 @@
 package logger
 
-import "owl/common/global"
+import (
+	"owl/common/global"
+	"strings"
+)
 
 const (
-	defaultServiceName = "undefined"
+	defaultFilename          = "undefined"
+	defaultFilenameSeparator = "-"
 
 	defaultLogPath  = "./logs"
 	defaultLogLevel = "debug"
 
-	defaultLogSize           = 100
-	defaultLogAge            = 7
-	defaultLogBackups        = 7
+	defaultLogSize           = 500
+	defaultLogAge            = 3
+	defaultLogBackups        = 3
 	defaultLogBackupCompress = true
 
 	defaultTimestampFormat  = global.TimestampFormat
@@ -22,9 +26,9 @@ const (
 
 type Option func(o *Options)
 
-// Option struct
+// Options struct
 type Options struct {
-	ServiceName string
+	Filename string
 
 	LogPath, LogLevel           string
 	LogSize, LogAge, LogBackups int
@@ -39,7 +43,7 @@ type Options struct {
 
 func newOptions(opts ...Option) Options {
 	opt := Options{
-		ServiceName: defaultServiceName,
+		Filename: defaultFilename,
 
 		LogPath:  defaultLogPath,
 		LogLevel: defaultLogLevel,
@@ -63,10 +67,14 @@ func newOptions(opts ...Option) Options {
 	return opt
 }
 
-// ServiceName 设置ServiceName，影响日志文件名，建议设置为服务全名
-func ServiceName(in string) Option {
+// Filename 设置Filename，影响日志文件名，建议设置为服务全名
+func Filename(in string, suffix ...string) Option {
 	return func(o *Options) {
-		o.ServiceName = in
+		fields := []string{in}
+		for _, s := range suffix {
+			fields = append(fields, s)
+		}
+		o.Filename = strings.Join(fields, defaultFilenameSeparator)
 	}
 }
 

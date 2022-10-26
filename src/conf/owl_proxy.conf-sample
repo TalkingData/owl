@@ -1,9 +1,11 @@
 [main]
-listen = 127.0.0.1:19577
+listen = 0.0.0.0:19577
+call_cfc_retries = 0
+call_repeater_retries = 0
 plugin_dir = ../plugins
 
 [log]
-level = debug
+level = info
 path = ../logs
 
 [etcd]
