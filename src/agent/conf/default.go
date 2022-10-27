@@ -1,10 +1,6 @@
 package conf
 
 const (
-	defaultConfigFilePathname = "../conf/owl_agent.conf"
-)
-
-const (
 	defaultListen                         = "127.0.0.1:19575"
 	defaultExecBuiltinMetricsIntervalSecs = 60
 
