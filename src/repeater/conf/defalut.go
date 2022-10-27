@@ -1,10 +1,6 @@
 package conf
 
 const (
-	defaultConfigFilePathname = "../conf/owl_repeater.conf"
-)
-
-const (
 	defaultListen                = "127.0.0.1:0"
 	defaultMicroRegisterTtl      = 10
 	defaultMicroRegisterInterval = 3
