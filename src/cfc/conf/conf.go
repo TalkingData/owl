@@ -33,8 +33,10 @@ type Conf struct {
 	MysqlMaxOpenConns int
 }
 
-func NewConfig() *Conf {
-	cfg, err := goconfig.LoadConfigFile(defaultConfigFilePathname)
+func NewConfig(options ...Option) *Conf {
+	opts := newOptions(options...)
+
+	cfg, err := goconfig.LoadConfigFile(opts.ConfFilePathname)
 	if err != nil {
 		panic(err)
 	}
