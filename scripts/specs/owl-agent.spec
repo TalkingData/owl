@@ -1,5 +1,5 @@
 Name:      owl-agent
-Version:   6.0.2
+Version:   v00.0.0
 Release:   1%{?dist}
 Summary:   TalkingData OWL Agent
 
