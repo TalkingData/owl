@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"google.golang.org/grpc"
 	"net"
+	"owl/common/global"
 	"owl/common/logger"
 	"owl/proxy/conf"
-	proxyProto "owl/proxy/proto"
+	proxypb "owl/proxy/proto"
 	"owl/proxy/service"
 )
 
@@ -43,6 +44,12 @@ func NewProxy(ctx context.Context, conf *conf.Conf, logger *logger.Logger) Proxy
 }
 
 func (p *defaultProxy) Start() (err error) {
+	p.logger.InfoWithFields(logger.Fields{
+		"branch":  global.Branch,
+		"commit":  global.Commit,
+		"version": global.Version,
+	}, "Starting owl proxy...")
+
 	// 开启RPC监听端口
 	p.listener, err = net.Listen("tcp", p.conf.Listen)
 	if err != nil {
@@ -56,7 +63,7 @@ func (p *defaultProxy) Start() (err error) {
 	// 创建proxy的grpc server
 	p.grpcServer = grpc.NewServer()
 	// 注册GRPC服务
-	proxyProto.RegisterOwlProxyServiceServer(
+	proxypb.RegisterOwlProxyServiceServer(
 		p.grpcServer,
 		service.NewOwlProxyService(p.conf, p.logger),
 	)

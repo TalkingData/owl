@@ -21,7 +21,9 @@ type Conf struct {
 	EtcdUsername  string
 	EtcdPassword  string
 
-	KairosDbAddress string
+	KairosDbAddress      string
+	KairosDbMaxIdleConns int
+	KairosDbMaxOpenConns int
 }
 
 func NewConfig(options ...Option) *Conf {
@@ -51,6 +53,8 @@ func NewConfig(options ...Option) *Conf {
 		EtcdUsername:  cfg.MustValue("etcd", "username", defaultEtcdUsername),
 		EtcdPassword:  cfg.MustValue("etcd", "password", defaultEtcdPassword),
 
-		KairosDbAddress: cfg.MustValue("kairosdb", "kairosdb_address", defaultKairosDbAddress),
+		KairosDbAddress:      cfg.MustValue("kairosdb", "kairosdb_address", defaultKairosDbAddress),
+		KairosDbMaxIdleConns: cfg.MustInt("kairosdb", "kairosdb_max_idle_conns", defaultKairosDbMaxIdleConns),
+		KairosDbMaxOpenConns: cfg.MustInt("kairosdb", "kairosdb_max_open_conns", defaultKairosDbMaxOpenConns),
 	}
 }

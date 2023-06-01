@@ -2,13 +2,12 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/micro/go-micro/v2"
 	"github.com/micro/go-micro/v2/registry"
 	"github.com/micro/go-plugins/registry/etcdv3/v2"
 	"owl/cfc/biz"
 	"owl/cfc/conf"
-	cfcProto "owl/cfc/proto"
+	cfcpb "owl/cfc/proto"
 	"owl/cfc/service"
 	"owl/common/global"
 	"owl/common/logger"
@@ -46,16 +45,16 @@ func newDefaultCfc(dao *dao.Dao, conf *conf.Conf, lg *logger.Logger) *defaultCfc
 	)
 
 	srv := micro.NewService(
-		micro.Name(cfcConf.Const.ServiceName),
+		micro.Name(cfcConf.Const.RpcRegisterKey),
 		micro.Address(cfcConf.Listen),
-		micro.Version("v1"),
+		micro.Version(global.SrvVersion),
 		micro.Registry(etcdReg),
 		micro.RegisterTTL(cfcConf.MicroRegisterTtl),
 		micro.RegisterInterval(cfcConf.MicroRegisterInterval),
 		micro.Context(ctx),
 	)
 
-	_ = cfcProto.RegisterOwlCfcServiceHandler(srv.Server(), service.NewOwlCfcService(dao, conf, lg))
+	_ = cfcpb.RegisterOwlCfcServiceHandler(srv.Server(), service.NewOwlCfcService(dao, conf, lg))
 
 	return &defaultCfc{
 		srv: srv,
@@ -70,7 +69,11 @@ func newDefaultCfc(dao *dao.Dao, conf *conf.Conf, lg *logger.Logger) *defaultCfc
 }
 
 func (cfc *defaultCfc) Start() error {
-	cfcLg.Info(fmt.Sprintf("Starting owl cfc %s...", global.Version))
+	cfc.logger.InfoWithFields(logger.Fields{
+		"branch":  global.Branch,
+		"commit":  global.Commit,
+		"version": global.Version,
+	}, "Starting owl cfc...")
 
 	go cfc.biz.RefreshHostStatus(cfc.ctx)
 	go cfc.biz.CleanExpiredMetric(cfc.ctx)
