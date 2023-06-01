@@ -20,7 +20,7 @@ type Plugin struct {
 	Interval  int32
 	Timeout   int32
 
-	mu *sync.RWMutex
+	mu sync.RWMutex
 
 	execUntrusted bool
 
@@ -51,8 +51,6 @@ func NewPlugin(
 		Args:      args,
 		Interval:  interval,
 		Timeout:   timeout,
-
-		mu: new(sync.RWMutex),
 
 		execUntrusted: execUntrusted,
 

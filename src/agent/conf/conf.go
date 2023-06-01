@@ -19,7 +19,10 @@ type Conf struct {
 	DownloadPluginTimeoutSecs   time.Duration
 	ListPluginsIntervalSecs     time.Duration
 	ReportMetricIntervalSecs    time.Duration
+	ReportMetricBatchSize       int
 	ReportHeartbeatIntervalSecs time.Duration
+	SendTsDataBatchSize         int
+	ForceSendTsDataIntervalSecs time.Duration
 
 	PluginDir              string
 	ExecuteUntrustedPlugin bool
@@ -57,8 +60,17 @@ func NewConfig(options ...Option) *Conf {
 		ReportMetricIntervalSecs: time.Duration(cfg.MustInt(
 			"proxy", "report_metric_interval_secs", defaultReportMetricIntervalSecs,
 		)) * time.Second,
+		ReportMetricBatchSize: cfg.MustInt(
+			"proxy", "report_metric_batch_size", defaultReportMetricBatchSize,
+		),
 		ReportHeartbeatIntervalSecs: time.Duration(cfg.MustInt(
 			"proxy", "report_heartbeat_interval_secs", defaultReportHeartbeatIntervalSecs,
+		)) * time.Second,
+		SendTsDataBatchSize: cfg.MustInt(
+			"proxy", "send_ts_data_batch_size", defaultSendTsDataBatchSize,
+		),
+		ForceSendTsDataIntervalSecs: time.Duration(cfg.MustInt(
+			"proxy", "force_send_ts_data_interval_secs", defaultForceSendTsDataIntervalSecs,
 		)) * time.Second,
 
 		PluginDir: cfg.MustValue("plugin", "plugin_dir", defaultPluginDir),

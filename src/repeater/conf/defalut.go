@@ -13,5 +13,7 @@ const (
 	defaultEtcdUsername = ""
 	defaultEtcdPassword = ""
 
-	defaultKairosDbAddress = "127.0.0.1:4242"
+	defaultKairosDbAddress      = "127.0.0.1:4242"
+	defaultKairosDbMaxIdleConns = 30
+	defaultKairosDbMaxOpenConns = 100
 )

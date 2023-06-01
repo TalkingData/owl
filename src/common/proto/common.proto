@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package owl.common;
+option go_package = "owl/common/proto";
+
+message HostIdReq {
+  string host_id = 1;
+}
+
+message TsData {
+  string metric = 1;
+  string data_type = 2;
+  double value = 3;
+  int64 timestamp = 4;
+  int32 cycle = 5;
+  map<string, string> tags = 6;
+}
+
+message TsDataArray {
+  repeated TsData data = 1;
+}
+
+message Metric {
+  string host_id = 1;
+  string metric = 2;
+  string data_type = 3;
+  int32 cycle = 4;
+  map<string, string> tags = 5;
+}
+
+message Metrics {
+  repeated Metric metrics = 1;
+}
+
+message AgentInfo {
+  string host_id = 1;
+  string ip = 2;
+  string hostname = 3;
+  string agent_version = 4;
+  string agent_os = 5;
+  string agent_arch = 6;
+  double uptime = 7;
+  double idle_pct = 8;
+  map<string, string> metadata = 9;
+}
+
+message Plugins {
+  repeated Plugin plugins = 1;
+}
+
+message Plugin {
+  uint32 id = 1;
+  string name = 2;
+  string path = 3;
+  string checksum = 4;
+  string args = 5;
+  int32 interval = 6;
+  int32 timeout = 7;
+  string comment = 8;
+}

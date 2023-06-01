@@ -64,8 +64,8 @@ func (agent *agent) tsDataHandler(fillAgentInfo bool) gin.HandlerFunc {
 			}
 		}
 
-		// 发送数据
-		agent.sendTsDataArray(tsdArr, fillAgentInfo)
+		// 预处理数据
+		agent.preprocessTsData(tsdArr, fillAgentInfo)
 		writeResponse(c, 0, "success")
 	}
 }

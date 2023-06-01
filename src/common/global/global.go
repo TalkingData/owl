@@ -1,5 +1,11 @@
 package global
 
 var (
-	Version = "6.0.6"
+	Branch  = "_"
+	Commit  = "_"
+	Version = "v6.0.0"
+)
+
+var (
+	SrvVersion = "v6"
 )

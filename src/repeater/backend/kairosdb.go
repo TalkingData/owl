@@ -1,81 +1,75 @@
 package backend
 
 import (
-	"errors"
 	"fmt"
+	"github.com/silenceper/pool"
 	"net"
 	"owl/dto"
-	"strings"
-	"time"
 )
 
-// kairosDbBackend struct
-type kairosDbBackend struct {
-	tcpAddr *net.TCPAddr
-	session *session
+// kairos struct
+type kairos struct {
+	connPool pool.Pool
 }
 
-func newKairosDbBackend(addr string) (Backend, error) {
-	tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
+func newKairos(addr string, maxIdleConns, maxOpenConns int) (Backend, error) {
+	pConf := &pool.Config{
+		InitialCap: maxIdleConns,
+		MaxIdle:    maxIdleConns,
+		MaxCap:     maxOpenConns,
+		Factory:    connKairosDb(addr),
+		Close:      closeKairosDb,
+	}
+
+	p, err := pool.NewChannelPool(pConf)
 	if err != nil {
 		return nil, err
 	}
 
-	bEnd := &kairosDbBackend{
-		tcpAddr: tcpAddr,
-		session: newSession(),
-	}
-
-	go bEnd.serve()
-
-	return bEnd, nil
+	return &kairos{
+		connPool: p,
+	}, nil
 }
 
-func (kDb *kairosDbBackend) Write(data *dto.TsData) error {
-	if kDb.session.IsClosed() {
-		return errors.New("backend session is closed.")
+func (kdb *kairos) Write(data *dto.TsData) error {
+	v, err := kdb.connPool.Get()
+	if err != nil {
+		return err
 	}
+	defer func() {
+		_ = kdb.connPool.Put(v)
+	}()
+
 	content := []byte(fmt.Sprintf("put %s %d %f %s\n",
 		data.Metric,
 		data.Timestamp,
 		data.Value,
-		strings.Replace(data.Tags2Str(), ",", " ", -1)))
-	if _, err := kDb.session.Write(content); err != nil {
-		kDb.session.Close()
-		return err
+		data.Tags2Str(" "),
+	))
+
+	_, err = v.(net.Conn).Write(content)
+	if err != nil {
+		_ = kdb.connPool.Close(v)
 	}
-	return nil
+
+	return err
 }
 
-// serve
-func (kDb *kairosDbBackend) serve() {
-	var (
-		err       error
-		conn      *net.TCPConn
-		tempDelay time.Duration
-	)
-retry:
-	conn, err = net.DialTCP("tcp", nil, kDb.tcpAddr)
-	if err != nil {
-		if tempDelay == 0 {
-			tempDelay = 5 * time.Millisecond
-		} else {
-			tempDelay *= 2
+func (kdb *kairos) Close() {
+	kdb.connPool.Release()
+}
+
+func connKairosDb(addr string) func() (interface{}, error) {
+	return func() (interface{}, error) {
+		kDbAddr, err := net.ResolveTCPAddr("tcp", addr)
+		if err != nil {
+			return nil, err
 		}
-		if max := 5 * time.Second; tempDelay > max {
-			tempDelay = max
-		}
-		time.Sleep(tempDelay)
-		goto retry
+
+		return net.DialTCP("tcp", nil, kDbAddr)
 	}
-	kDb.session = &session{
-		conn:     conn,
-		exitFlag: 1,
-	}
-	for {
-		if kDb.session.IsClosed() {
-			goto retry
-		}
-		time.Sleep(time.Second * 1)
-	}
+}
+
+func closeKairosDb(v interface{}) error {
+	return v.(net.Conn).Close()
 }

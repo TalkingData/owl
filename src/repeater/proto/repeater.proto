@@ -1,19 +1,14 @@
 syntax = "proto3";
 
 import "google/protobuf/empty.proto";
+import "common/proto/common.proto";
 
-package repeater_proto;
+package owl.repeater;
+option go_package = "repeaterpb";
 
 service OwlRepeater {
   // ReceiveTimeSeriesData 中继器接收数据
-  rpc ReceiveTimeSeriesData(TsData) returns(google.protobuf.Empty);
-}
-
-message TsData {
-  string metric = 1;
-  string data_type = 2;
-  double value = 3;
-  int64 timestamp = 4;
-  int32 cycle = 5;
-  map<string, string> tags = 6;
+  rpc ReceiveTimeSeriesData(owl.common.TsData) returns(google.protobuf.Empty);
+  // ReceiveTimeSeriesDataArray 中继器批量接收数据
+  rpc ReceiveTimeSeriesDataArray(owl.common.TsDataArray) returns(google.protobuf.Empty);
 }

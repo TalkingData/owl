@@ -7,12 +7,20 @@ level = debug
 path = ../logs
 
 [proxy]
-address = 127.0.0.1:19577
+address = 127.0.0.1:19570
+
 call_proxy_timeout_secs = 10
+
 download_plugin_timeout_secs = 90
 list_plugins_interval_secs = 300
+
 report_metric_interval_secs = 300
+report_metric_batch_size = 500
+
 report_heartbeat_interval_secs = 60
+
+send_ts_data_batch_size = 50
+force_send_ts_data_interval_secs = 20
 
 [plugin]
 plugin_dir = ../plugins
