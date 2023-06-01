@@ -6,13 +6,15 @@ import (
 	"net/http"
 	"os"
 	"owl/agent/conf"
+	dtHandler "owl/agent/dt_handler"
 	"owl/agent/executor"
 	"owl/cli"
 	"owl/common/global"
 	"owl/common/logger"
-	metricList "owl/dto/metric_list"
+	commonpb "owl/common/proto"
+	"owl/dto"
 	pluginList "owl/dto/plugin_list"
-	proxyProto "owl/proxy/proto"
+	proxypb "owl/proxy/proto"
 	"sync"
 	"time"
 )
@@ -34,18 +36,22 @@ func NewAgent(ctx context.Context, conf *conf.Conf, lg *logger.Logger) (Agent, e
 type agent struct {
 	httpServer *http.Server
 
-	proxyCli proxyProto.OwlProxyServiceClient
+	proxyCli proxypb.OwlProxyServiceClient
 
 	executor *executor.Executor
 
-	agentInfo  proxyProto.AgentInfo
+	agentInfo  commonpb.AgentInfo
 	pluginList *pluginList.PluginList
-	metricList *metricList.MetricList
+	tsDataMap  *dto.TsDataMap
+
+	tsDataBuff *dto.TsDataBuffer
+
+	dtHandlerMap dtHandler.DtHandlerMap
 
 	conf   *conf.Conf
 	logger *logger.Logger
 
-	wg         *sync.WaitGroup
+	wg         sync.WaitGroup
 	ctx        context.Context
 	cancelFunc context.CancelFunc
 }
@@ -55,12 +61,14 @@ func newAgent(ctx context.Context, conf *conf.Conf, lg *logger.Logger) (*agent, 
 		executor: executor.NewExecutor(lg),
 
 		pluginList: pluginList.NewPluginList(),
-		metricList: metricList.NewMetricList(),
+		tsDataMap:  dto.NewTsDataMap(),
+
+		tsDataBuff: dto.NewTsDataBuffer(),
+
+		dtHandlerMap: dtHandler.NewDtHandlerMap(),
 
 		conf:   conf,
 		logger: lg,
-
-		wg: new(sync.WaitGroup),
 	}
 
 	a.ctx, a.cancelFunc = context.WithCancel(ctx)
@@ -74,7 +82,11 @@ func newAgent(ctx context.Context, conf *conf.Conf, lg *logger.Logger) (*agent, 
 }
 
 func (agent *agent) Start() error {
-	agent.logger.Info(fmt.Sprintf("Starting owl agent %s...", global.Version))
+	agent.logger.InfoWithFields(logger.Fields{
+		"branch":  global.Branch,
+		"commit":  global.Commit,
+		"version": global.Version,
+	}, "Starting owl agent...")
 
 	agent.wg.Add(1)
 	defer agent.wg.Done()
@@ -88,6 +100,7 @@ func (agent *agent) Start() error {
 	execBuiltinMetricsTk := time.Tick(
 		time.Duration(agent.conf.ExecBuiltinMetricsIntervalSecs) * time.Second,
 	)
+	forceSendTsDataTk := time.Tick(agent.conf.ForceSendTsDataIntervalSecs)
 
 	// 启动httpServer
 	go func() {
@@ -124,6 +137,9 @@ func (agent *agent) Start() error {
 
 		case <-execBuiltinMetricsTk:
 			go agent.execBuiltinMetrics()
+
+		case <-forceSendTsDataTk:
+			go agent.sendTsData(true)
 
 		case <-agent.ctx.Done():
 			agent.logger.InfoWithFields(logger.Fields{

@@ -5,16 +5,14 @@ import (
 )
 
 type PluginList struct {
-	mu      *sync.RWMutex
 	plugins map[string]*Plugin
+
+	mu sync.RWMutex
 }
 
 // NewPluginList 新建插件列表
 func NewPluginList() *PluginList {
-	return &PluginList{
-		mu:      new(sync.RWMutex),
-		plugins: make(map[string]*Plugin),
-	}
+	return &PluginList{plugins: make(map[string]*Plugin)}
 }
 
 func (pl *PluginList) StartAllPluginTask() {

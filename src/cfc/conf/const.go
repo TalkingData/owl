@@ -3,7 +3,8 @@ package conf
 import "owl/common/global"
 
 type constConf struct {
-	ServiceName string
+	ServiceName    string
+	RpcRegisterKey string
 
 	CleanExpiredMetricBatchLimit      int
 	CleanExpiredMetricBatchIntervalMs int
@@ -13,7 +14,8 @@ type constConf struct {
 
 func newConstConf() *constConf {
 	return &constConf{
-		ServiceName: global.OwlCfcServiceName,
+		ServiceName:    global.OwlCfcServiceName,
+		RpcRegisterKey: global.OwlCfcRpcRegisterKey,
 
 		CleanExpiredMetricBatchLimit:      500,
 		CleanExpiredMetricBatchIntervalMs: 100,

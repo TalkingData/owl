@@ -2,18 +2,18 @@ package service
 
 import (
 	"github.com/micro/go-micro/v2/client"
-	cfcProto "owl/cfc/proto"
+	cfcpb "owl/cfc/proto"
 	"owl/cli"
 	"owl/common/logger"
 	"owl/common/utils"
 	"owl/proxy/conf"
-	repProto "owl/repeater/proto"
+	reppb "owl/repeater/proto"
 )
 
 // OwlProxyService struct
 type OwlProxyService struct {
-	cfcCli cfcProto.OwlCfcService
-	repCli repProto.OwlRepeaterService
+	cfcCli cfcpb.OwlCfcService
+	repCli reppb.OwlRepeaterService
 
 	grpcDownloader *utils.Downloader
 

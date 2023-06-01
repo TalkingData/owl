@@ -6,7 +6,7 @@ import (
 	"os"
 	"owl/common/logger"
 	"owl/common/utils"
-	proxyProto "owl/proxy/proto"
+	proxypb "owl/proxy/proto"
 	"path"
 )
 
@@ -18,7 +18,7 @@ func (agent *agent) downloadPluginFile(relPath string, pathname string) error {
 	ctx, cancel := context.WithTimeout(agent.ctx, agent.conf.DownloadPluginTimeoutSecs)
 	defer cancel()
 
-	stream, err := agent.proxyCli.DownloadPluginFile(ctx, &proxyProto.DownloadPluginReq{RelPath: relPath})
+	stream, err := agent.proxyCli.DownloadPluginFile(ctx, &proxypb.DownloadPluginReq{RelPath: relPath})
 	if err != nil {
 		agent.logger.ErrorWithFields(logger.Fields{
 			"error": err,

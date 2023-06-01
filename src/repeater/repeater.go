@@ -2,14 +2,13 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/micro/go-micro/v2"
 	"github.com/micro/go-micro/v2/registry"
 	"github.com/micro/go-plugins/registry/etcdv3/v2"
 	"owl/common/global"
 	"owl/common/logger"
 	"owl/repeater/conf"
-	repProto "owl/repeater/proto"
+	reppb "owl/repeater/proto"
 	"owl/repeater/service"
 )
 
@@ -43,16 +42,16 @@ func newDefaultRepeater(conf *conf.Conf, lg *logger.Logger) *defaultRepeater {
 	)
 
 	srv := micro.NewService(
-		micro.Name(repConf.Const.ServiceName),
+		micro.Name(repConf.Const.RpcRegisterKey),
 		micro.Address(repConf.Listen),
-		micro.Version("v1"),
+		micro.Version(global.SrvVersion),
 		micro.Registry(etcdReg),
 		micro.RegisterTTL(repConf.MicroRegisterTtl),
 		micro.RegisterInterval(repConf.MicroRegisterInterval),
 		micro.Context(ctx),
 	)
 
-	_ = repProto.RegisterOwlRepeaterHandler(srv.Server(), service.NewOwlRepeaterService(conf, lg))
+	_ = reppb.RegisterOwlRepeaterHandler(srv.Server(), service.NewOwlRepeaterService(conf, lg))
 
 	return &defaultRepeater{
 		srv: srv,
@@ -66,7 +65,11 @@ func newDefaultRepeater(conf *conf.Conf, lg *logger.Logger) *defaultRepeater {
 }
 
 func (rep *defaultRepeater) Start() error {
-	rep.logger.Info(fmt.Sprintf("Starting owl repeater %s...", global.Version))
+	rep.logger.InfoWithFields(logger.Fields{
+		"branch":  global.Branch,
+		"commit":  global.Commit,
+		"version": global.Version,
+	}, "Starting owl repeater...")
 
 	return rep.srv.Run()
 }
