@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"owl/common/logger"
+	commonpb "owl/common/proto"
 	"owl/common/utils"
 	pluginList "owl/dto/plugin_list"
-	proxyProto "owl/proxy/proto"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -16,7 +16,7 @@ func (agent *agent) reportHeartbeat() {
 	agent.logger.Info("agent.reportHeartbeat called.")
 	defer agent.logger.Info("agent.reportHeartbeat end.")
 
-	req := &proxyProto.AgentInfo{
+	req := &commonpb.AgentInfo{
 		HostId:       agent.agentInfo.HostId,
 		Ip:           agent.agentInfo.Ip,
 		Hostname:     agent.agentInfo.Hostname,
@@ -41,16 +41,48 @@ func (agent *agent) reportHeartbeat() {
 
 func (agent *agent) reportAgentAllMetrics() {
 	agent.logger.InfoWithFields(logger.Fields{
-		"length": agent.metricList.Len(),
+		"length": agent.tsDataMap.Len(),
 	}, "agent.reportAgentAllMetrics called.")
 	defer agent.logger.Info("agent.reportAgentAllMetrics end.")
 
-	for _, v := range agent.metricList.List() {
-		agent.reportAgentMetric(v.ToProxyMetric())
+	// 将tsDataMap中的数据分成多批，每批agent.conf.ReportMetricBatchSize个，并分别作为参数交给reportAgentMetrics处理
+	commonMetricList := make([]*commonpb.Metric, 0, agent.conf.ReportMetricBatchSize)
+	counter := 0
+
+	for _, tsData := range agent.tsDataMap.List() {
+		commonMetricList = append(commonMetricList, tsData.ToCommonMetric(agent.agentInfo.HostId))
+		counter++
+
+		if counter >= agent.conf.ReportMetricBatchSize {
+			// 处理当前批次的逻辑，例如发送到网络或进行其他处理
+			agent.reportAgentMetrics(&commonpb.Metrics{Metrics: commonMetricList})
+
+			// 重置计数器和批次列表
+			counter = 0
+			commonMetricList = make([]*commonpb.Metric, 0, agent.conf.ReportMetricBatchSize)
+		}
+	}
+
+	// 处理剩余的不足一批的数据
+	if counter > 0 {
+		// 处理剩余批次的逻辑
+		agent.reportAgentMetrics(&commonpb.Metrics{Metrics: commonMetricList})
 	}
 }
 
-func (agent *agent) reportAgentMetric(in *proxyProto.Metric) {
+func (agent *agent) reportAgentMetrics(in *commonpb.Metrics) {
+	ctx, cancel := context.WithTimeout(agent.ctx, agent.conf.CallProxyTimeoutSecs)
+	defer cancel()
+
+	if _, err := agent.proxyCli.ReceiveAgentMetrics(ctx, in); err != nil {
+		agent.logger.ErrorWithFields(logger.Fields{
+			"metrics_length": len(in.Metrics),
+			"error":          err,
+		}, "An error occurred while proxyCli.ReceiveAgentMetrics in agent.reportAgentMetrics")
+	}
+}
+
+func (agent *agent) reportAgentMetric(in *commonpb.Metric) {
 	ctx, cancel := context.WithTimeout(agent.ctx, agent.conf.CallProxyTimeoutSecs)
 	defer cancel()
 
@@ -67,7 +99,7 @@ func (agent *agent) registerAgent() error {
 	agent.logger.Info("agent.registerAgent called.")
 	defer agent.logger.Info("agent.registerAgent end.")
 
-	req := &proxyProto.AgentInfo{
+	req := &commonpb.AgentInfo{
 		HostId:       agent.agentInfo.HostId,
 		Ip:           agent.agentInfo.Ip,
 		Hostname:     agent.agentInfo.Hostname,
@@ -99,7 +131,7 @@ func (agent *agent) listPluginsProcess() {
 	ctx, cancel := context.WithTimeout(agent.ctx, agent.conf.CallProxyTimeoutSecs)
 	defer cancel()
 
-	plugins, err := agent.proxyCli.ListAgentPlugins(ctx, &proxyProto.HostIdReq{HostId: agent.agentInfo.HostId})
+	plugins, err := agent.proxyCli.ListAgentPlugins(ctx, &commonpb.HostIdReq{HostId: agent.agentInfo.HostId})
 	if err != nil {
 		agent.logger.ErrorWithFields(logger.Fields{
 			"error": err,
@@ -140,7 +172,7 @@ func (agent *agent) listPluginsProcess() {
 				for _, data := range dataArr {
 					data.Cycle = cycle
 				}
-				agent.sendTsDataArray(dataArr, true)
+				agent.preprocessTsData(dataArr, true)
 			},
 		)
 

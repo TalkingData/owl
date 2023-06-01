@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/shopspring/decimal"
+	commonpb "owl/common/proto"
 	"owl/common/utils"
-	proxyProto "owl/proxy/proto"
 	"regexp"
 	"sort"
 	"strings"
@@ -15,7 +15,10 @@ const (
 	TsDataTypeGauge   = "GAUGE"
 	TsDataTypeCounter = "COUNTER"
 	TsDataTypeDerive  = "DERIVE"
+	TsDataTypeGrowth  = "GROWTH"
 )
+
+const defaultTagSeparator = ","
 
 var (
 	regMetric   = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_.-]+$`)
@@ -26,6 +29,7 @@ var (
 		TsDataTypeGauge:   "",
 		TsDataTypeCounter: "",
 		TsDataTypeDerive:  "",
+		TsDataTypeGrowth:  "",
 	}
 )
 
@@ -102,11 +106,13 @@ func (tsData *TsData) PutTag(key, val string) {
 	tsData.Tags[key] = val
 }
 
+// GetPk 获取TsData唯一值
 func (tsData *TsData) GetPk() string {
-	return fmt.Sprintf("%s.%s", tsData.Metric, tsData.Tags2Str())
+	return fmt.Sprintf("%s.%s", tsData.Metric, tsData.Tags2Str(defaultTagSeparator))
 }
 
-func (tsData *TsData) Tags2Str() (res string) {
+// Tags2Str 将tags转换为字符串
+func (tsData *TsData) Tags2Str(sep string) (res string) {
 	if len(tsData.Tags) == 0 {
 		return
 	}
@@ -118,16 +124,49 @@ func (tsData *TsData) Tags2Str() (res string) {
 	}
 
 	sort.Strings(keyArr)
-	return strings.Join(keyArr, ",")
+	return strings.Join(keyArr, sep)
 }
 
-func (tsData *TsData) Trans2ProxyTsData() *proxyProto.TsData {
-	return &proxyProto.TsData{
+// DeepCopyTsData 深拷贝
+func (tsData *TsData) DeepCopyTsData() *TsData {
+	return &TsData{
 		Metric:    tsData.Metric,
 		DataType:  tsData.DataType,
 		Value:     tsData.Value,
 		Timestamp: tsData.Timestamp,
 		Cycle:     tsData.Cycle,
-		Tags:      tsData.Tags,
+		Tags:      deepCopyTags(tsData.Tags),
 	}
+}
+
+// Trans2CommonTsData 转换为commonpb.TsData
+func (tsData *TsData) Trans2CommonTsData() *commonpb.TsData {
+	return &commonpb.TsData{
+		Metric:    tsData.Metric,
+		DataType:  tsData.DataType,
+		Value:     tsData.Value,
+		Timestamp: tsData.Timestamp,
+		Cycle:     tsData.Cycle,
+		Tags:      deepCopyTags(tsData.Tags),
+	}
+}
+
+// ToCommonMetric 转换为commonpb.Metric
+func (tsData *TsData) ToCommonMetric(hostId string) *commonpb.Metric {
+	return &commonpb.Metric{
+		HostId:   hostId,
+		Metric:   tsData.Metric,
+		DataType: tsData.DataType,
+		Cycle:    tsData.Cycle,
+		Tags:     deepCopyTags(tsData.Tags),
+	}
+}
+
+func deepCopyTags(tags map[string]string) map[string]string {
+	res := map[string]string{}
+	for k, v := range tags {
+		res[k] = v
+	}
+
+	return res
 }

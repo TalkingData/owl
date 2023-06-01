@@ -1,5 +1,5 @@
 [main]
-listen = 0.0.0.0:19577
+listen = 0.0.0.0:19570
 call_cfc_retries = 0
 call_repeater_retries = 0
 plugin_dir = ../plugins

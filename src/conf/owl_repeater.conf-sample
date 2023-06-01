@@ -18,3 +18,5 @@ password =
 [kairosdb]
 # Enable when backend = kairosdb
 kairosdb_address = 127.0.0.1:4242
+kairosdb_max_idle_conns = 30
+kairosdb_max_open_conns = 100
