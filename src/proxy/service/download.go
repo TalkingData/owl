@@ -5,12 +5,14 @@ import (
 	"io"
 	"owl/common/logger"
 	"owl/common/utils"
-	proxyProto "owl/proxy/proto"
+	proxypb "owl/proxy/proto"
 	"path"
 	"path/filepath"
 )
 
-func (proxySrv *OwlProxyService) DownloadPluginFile(req *proxyProto.DownloadPluginReq, stream proxyProto.OwlProxyService_DownloadPluginFileServer) error {
+func (proxySrv *OwlProxyService) DownloadPluginFile(
+	req *proxypb.DownloadPluginReq, stream proxypb.OwlProxyService_DownloadPluginFileServer,
+) error {
 	proxySrv.logger.Debug("proxySrv.DownloadPluginFile called.")
 	defer proxySrv.logger.Debug("proxySrv.DownloadPluginFile end.")
 
@@ -20,14 +22,14 @@ func (proxySrv *OwlProxyService) DownloadPluginFile(req *proxyProto.DownloadPlug
 			"plugin_dir": proxySrv.conf.PluginDir,
 			"rel_path":   req.RelPath,
 			"error":      err,
-		}, "An error occurred while filepath.Abs in proxySrv.DownloadPluginFile.")
+		}, "An error occurred while calling filepath.Abs.")
 	}
 
 	proxySrv.logger.InfoWithFields(logger.Fields{
 		"plugin_pathname": pluginPathname,
 	}, "proxySrv.DownloadPluginFile prepare send plugin file.")
 	err = proxySrv.grpcDownloader.Download(pluginPathname, func(buffer []byte) error {
-		return stream.Send(&proxyProto.PluginFile{Buffer: buffer})
+		return stream.Send(&proxypb.PluginFile{Buffer: buffer})
 	})
 	if err != nil {
 		switch err {

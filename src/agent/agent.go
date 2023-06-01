@@ -6,13 +6,15 @@ import (
 	"net/http"
 	"os"
 	"owl/agent/conf"
+	dtHandler "owl/agent/dt_handler"
 	"owl/agent/executor"
 	"owl/cli"
 	"owl/common/global"
 	"owl/common/logger"
-	metricList "owl/dto/metric_list"
+	commonpb "owl/common/proto"
+	"owl/dto"
 	pluginList "owl/dto/plugin_list"
-	proxyProto "owl/proxy/proto"
+	proxypb "owl/proxy/proto"
 	"sync"
 	"time"
 )
@@ -34,18 +36,24 @@ func NewAgent(ctx context.Context, conf *conf.Conf, lg *logger.Logger) (Agent, e
 type agent struct {
 	httpServer *http.Server
 
-	proxyCli proxyProto.OwlProxyServiceClient
+	proxyCli proxypb.OwlProxyServiceClient
 
 	executor *executor.Executor
 
-	agentInfo  proxyProto.AgentInfo
+	agentInfo  commonpb.AgentInfo
 	pluginList *pluginList.PluginList
-	metricList *metricList.MetricList
+	tsDataMap  *dto.TsDataMap
+
+	tsDataBuffer *dto.TsDataBuffer
+
+	dtHandlerMap dtHandler.DtHandlerMap
+
+	metricServer *http.Server
 
 	conf   *conf.Conf
 	logger *logger.Logger
 
-	wg         *sync.WaitGroup
+	wg         sync.WaitGroup
 	ctx        context.Context
 	cancelFunc context.CancelFunc
 }
@@ -55,12 +63,14 @@ func newAgent(ctx context.Context, conf *conf.Conf, lg *logger.Logger) (*agent, 
 		executor: executor.NewExecutor(lg),
 
 		pluginList: pluginList.NewPluginList(),
-		metricList: metricList.NewMetricList(),
+		tsDataMap:  dto.NewTsDataMap(),
+
+		tsDataBuffer: dto.NewTsDataBuffer(),
+
+		dtHandlerMap: dtHandler.NewDtHandlerMap(),
 
 		conf:   conf,
 		logger: lg,
-
-		wg: new(sync.WaitGroup),
 	}
 
 	a.ctx, a.cancelFunc = context.WithCancel(ctx)
@@ -73,38 +83,61 @@ func newAgent(ctx context.Context, conf *conf.Conf, lg *logger.Logger) (*agent, 
 	return a, nil
 }
 
-func (agent *agent) Start() error {
-	agent.logger.Info(fmt.Sprintf("Starting owl agent %s...", global.Version))
+func (a *agent) Start() error {
+	a.logger.InfoWithFields(logger.Fields{
+		"branch":  global.Branch,
+		"commit":  global.Commit,
+		"version": global.Version,
+	}, "Starting owl agent...")
 
-	agent.wg.Add(1)
-	defer agent.wg.Done()
+	a.wg.Add(1)
+	defer a.wg.Done()
 
 	// 首次启动首先需要注册Agent
-	_ = agent.registerAgent()
+	_ = a.registerAgent()
 
-	reportHbTk := time.Tick(agent.conf.ReportHeartbeatIntervalSecs)
-	listPluginsTk := time.Tick(agent.conf.ListPluginsIntervalSecs)
-	reportAgentMetricsTk := time.Tick(agent.conf.ReportMetricIntervalSecs)
+	reportHbTk := time.Tick(a.conf.ReportHeartbeatIntervalSecs)
+	listPluginsTk := time.Tick(a.conf.ListPluginsIntervalSecs)
+	reportAgentMetricsTk := time.Tick(a.conf.ReportMetricsIntervalSecs)
 	execBuiltinMetricsTk := time.Tick(
-		time.Duration(agent.conf.ExecBuiltinMetricsIntervalSecs) * time.Second,
+		time.Duration(a.conf.ExecBuiltinMetricsIntervalSecs) * time.Second,
 	)
+	forceSendTsDataTk := time.Tick(a.conf.ForceSendTsDataIntervalSecs)
 
 	// 启动httpServer
 	go func() {
-		agent.wg.Add(1)
-		defer agent.Stop()
-		defer agent.wg.Done()
+		a.wg.Add(1)
+		defer a.Stop()
+		defer a.wg.Done()
 
-		agent.logger.Info(fmt.Sprintf("Owl agent's http server listening on: %s", agent.conf.Listen))
-
-		if err := agent.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			agent.logger.ErrorWithFields(logger.Fields{
+		a.logger.Info(fmt.Sprintf("Owl agent's http server listening on: %s", a.conf.Listen))
+		if err := a.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			a.logger.ErrorWithFields(logger.Fields{
 				"error": err,
-			}, "An error occurred while httpServer.ListenAndServe.")
+			}, "An error occurred while calling httpServer.ListenAndServe.")
 			return
 		}
 
-		agent.logger.Info("Owl agent's http server closed.")
+		a.logger.Info("Owl agent's http server closed.")
+	}()
+
+	// 启动Prometheus的metrics http server
+	go func() {
+		a.wg.Add(1)
+		defer a.Stop()
+		defer a.wg.Done()
+
+		a.logger.Info(fmt.Sprintf(
+			"Owl agent's metrics http server listening on: %s", a.conf.MetricListen,
+		))
+		if err := a.metricServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			a.logger.ErrorWithFields(logger.Fields{
+				"error": err,
+			}, "An error occurred while calling metricServer.ListenAndServe.")
+			return
+		}
+
+		a.logger.Info("Owl agent's metrics server closed.")
 	}()
 
 	// 启动主服务
@@ -112,67 +145,85 @@ func (agent *agent) Start() error {
 		select {
 		case <-reportHbTk:
 			go func() {
-				agent.refreshAgentInfo()
-				agent.reportHeartbeat()
+				a.refreshAgentInfo()
+				a.reportHeartbeat()
 			}()
 
 		case <-listPluginsTk:
-			go agent.listPluginsProcess()
+			go a.listPluginsProcess()
 
 		case <-reportAgentMetricsTk:
-			go agent.reportAgentAllMetrics()
+			go a.reportAgentAllMetrics()
 
-		case <-execBuiltinMetricsTk:
-			go agent.execBuiltinMetrics()
+		case c := <-execBuiltinMetricsTk:
+			go a.execBuiltinMetrics(c.Unix())
 
-		case <-agent.ctx.Done():
-			agent.logger.InfoWithFields(logger.Fields{
-				"context_error": agent.ctx.Err(),
+		case <-forceSendTsDataTk:
+			go a.sendTsData(true)
+
+		case <-a.ctx.Done():
+			a.logger.InfoWithFields(logger.Fields{
+				"context_error": a.ctx.Err(),
 			}, "Owl agent exited by context done.")
-			return agent.ctx.Err()
+			return a.ctx.Err()
 		}
 	}
 }
 
-func (agent *agent) Stop() {
-	defer agent.wg.Wait()
+func (a *agent) Stop() {
+	defer a.wg.Wait()
+
+	// 结束前强制发送数据定时器
+	a.sendTsData(true)
 
 	// 关闭httpServer
-	if agent.httpServer != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), agent.conf.Const.HttpServerShutdownTimeoutSecs)
+	if a.httpServer != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), a.conf.Const.HttpServerShutdownTimeoutSecs)
 		defer cancel()
-		_ = agent.httpServer.Shutdown(ctx)
+		_ = a.httpServer.Shutdown(ctx)
 	}
 
 	// 关闭插件采集任务
-	if agent.pluginList != nil {
-		agent.pluginList.StopAllPluginTask()
+	if a.pluginList != nil {
+		a.pluginList.StopAllPluginTask()
 	}
 
-	agent.cancelFunc()
+	// 关闭metrics http server
+	if a.metricServer != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), a.conf.Const.HttpServerShutdownTimeoutSecs)
+		defer cancel()
+		_ = a.metricServer.Shutdown(ctx)
+	}
+
+	a.cancelFunc()
 }
 
-func (agent *agent) init() (err error) {
-	agent.httpServer = &http.Server{
-		Addr:    agent.conf.Listen,
-		Handler: agent.newHttpHandler(),
+func (a *agent) init() (err error) {
+	a.httpServer = &http.Server{
+		Addr:    a.conf.Listen,
+		Handler: a.newHttpHandler(),
+	}
+
+	a.metricServer = &http.Server{
+		Addr:    a.conf.MetricListen,
+		Handler: a.newMetricHttpHandler(),
 	}
 
 	// 连接Proxy
-	agent.proxyCli, err = cli.NewProxyClient(agent.conf.ProxyAddress)
+	a.proxyCli, err = cli.NewProxyClient(a.conf.ProxyAddress)
 	if err != nil {
 		return err
 	}
 
 	// 创建插件路径
-	if err = os.Mkdir(agent.conf.PluginDir, 0755); err != nil {
-		agent.logger.WarnWithFields(logger.Fields{
+	if err = os.Mkdir(a.conf.PluginDir, 0755); err != nil {
+		a.logger.WarnWithFields(logger.Fields{
 			"error": err,
-		}, "An error occurred while os.Mkdir for create plugins dir in agent.init, Skipped it.")
+		}, "An error occurred while calling os.Mkdir for create plugins dir, Skipped it.")
 	}
 
-	agent.refreshAgentInfo()
-	agent.listPluginsProcess()
+	a.refreshAgentInfo()
+	a.listPluginsProcess()
 
 	return nil
 }

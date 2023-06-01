@@ -6,18 +6,16 @@ import (
 	"time"
 )
 
-func (e *Executor) ExecCollectCpu(cycle int32) (res dto.TsDataArray) {
+func (e *Executor) ExecCollectCpu(ts int64, cycle int32) (res dto.TsDataArray) {
 	e.logger.Info("Executor.ExecCollectCpu called.")
 	defer e.logger.Info("Executor.ExecCollectCpu end.")
-
-	currTs := time.Now().Unix()
 
 	cts1 := getAllCpuTimesStat()
 	time.Sleep(time.Second * 1)
 	cts2 := getAllCpuTimesStat()
 
 	for idx, data2 := range cts2 {
-		res = append(res, processCpuTimeSeriesData(currTs, cycle, &cts1[idx], &data2)...)
+		res = append(res, processCpuTimeSeriesData(ts, cycle, &cts1[idx], &data2)...)
 	}
 
 	return

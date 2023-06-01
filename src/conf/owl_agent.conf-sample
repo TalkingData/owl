@@ -1,5 +1,6 @@
 [main]
 listen = 127.0.0.1:19575
+metric_listen = 0.0.0.0:19675
 exec_builtin_metrics_interval_secs = 60
 
 [log]
@@ -7,12 +8,27 @@ level = debug
 path = ../logs
 
 [proxy]
-address = 127.0.0.1:19577
-call_proxy_timeout_secs = 10
-download_plugin_timeout_secs = 90
+address = 127.0.0.1:19570
+
+list_plugin_timeout_secs = 300
+download_plugin_timeout_secs = 300
 list_plugins_interval_secs = 300
-report_metric_interval_secs = 300
+
+clean_expired_metric_cycle_expired_ratio = 60
+
+report_metrics_timeout_secs = 90
+report_metrics_timeout_secs = 300
+report_metrics_interval_secs = 300
+report_metric_batch_size = 500
+
+register_agent_timeout_secs = 90
+report_heartbeat_timeout_secs = 90
 report_heartbeat_interval_secs = 60
+
+send_ts_data_timeout_secs = 90
+send_ts_data_array_timeout_secs = 120
+send_ts_data_batch_size = 200
+force_send_ts_data_interval_secs = 25
 
 [plugin]
 plugin_dir = ../plugins

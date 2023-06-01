@@ -1,21 +1,22 @@
 package biz
 
 import (
+	"context"
 	"owl/common/logger"
 	"owl/model"
 )
 
-func (b *Biz) ListAgentPlugins(hostId string) ([]*model.Plugin, error) {
+func (b *Biz) ListAgentPlugins(ctx context.Context, hostId string) ([]*model.Plugin, error) {
 	finalPlugins := make([]*model.Plugin, 0)
 	idMap := make(map[string]struct{})
 
 	// 查找主机的插件
-	hPlugins, err := b.dao.ListHostsPluginsByHostId(hostId)
+	hPlugins, err := b.dao.ListHostsPluginsByHostId(ctx, hostId)
 	if err != nil {
 		b.logger.ErrorWithFields(logger.Fields{
 			"host_id": hostId,
 			"error":   err,
-		}, "An error occurred while dao.ListHostsPlugins.")
+		}, "An error occurred while calling dao.ListHostsPlugins.")
 		return nil, err
 	}
 	for _, p := range hPlugins {
@@ -32,12 +33,12 @@ func (b *Biz) ListAgentPlugins(hostId string) ([]*model.Plugin, error) {
 	}
 
 	// 查找主机所在组的插件
-	hgPlugins, err := b.dao.ListHostGroupsPluginsByHostId(hostId)
+	hgPlugins, err := b.dao.ListHostGroupsPluginsByHostId(ctx, hostId)
 	if err != nil {
 		b.logger.ErrorWithFields(logger.Fields{
 			"host_id": hostId,
 			"error":   err,
-		}, "An error occurred while dao.ListHostGroupsPluginsByHostId.")
+		}, "An error occurred while calling dao.ListHostGroupsPluginsByHostId.")
 		return nil, err
 	}
 	for _, p := range hgPlugins {

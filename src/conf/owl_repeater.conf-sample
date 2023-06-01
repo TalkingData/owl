@@ -1,9 +1,10 @@
 [main]
 listen = 0.0.0.0:0
+metric_listen = 0.0.0.0:19672
 micro_register_ttl = 10
 micro_register_interval = 3
 
-# Supported 'kairosdb' backend only
+# Supported 'kairosdb', 'kairosdb_redundant' backends.
 backend = kairosdb
 
 [log]
@@ -18,3 +19,12 @@ password =
 [kairosdb]
 # Enable when backend = kairosdb
 kairosdb_address = 127.0.0.1:4242
+kairosdb_max_idle_conns = 10
+kairosdb_max_open_conns = 20
+
+[kairosdb_redundant]
+# Enable when backend = kairosdb_redundant
+kairosdb_redundant_address1 = 127.0.0.1:4242
+kairosdb_redundant_address2 = 127.0.0.1:4242
+kairosdb_redundant_max_idle_conns = 10
+kairosdb_redundant_max_open_conns = 20

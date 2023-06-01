@@ -7,14 +7,13 @@ import (
 	"owl/dto"
 	"strconv"
 	"strings"
-	"time"
 )
 
 const (
 	fdFile = "/proc/sys/fs/file-nr"
 )
 
-func (e *Executor) ExecCollectFd(cycle int32) dto.TsDataArray {
+func (e *Executor) ExecCollectFd(ts int64, cycle int32) dto.TsDataArray {
 	e.logger.Info("Executor.ExecCollectFd called.")
 	defer e.logger.Info("Executor.ExecCollectFd end.")
 
@@ -26,7 +25,7 @@ func (e *Executor) ExecCollectFd(cycle int32) dto.TsDataArray {
 			"fd_file": fdFile,
 			"cycle":   cycle,
 			"error":   err,
-		}, "An error occurred while Executor.ExecCollectFd.")
+		}, "An error occurred while calling os.Open.")
 		return nil
 	}
 	defer func() {
@@ -39,7 +38,7 @@ func (e *Executor) ExecCollectFd(cycle int32) dto.TsDataArray {
 		e.logger.ErrorWithFields(logger.Fields{
 			"cycle": cycle,
 			"error": err,
-		}, "An error occurred while Executor.ExecCollectFd on bufio.NewReader.ReadString.")
+		}, "An error occurred while calling r.ReadString.")
 		return nil
 	}
 	fields := strings.Fields(line)
@@ -48,7 +47,7 @@ func (e *Executor) ExecCollectFd(cycle int32) dto.TsDataArray {
 			"fields_length": len(fields),
 			"cycle":         cycle,
 			"error":         err,
-		}, "An error occurred while Executor.ExecCollectFd, len(fields) < 3.")
+		}, "An error occurred while calling strings.Fields, len(fields) < 3.")
 		return nil
 	}
 
@@ -56,34 +55,33 @@ func (e *Executor) ExecCollectFd(cycle int32) dto.TsDataArray {
 	unused, _ = strconv.ParseFloat(fields[1], 64)
 	max, _ = strconv.ParseFloat(fields[2], 64)
 
-	currTs := time.Now().Unix()
 	return dto.TsDataArray{
 		{
 			Metric:    "system.fd.allocated",
 			DataType:  dto.TsDataTypeGauge,
 			Value:     allocated,
-			Timestamp: currTs,
+			Timestamp: ts,
 			Cycle:     cycle,
 		},
 		{
 			Metric:    "system.fd.unused",
 			DataType:  dto.TsDataTypeGauge,
 			Value:     unused,
-			Timestamp: currTs,
+			Timestamp: ts,
 			Cycle:     cycle,
 		},
 		{
 			Metric:    "system.fd.max",
 			DataType:  dto.TsDataTypeGauge,
 			Value:     max,
-			Timestamp: currTs,
+			Timestamp: ts,
 			Cycle:     cycle,
 		},
 		{
 			Metric:    "system.fd.used_pct",
 			DataType:  dto.TsDataTypeGauge,
 			Value:     (allocated / max) * 100,
-			Timestamp: currTs,
+			Timestamp: ts,
 			Cycle:     cycle,
 		},
 	}

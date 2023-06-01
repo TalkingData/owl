@@ -3,10 +3,9 @@ package main
 import (
 	"crypto/rsa"
 	"fmt"
+	"github.com/dgrijalva/jwt-go"
 	"io/ioutil"
 	"time"
-
-	"github.com/dgrijalva/jwt-go"
 )
 
 var (

@@ -1,18 +1,19 @@
 package dao
 
 import (
+	"context"
 	"owl/common/orm"
 	"owl/model"
 )
 
-func (d *Dao) ListHostPlugins(query orm.Query) (hPlugins []*model.HostPlugin, err error) {
-	res := query.Where(d.db).Limit(1).Find(&hPlugins)
+func (d *Dao) ListHostPlugins(ctx context.Context, query orm.Query) (hPlugins []*model.HostPlugin, err error) {
+	res := query.Where(d.getDbWithCtx(ctx)).Limit(1).Find(&hPlugins)
 	return hPlugins, res.Error
 }
 
 // ListHostsPluginsByHostId 根据HostId列出主机的所有插件
-func (d *Dao) ListHostsPluginsByHostId(hostId string) (plugins []*model.Plugin, err error) {
-	res := d.db.Model(&model.HostPlugin{}).
+func (d *Dao) ListHostsPluginsByHostId(ctx context.Context, hostId string) (plugins []*model.Plugin, err error) {
+	res := d.getDbWithCtx(ctx).Model(&model.HostPlugin{}).
 		Select("host_plugin.plugin_id AS id, "+
 			"p.name AS name, "+
 			"p.path AS path, "+

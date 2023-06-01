@@ -1,11 +1,15 @@
 package dao
 
 import (
+	"context"
 	"owl/common/orm"
 	"owl/model"
 )
 
-func (d *Dao) NewStrategyEventFailed(strategyId uint64, status int, hostId, message string) (*model.StrategyEventFailed, error) {
+func (d *Dao) NewStrategyEventFailed(
+	ctx context.Context,
+	strategyId uint64, status int32, hostId, message string,
+) (*model.StrategyEventFailed, error) {
 	p := model.StrategyEventFailed{
 		StrategyId: strategyId,
 		Status:     status,
@@ -13,16 +17,16 @@ func (d *Dao) NewStrategyEventFailed(strategyId uint64, status int, hostId, mess
 		Message:    message,
 	}
 
-	res := d.db.Create(&p)
+	res := d.getDbWithCtx(ctx).Create(&p)
 	return &p, res.Error
 }
 
-func (d *Dao) RemoveStrategyEventFailed(strategyId uint64, hostId string) error {
-	query := orm.Query{
+func (d *Dao) RemoveStrategyEventFailed(ctx context.Context, strategyId uint64, hostId string) error {
+	q := orm.Query{
 		"strategy_id=?": strategyId,
 		"host_id=?":     hostId,
 	}
 
-	res := query.Where(d.db).Delete(model.StrategyEventFailed{})
+	res := q.Where(d.getDbWithCtx(ctx)).Delete(model.StrategyEventFailed{})
 	return res.Error
 }

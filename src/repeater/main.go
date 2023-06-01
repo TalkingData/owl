@@ -35,7 +35,7 @@ func main() {
 			if err != nil {
 				repLg.ErrorWithFields(logger.Fields{
 					"error": err,
-				}, "An error occurred while repSrv.Start.")
+				}, "An error occurred while calling repSrv.Start.")
 			}
 			closeAll()
 			return
@@ -72,7 +72,7 @@ func init() {
 		logger.Filename(repConf.Const.ServiceName),
 	)
 	if err != nil {
-		fmt.Println("An error occurred while logger.NewLogger, error:", err.Error())
+		fmt.Println("An error occurred while calling logger.NewLogger, error:", err.Error())
 		panic(err)
 	}
 	repLg = lg

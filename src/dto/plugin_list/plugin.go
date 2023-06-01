@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-type PluginTaskFunc func(ctx context.Context, cycle int32, command string, args ...string)
+type PluginTaskFunc func(ctx context.Context, tx int64, cycle int32, command string, args ...string)
 
 type Plugin struct {
 	Id        uint32
@@ -20,7 +20,7 @@ type Plugin struct {
 	Interval  int32
 	Timeout   int32
 
-	mu *sync.RWMutex
+	mu sync.RWMutex
 
 	execUntrusted bool
 
@@ -52,8 +52,6 @@ func NewPlugin(
 		Interval:  interval,
 		Timeout:   timeout,
 
-		mu: new(sync.RWMutex),
-
 		execUntrusted: execUntrusted,
 
 		parentCtx: ctx,
@@ -82,9 +80,9 @@ func (p *Plugin) StartTask() {
 		tk := time.Tick(time.Second * time.Duration(p.Interval))
 		for {
 			select {
-			case <-tk:
+			case c := <-tk:
 				tkCtx, tkCancelFunc := context.WithTimeout(p.ctx, time.Second*time.Duration(p.Timeout))
-				p.taskFunc(tkCtx, p.Interval, p.LocalPath, p.Args...)
+				p.taskFunc(tkCtx, c.Unix(), p.Interval, p.LocalPath, p.Args...)
 				tkCancelFunc()
 			case <-p.ctx.Done():
 				return
