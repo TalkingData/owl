@@ -1,6 +1,7 @@
 package dao
 
 import (
+	"context"
 	"gorm.io/gorm"
 	"owl/common/logger"
 )
@@ -25,4 +26,11 @@ func (d *Dao) Close() {
 	if db != nil {
 		_ = db.Close()
 	}
+}
+func (d *Dao) getDb() *gorm.DB {
+	return d.db
+}
+
+func (d *Dao) getDbWithCtx(ctx context.Context) *gorm.DB {
+	return d.db.WithContext(ctx)
 }

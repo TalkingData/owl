@@ -1,8 +1,8 @@
 package model
 
 type ProductHost struct {
-	Id        uint   `json:"id"`
-	ProductId uint   `json:"product_id"`
+	Id        uint32 `json:"id"`
+	ProductId uint32 `json:"product_id"`
 	HostId    string `json:"host_id"`
 }
 

@@ -5,7 +5,7 @@ type TriggerEvent struct {
 	Index            string  `json:"index"`
 	Metric           string  `json:"metric"`
 	Tags             string  `json:"tags"`
-	Number           uint    `json:"number"`
+	Number           uint32  `json:"number"`
 	AggregateTags    string  `json:"aggregate_tags"`
 	CurrentThreshold float64 `json:"current_threshold"`
 	Method           string  `json:"method"`

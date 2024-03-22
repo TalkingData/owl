@@ -9,114 +9,122 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"time"
 )
 
 // reportHeartbeat 发送当前Agent心跳数据
-func (agent *agent) reportHeartbeat() {
-	agent.logger.Info("agent.reportHeartbeat called.")
-	defer agent.logger.Info("agent.reportHeartbeat end.")
+func (a *agent) reportHeartbeat() {
+	a.logger.Info("agent.reportHeartbeat called.")
+	defer a.logger.Info("agent.reportHeartbeat end.")
 
 	req := &commonpb.AgentInfo{
-		HostId:       agent.agentInfo.HostId,
-		Ip:           agent.agentInfo.Ip,
-		Hostname:     agent.agentInfo.Hostname,
-		AgentVersion: agent.agentInfo.AgentVersion,
+		HostId:       a.agentInfo.HostId,
+		Ip:           a.agentInfo.Ip,
+		Hostname:     a.agentInfo.Hostname,
+		AgentVersion: a.agentInfo.AgentVersion,
 		AgentOs:      runtime.GOOS,
 		AgentArch:    runtime.GOARCH,
-		Uptime:       agent.agentInfo.Uptime,
-		IdlePct:      agent.agentInfo.IdlePct,
-		Metadata:     agent.agentInfo.Metadata,
+		Uptime:       a.agentInfo.Uptime,
+		IdlePct:      a.agentInfo.IdlePct,
+		Metadata:     a.agentInfo.Metadata,
 	}
 
-	ctx, cancel := context.WithTimeout(agent.ctx, agent.conf.CallProxyTimeoutSecs)
+	ctx, cancel := context.WithTimeout(a.ctx, a.conf.ReportHeartbeatTimeoutSecs)
 	defer cancel()
 
-	_, err := agent.proxyCli.ReceiveAgentHeartbeat(ctx, req)
+	_, err := a.proxyCli.ReceiveAgentHeartbeat(ctx, req)
 	if err != nil {
-		agent.logger.ErrorWithFields(logger.Fields{
+		a.logger.ErrorWithFields(logger.Fields{
 			"error": err,
-		}, "An error occurred while agent.proxyCli.ReceiveAgentHeartbeat in agent.reportHeartbeat.")
+		}, "An error occurred while calling agent.proxyCli.ReceiveAgentHeartbeat.")
 	}
 }
 
-func (agent *agent) reportAgentAllMetrics() {
-	agent.logger.InfoWithFields(logger.Fields{
-		"length": agent.tsDataMap.Len(),
+func (a *agent) reportAgentAllMetrics() {
+	a.logger.InfoWithFields(logger.Fields{
+		"length": a.tsDataMap.Len(),
 	}, "agent.reportAgentAllMetrics called.")
-	defer agent.logger.Info("agent.reportAgentAllMetrics end.")
+	defer a.logger.Info("agent.reportAgentAllMetrics end.")
 
 	// 将tsDataMap中的数据分成多批，每批agent.conf.ReportMetricBatchSize个，并分别作为参数交给reportAgentMetrics处理
-	commonMetricList := make([]*commonpb.Metric, 0, agent.conf.ReportMetricBatchSize)
+	commonMetricList := make([]*commonpb.Metric, 0, a.conf.ReportMetricBatchSize)
 	counter := 0
 
-	for _, tsData := range agent.tsDataMap.List() {
-		commonMetricList = append(commonMetricList, tsData.ToCommonMetric(agent.agentInfo.HostId))
+	currTs := time.Now().Unix()
+	for _, tsData := range a.tsDataMap.List() {
+		// 如果当前时间戳减去tsData的时间戳大于两倍的采集周期，则删除该tsData
+		if int64(tsData.Cycle)*int64(a.conf.CleanExpiredMetricCycleExpiredRatio)+tsData.Timestamp < currTs {
+			a.tsDataMap.Remove(tsData.GetPk())
+			continue
+		}
+
+		commonMetricList = append(commonMetricList, tsData.ToCommonMetric(a.agentInfo.HostId))
 		counter++
 
-		if counter >= agent.conf.ReportMetricBatchSize {
+		if counter >= a.conf.ReportMetricBatchSize {
 			// 处理当前批次的逻辑，例如发送到网络或进行其他处理
-			agent.reportAgentMetrics(&commonpb.Metrics{Metrics: commonMetricList})
+			a.reportAgentMetrics(&commonpb.Metrics{Metrics: commonMetricList})
 
 			// 重置计数器和批次列表
 			counter = 0
-			commonMetricList = make([]*commonpb.Metric, 0, agent.conf.ReportMetricBatchSize)
+			commonMetricList = make([]*commonpb.Metric, 0, a.conf.ReportMetricBatchSize)
 		}
 	}
 
 	// 处理剩余的不足一批的数据
 	if counter > 0 {
 		// 处理剩余批次的逻辑
-		agent.reportAgentMetrics(&commonpb.Metrics{Metrics: commonMetricList})
+		a.reportAgentMetrics(&commonpb.Metrics{Metrics: commonMetricList})
 	}
 }
 
-func (agent *agent) reportAgentMetrics(in *commonpb.Metrics) {
-	ctx, cancel := context.WithTimeout(agent.ctx, agent.conf.CallProxyTimeoutSecs)
+func (a *agent) reportAgentMetrics(in *commonpb.Metrics) {
+	ctx, cancel := context.WithTimeout(a.ctx, a.conf.ReportMetricsTimeoutSecs)
 	defer cancel()
 
-	if _, err := agent.proxyCli.ReceiveAgentMetrics(ctx, in); err != nil {
-		agent.logger.ErrorWithFields(logger.Fields{
+	if _, err := a.proxyCli.ReceiveAgentMetrics(ctx, in); err != nil {
+		a.logger.ErrorWithFields(logger.Fields{
 			"metrics_length": len(in.Metrics),
 			"error":          err,
-		}, "An error occurred while proxyCli.ReceiveAgentMetrics in agent.reportAgentMetrics")
+		}, "An error occurred while calling proxyCli.ReceiveAgentMetrics.")
 	}
 }
 
-func (agent *agent) reportAgentMetric(in *commonpb.Metric) {
-	ctx, cancel := context.WithTimeout(agent.ctx, agent.conf.CallProxyTimeoutSecs)
+func (a *agent) reportAgentMetric(in *commonpb.Metric) {
+	ctx, cancel := context.WithTimeout(a.ctx, a.conf.ReportMetricTimeoutSecs)
 	defer cancel()
 
-	if _, err := agent.proxyCli.ReceiveAgentMetric(ctx, in); err != nil {
-		agent.logger.ErrorWithFields(logger.Fields{
+	if _, err := a.proxyCli.ReceiveAgentMetric(ctx, in); err != nil {
+		a.logger.ErrorWithFields(logger.Fields{
 			"request": in,
 			"error":   err,
-		}, "An error occurred while proxyCli.ReceiveAgentMetric in agent.reportAgentMetric")
+		}, "An error occurred while calling proxyCli.ReceiveAgentMetric.")
 	}
 }
 
 // registerAgent 注册当前Agent
-func (agent *agent) registerAgent() error {
-	agent.logger.Info("agent.registerAgent called.")
-	defer agent.logger.Info("agent.registerAgent end.")
+func (a *agent) registerAgent() error {
+	a.logger.Info("agent.registerAgent called.")
+	defer a.logger.Info("agent.registerAgent end.")
 
 	req := &commonpb.AgentInfo{
-		HostId:       agent.agentInfo.HostId,
-		Ip:           agent.agentInfo.Ip,
-		Hostname:     agent.agentInfo.Hostname,
-		AgentVersion: agent.agentInfo.AgentVersion,
-		Uptime:       agent.agentInfo.Uptime,
-		IdlePct:      agent.agentInfo.IdlePct,
-		Metadata:     agent.agentInfo.Metadata,
+		HostId:       a.agentInfo.HostId,
+		Ip:           a.agentInfo.Ip,
+		Hostname:     a.agentInfo.Hostname,
+		AgentVersion: a.agentInfo.AgentVersion,
+		Uptime:       a.agentInfo.Uptime,
+		IdlePct:      a.agentInfo.IdlePct,
+		Metadata:     a.agentInfo.Metadata,
 	}
 
-	ctx, cancel := context.WithTimeout(agent.ctx, agent.conf.CallProxyTimeoutSecs)
+	ctx, cancel := context.WithTimeout(a.ctx, a.conf.ReportHeartbeatIntervalSecs)
 	defer cancel()
 
-	_, err := agent.proxyCli.RegisterAgent(ctx, req)
+	_, err := a.proxyCli.RegisterAgent(ctx, req)
 	if err != nil {
-		agent.logger.ErrorWithFields(logger.Fields{
+		a.logger.ErrorWithFields(logger.Fields{
 			"error": err,
-		}, "An error occurred while agent.proxyCli.RegisterAgent in agent.registerAgent.")
+		}, "An error occurred while calling agent.proxyCli.RegisterAgent.")
 		return err
 	}
 
@@ -124,24 +132,24 @@ func (agent *agent) registerAgent() error {
 }
 
 // listPluginsProcess Agent请求Proxy列出自身所需的Plugins，并做相应处理
-func (agent *agent) listPluginsProcess() {
-	agent.logger.Info("agent.listPluginsProcess called.")
-	defer agent.logger.Info("agent.listPluginsProcess end.")
+func (a *agent) listPluginsProcess() {
+	a.logger.Info("agent.listPluginsProcess called.")
+	defer a.logger.Info("agent.listPluginsProcess end.")
 
-	ctx, cancel := context.WithTimeout(agent.ctx, agent.conf.CallProxyTimeoutSecs)
+	ctx, cancel := context.WithTimeout(a.ctx, a.conf.ListPluginsTimeoutSecs)
 	defer cancel()
 
-	plugins, err := agent.proxyCli.ListAgentPlugins(ctx, &commonpb.HostIdReq{HostId: agent.agentInfo.HostId})
+	plugins, err := a.proxyCli.ListAgentPlugins(ctx, &commonpb.HostIdReq{HostId: a.agentInfo.HostId})
 	if err != nil {
-		agent.logger.ErrorWithFields(logger.Fields{
+		a.logger.ErrorWithFields(logger.Fields{
 			"error": err,
-		}, "An error occurred while agent.proxyCli.ListAgentPlugins in agent.listPluginsProcess.")
+		}, "An error occurred while calling agent.proxyCli.ListAgentPlugins.")
 		return
 	}
 
 	newPluginPkMap := map[string]struct{}{}
 	for _, p := range plugins.Plugins {
-		agent.logger.DebugWithFields(logger.Fields{
+		a.logger.DebugWithFields(logger.Fields{
 			"rsp_plugin_id":       p.Id,
 			"rsp_plugin_name":     p.Name,
 			"rsp_plugin_path":     p.Path,
@@ -151,28 +159,28 @@ func (agent *agent) listPluginsProcess() {
 			"rsp_plugin_timeout":  p.Timeout,
 		}, "Got agent plugin from proxy.")
 
-		localAbsPath, err := filepath.Abs(path.Join(agent.conf.PluginDir, p.Path))
+		localAbsPath, err := filepath.Abs(path.Join(a.conf.PluginDir, p.Path))
 		if err != nil {
-			agent.logger.ErrorWithFields(logger.Fields{
-				"plugin_dir":  agent.conf.PluginDir,
+			a.logger.ErrorWithFields(logger.Fields{
+				"plugin_dir":  a.conf.PluginDir,
 				"plugin_path": p.Path,
 				"error":       err,
-			}, "An error occurred while filepath.Abs in agent.listPluginsProcess.")
+			}, "An error occurred while calling filepath.Abs.")
 		}
 
 		newPlugin := pluginList.NewPlugin(
-			agent.ctx,
+			a.ctx,
 			p.Id,
 			p.Name, localAbsPath, p.Checksum,
 			utils.ParseCommandArgs(p.Args),
 			p.Interval, p.Timeout,
-			agent.conf.ExecuteUntrustedPlugin,
-			func(ctx context.Context, cycle int32, command string, args ...string) {
-				dataArr := agent.executor.ExecCollectCmd(ctx, command, args...)
+			a.conf.ExecuteUntrustedPlugin,
+			func(ctx context.Context, ts int64, cycle int32, command string, args ...string) {
+				dataArr := a.executor.ExecCollectCmd(ctx, ts, command, args...)
 				for _, data := range dataArr {
 					data.Cycle = cycle
 				}
-				agent.preprocessTsData(dataArr, true)
+				a.preprocessTsData(dataArr, true)
 			},
 		)
 
@@ -182,7 +190,7 @@ func (agent *agent) listPluginsProcess() {
 		fileChecksum := newPlugin.GetFileChecksum()
 		//  插件文件的校验和与本地文件不一致时，需要重新下载插件文件
 		if fileChecksum != p.Checksum {
-			agent.logger.WarnWithFields(logger.Fields{
+			a.logger.WarnWithFields(logger.Fields{
 				"plugin_id":            newPlugin.Id,
 				"plugin_name":          newPlugin.Name,
 				"response_plugin_path": p.Path,
@@ -192,36 +200,36 @@ func (agent *agent) listPluginsProcess() {
 			}, "Valid plugin checksum failed, Prepare for download plugin file.")
 
 			// 从proxy下载插件文件，如果失败则跳过
-			if err = agent.downloadPluginFile(p.Path, newPlugin.LocalPath); err != nil {
-				agent.logger.ErrorWithFields(logger.Fields{
+			if err = a.downloadPluginFile(p.Path, newPlugin.LocalPath); err != nil {
+				a.logger.ErrorWithFields(logger.Fields{
 					"plugin_id":            newPlugin.Id,
 					"plugin_name":          newPlugin.Name,
 					"response_plugin_path": p.Path,
 					"plugin_pathname":      newPlugin.LocalPath,
 					"plugin_checksum":      newPlugin.Checksum,
 					"error":                err,
-				}, "An error occurred while agent.proxyCli.downloadPluginFile, Skipped this plugin and task.")
+				}, "An error occurred while calling agent.proxyCli.downloadPluginFile, Skipped this plugin and task.")
 				continue
 			}
 		}
-		if !agent.pluginList.Exists(newPluginPk) {
-			agent.logger.DebugWithFields(logger.Fields{
+		if !a.pluginList.Exists(newPluginPk) {
+			a.logger.DebugWithFields(logger.Fields{
 				"plugin_id":            newPlugin.Id,
 				"plugin_name":          newPlugin.Name,
 				"response_plugin_path": p.Path,
 				"plugin_pathname":      newPlugin.LocalPath,
 				"plugin_checksum":      newPlugin.Checksum,
 			}, "Put agent plugin to newPluginList.")
-			agent.pluginList.Put(newPluginPk, newPlugin)
+			a.pluginList.Put(newPluginPk, newPlugin)
 			// 启动新Plugin采集任务
 			newPlugin.StartTask()
 		}
 	}
 
 	// 对于不存在的插件，则移除任务
-	for k := range agent.pluginList.List() {
+	for k := range a.pluginList.List() {
 		if _, ok := newPluginPkMap[k]; !ok {
-			agent.pluginList.StopTaskAndRemove(k)
+			a.pluginList.StopAndRemoveTask(k)
 		}
 	}
 }

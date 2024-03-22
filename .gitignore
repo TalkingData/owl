@@ -29,6 +29,9 @@
 *.swp
 *.lock
 
+# Key files
+*.key
+
 # Output files
 output/
 dist/

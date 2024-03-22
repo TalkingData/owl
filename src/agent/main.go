@@ -25,13 +25,13 @@ func main() {
 	if err != nil {
 		agtLg.ErrorWithFields(logger.Fields{
 			"error": err,
-		}, "An error occurred while main.")
+		}, "An error occurred while calling main.")
 		return
 	}
 	if agt == nil {
 		agtLg.ErrorWithFields(logger.Fields{
 			"error": fmt.Errorf("nil agent error"),
-		}, "An error occurred while main.")
+		}, "An error occurred while calling main.")
 		return
 	}
 
@@ -50,7 +50,7 @@ func main() {
 			if err != nil {
 				agtLg.ErrorWithFields(logger.Fields{
 					"error": err,
-				}, "An error occurred while agent.Start.")
+				}, "An error occurred while calling agent.Start.")
 			}
 			closeAll()
 			return
@@ -86,7 +86,7 @@ func init() {
 		logger.Filename(agtConf.Const.ServiceName),
 	)
 	if err != nil {
-		fmt.Println("An error occurred while logger.NewLogger, error:", err.Error())
+		fmt.Println("An error occurred while calling logger.NewLogger, error:", err.Error())
 		panic(err)
 	}
 	agtLg = lg

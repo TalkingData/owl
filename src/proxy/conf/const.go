@@ -1,12 +1,17 @@
 package conf
 
-import "owl/common/global"
+import (
+	"owl/common/global"
+	"time"
+)
 
 type constConf struct {
 	ServiceName string
 
 	CfcServiceName      string
 	RepeaterServiceName string
+
+	MetricServerShutdownTimeoutSecs time.Duration
 }
 
 func newConstConf() *constConf {
@@ -15,5 +20,7 @@ func newConstConf() *constConf {
 
 		CfcServiceName:      global.OwlCfcServiceName,
 		RepeaterServiceName: global.OwlRepeaterServiceName,
+
+		MetricServerShutdownTimeoutSecs: 5 * time.Second,
 	}
 }

@@ -2,15 +2,14 @@ package executor
 
 import (
 	"owl/dto"
-	"time"
 )
 
-func (e *Executor) ExecCollectAlive(cycle int32) dto.TsDataArray {
+func (e *Executor) ExecCollectAlive(ts int64, cycle int32) dto.TsDataArray {
 	return dto.TsDataArray{{
 		Metric:    "agent.alive",
 		DataType:  dto.TsDataTypeGauge,
 		Value:     1,
-		Timestamp: time.Now().Unix(),
+		Timestamp: ts,
 		Cycle:     cycle,
 	}}
 }

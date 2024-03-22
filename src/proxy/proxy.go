@@ -7,9 +7,11 @@ import (
 	"net"
 	"owl/common/global"
 	"owl/common/logger"
+	"owl/common/prom"
 	"owl/proxy/conf"
 	proxypb "owl/proxy/proto"
 	"owl/proxy/service"
+	"sync"
 )
 
 // Proxy interface
@@ -24,9 +26,12 @@ type defaultProxy struct {
 	listener   net.Listener
 	grpcServer *grpc.Server
 
+	prom prom.Prom
+
 	conf   *conf.Conf
 	logger *logger.Logger
 
+	wg         sync.WaitGroup
 	ctx        context.Context
 	cancelFunc context.CancelFunc
 }
@@ -35,6 +40,8 @@ func NewProxy(ctx context.Context, conf *conf.Conf, logger *logger.Logger) Proxy
 	pCtx, pCancel := context.WithCancel(ctx)
 
 	return &defaultProxy{
+		prom: prom.NewProm(conf.MetricListen),
+
 		conf:   conf,
 		logger: logger,
 
@@ -55,13 +62,13 @@ func (p *defaultProxy) Start() (err error) {
 	if err != nil {
 		p.logger.ErrorWithFields(logger.Fields{
 			"error": err,
-		}, "An error occurred while net.Listen.")
+		}, "An error occurred while calling net.Listen.")
 		return err
 	}
 	listenerAddrStr := p.listener.Addr().String()
 
 	// 创建proxy的grpc server
-	p.grpcServer = grpc.NewServer()
+	p.grpcServer = grpc.NewServer(grpc.UnaryInterceptor(p.prom.GrpcInterceptor))
 	// 注册GRPC服务
 	proxypb.RegisterOwlProxyServiceServer(
 		p.grpcServer,
@@ -70,15 +77,38 @@ func (p *defaultProxy) Start() (err error) {
 
 	p.logger.Info(fmt.Sprintf("Owl proxy listening on: %s", listenerAddrStr))
 
+	// 启动Prometheus的metrics http server
+	go func() {
+		p.wg.Add(1)
+		defer p.Stop()
+		defer p.wg.Done()
+
+		p.logger.Info(fmt.Sprintf("Owl proxy's metrics http server listening on: %s", p.conf.MetricListen))
+		if err = p.prom.MetricServerStart(); err != nil {
+			p.logger.ErrorWithFields(logger.Fields{
+				"error": err,
+			}, "An error occurred while calling proxy.prom.ListenAndServe.")
+			return
+		}
+		p.logger.Info("Owl proxy's metrics server closed.")
+	}()
+
 	return p.grpcServer.Serve(p.listener)
 }
 
 func (p *defaultProxy) Stop() {
-	defer p.logger.Info("Owl proxy Stopped.")
+	defer p.wg.Wait()
 
 	// 关闭grpc server
 	if p.grpcServer != nil {
 		p.grpcServer.Stop()
+	}
+
+	// 关闭metrics http server
+	if p.prom != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), p.conf.Const.MetricServerShutdownTimeoutSecs)
+		defer cancel()
+		p.prom.MetricServerStop(ctx)
 	}
 
 	// 等待所有任务结束

@@ -17,7 +17,7 @@ func (proxySrv *OwlProxyService) ReceiveAgentHeartbeat(
 	if err != nil {
 		proxySrv.logger.WarnWithFields(logger.Fields{
 			"error": err,
-		}, "An error occurred while proxySrv.cfcCli.ReceiveAgentHeartbeat, Skipped.")
+		}, "An error occurred while calling proxySrv.cfcCli.ReceiveAgentHeartbeat, Skipped.")
 		return ret, err
 	}
 
@@ -32,7 +32,7 @@ func (proxySrv *OwlProxyService) ReceiveAgentMetric(ctx context.Context, req *co
 	if err != nil {
 		proxySrv.logger.WarnWithFields(logger.Fields{
 			"error": err,
-		}, "An error occurred while proxySrv.cfcCli.ReceiveAgentMetric, Skipped.")
+		}, "An error occurred while calling proxySrv.cfcCli.ReceiveAgentMetric, Skipped.")
 		return ret, err
 	}
 
@@ -49,7 +49,7 @@ func (proxySrv *OwlProxyService) ReceiveAgentMetrics(
 	if err != nil {
 		proxySrv.logger.WarnWithFields(logger.Fields{
 			"error": err,
-		}, "An error occurred while proxySrv.cfcCli.ReceiveAgentMetrics, Skipped.")
+		}, "An error occurred while calling proxySrv.cfcCli.ReceiveAgentMetrics, Skipped.")
 		return ret, err
 	}
 
@@ -64,7 +64,7 @@ func (proxySrv *OwlProxyService) RegisterAgent(ctx context.Context, req *commonp
 	if err != nil {
 		proxySrv.logger.WarnWithFields(logger.Fields{
 			"error": err,
-		}, "An error occurred while proxySrv.cfcCli.RegisterAgent, Skipped.")
+		}, "An error occurred while calling proxySrv.cfcCli.RegisterAgent, Skipped.")
 		return ret, err
 	}
 
@@ -81,7 +81,7 @@ func (proxySrv *OwlProxyService) ListAgentPlugins(
 	if err != nil {
 		proxySrv.logger.WarnWithFields(logger.Fields{
 			"error": err,
-		}, "An error occurred while proxySrv.cfcCli.ListAgentPlugins, Skipped.")
+		}, "An error occurred while calling proxySrv.cfcCli.ListAgentPlugins, Skipped.")
 		return plugins, err
 	}
 

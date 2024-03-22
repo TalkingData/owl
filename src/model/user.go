@@ -3,7 +3,7 @@ package model
 import "owl/common/utils"
 
 type User struct {
-	Id          uint             `json:"id"`
+	Id          uint32           `json:"id"`
 	Username    string           `json:"username"`
 	DisplayName string           `json:"display_name"`
 	Password    string           `json:"-"`

@@ -1,9 +1,13 @@
 package dao
 
-import "owl/model"
+import (
+	"context"
+	"owl/model"
+)
 
 func (d *Dao) NewStrategyEventProcess(
-	strategyEventId uint64, strategyEventStatus int, processUser, processComments string,
+	ctx context.Context,
+	strategyEventId uint64, strategyEventStatus int32, processUser, processComments string,
 ) (*model.StrategyEventProcess, error) {
 	sep := model.StrategyEventProcess{
 		StrategyEventId: strategyEventId,
@@ -12,6 +16,6 @@ func (d *Dao) NewStrategyEventProcess(
 		ProcessComments: processComments,
 	}
 
-	res := d.db.Create(&sep)
+	res := d.getDbWithCtx(ctx).Create(&sep)
 	return &sep, res.Error
 }

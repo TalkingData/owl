@@ -7,10 +7,9 @@ import (
 	"os/exec"
 	"owl/common/logger"
 	"owl/dto"
-	"time"
 )
 
-func (e *Executor) ExecCollectCmd(ctx context.Context, command string, args ...string) dto.TsDataArray {
+func (e *Executor) ExecCollectCmd(ctx context.Context, ts int64, command string, args ...string) dto.TsDataArray {
 	e.logger.InfoWithFields(logger.Fields{
 		"command": command,
 		"args":    args,
@@ -27,7 +26,7 @@ func (e *Executor) ExecCollectCmd(ctx context.Context, command string, args ...s
 			"command": command,
 			"args":    args,
 			"error":   err,
-		}, "An error occurred while Executor.ExecCollectCmd on exec.Command.")
+		}, "An error occurred while calling Executor.ExecCollectCmd.")
 		return nil
 	}
 
@@ -44,7 +43,7 @@ func (e *Executor) ExecCollectCmd(ctx context.Context, command string, args ...s
 				"command": command,
 				"args":    args,
 				"error":   err,
-			}, "An error occurred while Executor.ExecCollectCmd on cmd.Process.Kill.")
+			}, "An error occurred while calling Executor.ExecCollectCmd.")
 			return nil
 		}
 
@@ -60,7 +59,6 @@ func (e *Executor) ExecCollectCmd(ctx context.Context, command string, args ...s
 			return nil
 		}
 
-		currTs := time.Now().Unix()
 		res := dto.TsDataArray{}
 		if err = json.Unmarshal(out.Bytes(), &res); err != nil {
 			e.logger.ErrorWithFields(logger.Fields{
@@ -68,13 +66,13 @@ func (e *Executor) ExecCollectCmd(ctx context.Context, command string, args ...s
 				"args":    args,
 				"out":     out.String(),
 				"error":   err,
-			}, "An error occurred while Executor.ExecCollectCmd on json.Unmarshal.")
+			}, "An error occurred while calling Executor.ExecCollectCmd.")
 			return nil
 		}
 
 		// 为每个TsData赋Timestamp
 		for _, r := range res {
-			r.Timestamp = currTs
+			r.Timestamp = ts
 		}
 
 		return res

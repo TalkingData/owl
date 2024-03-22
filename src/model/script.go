@@ -1,7 +1,7 @@
 package model
 
 type Script struct {
-	Id       uint   `json:"id"`
+	Id       uint32 `json:"id"`
 	Name     string `json:"name"`
 	FilePath string `json:"file_path"`
 }
