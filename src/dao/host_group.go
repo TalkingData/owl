@@ -1,12 +1,16 @@
 package dao
 
 import (
+	"context"
 	"owl/common/orm"
 	"owl/model"
 )
 
-func (d *Dao) GetOrNewHostGroup(productId uint, name, description, creator string) (obj *model.HostGroup, err error) {
-	res := d.db.Where(map[string]interface{}{
+func (d *Dao) GetOrNewHostGroup(
+	ctx context.Context,
+	productId uint32, name, description, creator string,
+) (obj *model.HostGroup, err error) {
+	res := d.getDbWithCtx(ctx).Where(map[string]interface{}{
 		"name":       name,
 		"product_id": productId,
 	}).Attrs(&model.HostGroup{
@@ -19,7 +23,10 @@ func (d *Dao) GetOrNewHostGroup(productId uint, name, description, creator strin
 	return obj, res.Error
 }
 
-func (d *Dao) NewHostGroup(productId uint, name, description, creator string) (*model.HostGroup, error) {
+func (d *Dao) NewHostGroup(
+	ctx context.Context,
+	productId uint32, name, description, creator string,
+) (*model.HostGroup, error) {
 	hg := model.HostGroup{
 		Name:        name,
 		Description: description,
@@ -27,11 +34,11 @@ func (d *Dao) NewHostGroup(productId uint, name, description, creator string) (*
 		Creator:     creator,
 	}
 
-	res := d.db.Create(&hg)
+	res := d.getDbWithCtx(ctx).Create(&hg)
 	return &hg, res.Error
 }
 
-func (d *Dao) GetHostGroup(query orm.Query) (hg *model.HostGroup, err error) {
-	res := query.Where(d.db).Limit(1).Find(&hg)
+func (d *Dao) GetHostGroup(ctx context.Context, q orm.Query) (hg *model.HostGroup, err error) {
+	res := q.Where(d.getDbWithCtx(ctx)).Limit(1).Find(&hg)
 	return hg, res.Error
 }

@@ -64,7 +64,7 @@ func (e *Executor) GetHostUptimeAndIdle() (float64, float64) {
 	if err != nil {
 		e.logger.ErrorWithFields(logger.Fields{
 			"error": err,
-		}, "An error occurred while Executor.GetHostUptime.")
+		}, "An error occurred while calling Executor.GetHostUptime.")
 		return 0, 0
 	}
 
@@ -92,7 +92,7 @@ func (e *Executor) GetLocalIp(tcpAddr string) string {
 	if err != nil {
 		e.logger.ErrorWithFields(logger.Fields{
 			"error": err,
-		}, "An error occurred while Executor.GetLocalIp.")
+		}, "An error occurred while calling Executor.GetLocalIp.")
 		return ""
 	}
 

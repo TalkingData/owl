@@ -10,6 +10,7 @@ type Conf struct {
 	Const *constConf
 
 	Listen                              string
+	MetricListen                        string
 	MicroRegisterTtl                    time.Duration
 	MicroRegisterInterval               time.Duration
 	RefreshHostStatusIntervalSecs       time.Duration
@@ -44,7 +45,8 @@ func NewConfig(options ...Option) *Conf {
 	return &Conf{
 		Const: newConstConf(),
 
-		Listen: cfg.MustValue("main", "listen", defaultListen),
+		Listen:       cfg.MustValue("main", "listen", defaultListen),
+		MetricListen: cfg.MustValue("main", "metric_listen", defaultMetricListen),
 		MicroRegisterTtl: time.Duration(cfg.MustInt(
 			"main", "micro_register_ttl", defaultMicroRegisterTtl,
 		)) * time.Second,

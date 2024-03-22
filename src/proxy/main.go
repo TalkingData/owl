@@ -23,7 +23,7 @@ func main() {
 	if proxy == nil {
 		proxyLg.ErrorWithFields(logger.Fields{
 			"error": fmt.Errorf("nil proxy error"),
-		}, "An error occurred while main.")
+		}, "An error occurred while calling main.")
 		return
 	}
 
@@ -42,7 +42,7 @@ func main() {
 			if err != nil {
 				proxyLg.ErrorWithFields(logger.Fields{
 					"error": err,
-				}, "An error occurred while proxy.Start.")
+				}, "An error occurred while calling proxy.Start.")
 			}
 			closeAll()
 			return
@@ -79,7 +79,7 @@ func init() {
 		logger.Filename(proxyConf.Const.ServiceName),
 	)
 	if err != nil {
-		fmt.Println("An error occurred while logger.NewLogger, error:", err.Error())
+		fmt.Println("An error occurred while calling logger.NewLogger, error:", err.Error())
 		panic(err)
 	}
 	proxyLg = lg

@@ -36,13 +36,13 @@ func NewOwlCfcService(dao *dao.Dao, conf *conf.Conf, logger *logger.Logger) *Owl
 }
 
 // RegisterAgent 客户端注册
-func (cfcSrv *OwlCfcService) RegisterAgent(_ context.Context, agent *commonpb.AgentInfo, _ *emptypb.Empty) error {
+func (cfcSrv *OwlCfcService) RegisterAgent(ctx context.Context, agent *commonpb.AgentInfo, _ *emptypb.Empty) error {
 	cfcSrv.logger.Debug("cfcSrv.RegisterAgent called.")
 	defer cfcSrv.logger.Debug("cfcSrv.RegisterAgent end.")
 
 	// 使用业务层分离处理客户端注册
 	err := cfcSrv.biz.RegisterAgent(
-		agent.HostId, agent.Ip, agent.Hostname, agent.AgentVersion, agent.Uptime, agent.IdlePct, agent.Metadata,
+		ctx, agent.HostId, agent.Ip, agent.Hostname, agent.AgentVersion, agent.Uptime, agent.IdlePct, agent.Metadata,
 	)
 	if err != nil {
 		// 汇报类操作，错误不需要返给Agent，记录日志即可
@@ -51,14 +51,16 @@ func (cfcSrv *OwlCfcService) RegisterAgent(_ context.Context, agent *commonpb.Ag
 			"agent_ip":       agent.Ip,
 			"agent_hostname": agent.Hostname,
 			"error":          err,
-		}, "An error occurred while biz.RegisterAgent in cfcSrv.RegisterAgent.")
+		}, "An error occurred while calling biz.RegisterAgent.")
 	}
 
 	return nil
 }
 
 // ListAgentPlugins 列出客户端需要执行的插件
-func (cfcSrv *OwlCfcService) ListAgentPlugins(_ context.Context, req *commonpb.HostIdReq, rsp *commonpb.Plugins) error {
+func (cfcSrv *OwlCfcService) ListAgentPlugins(
+	ctx context.Context, req *commonpb.HostIdReq, rsp *commonpb.Plugins,
+) error {
 	cfcSrv.logger.Debug("cfcSrv.ListAgentPlugins called.")
 	defer cfcSrv.logger.Debug("cfcSrv.ListAgentPlugins end.")
 
@@ -66,24 +68,24 @@ func (cfcSrv *OwlCfcService) ListAgentPlugins(_ context.Context, req *commonpb.H
 	rsp.Plugins = make([]*commonpb.Plugin, 0)
 
 	// 使用业务层分离处理
-	plugins, err := cfcSrv.biz.ListAgentPlugins(req.HostId)
+	plugins, err := cfcSrv.biz.ListAgentPlugins(ctx, req.HostId)
 	if err != nil {
 		cfcSrv.logger.ErrorWithFields(logger.Fields{
 			"agent_host_id": req.HostId,
 			"error":         err,
-		}, "An error occurred while biz.ListAgentPlugins in cfcSrv.ListAgentPlugins.")
+		}, "An error occurred while calling biz.ListAgentPlugins.")
 		return err
 	}
 	// 填充返回内容
 	for _, p := range plugins {
 		rsp.Plugins = append(rsp.Plugins, &commonpb.Plugin{
-			Id:       uint32(p.Id),
+			Id:       p.Id,
 			Name:     p.Name,
 			Path:     p.Path,
 			Checksum: p.Checksum,
 			Args:     p.Args,
-			Interval: int32(p.Interval),
-			Timeout:  int32(p.Timeout),
+			Interval: p.Interval,
+			Timeout:  p.Timeout,
 			Comment:  p.Comment,
 		})
 	}
@@ -93,14 +95,14 @@ func (cfcSrv *OwlCfcService) ListAgentPlugins(_ context.Context, req *commonpb.H
 
 // ReceiveAgentHeartbeat 接收客户端上报的心跳
 func (cfcSrv *OwlCfcService) ReceiveAgentHeartbeat(
-	_ context.Context, agent *commonpb.AgentInfo, _ *emptypb.Empty,
+	ctx context.Context, agent *commonpb.AgentInfo, _ *emptypb.Empty,
 ) error {
 	cfcSrv.logger.Debug("cfcSrv.ReceiveAgentHeartbeat called.")
 	defer cfcSrv.logger.Debug("cfcSrv.ReceiveAgentHeartbeat end.")
 
 	// 使用业务层分离处理客户端注册
 	err := cfcSrv.biz.ReceiveAgentHeartbeat(
-		agent.HostId, agent.Ip, agent.Hostname, agent.AgentVersion, agent.Uptime, agent.IdlePct,
+		ctx, agent.HostId, agent.Ip, agent.Hostname, agent.AgentVersion, agent.Uptime, agent.IdlePct,
 	)
 	if err != nil {
 		// 汇报类操作，错误不需要返给Agent，记录日志即可
@@ -109,19 +111,20 @@ func (cfcSrv *OwlCfcService) ReceiveAgentHeartbeat(
 			"agent_ip":       agent.Ip,
 			"agent_hostname": agent.Hostname,
 			"error":          err,
-		}, "An error occurred while biz.ReceiveAgentHeartbeat in cfcSrv.ReceiveAgentHeartbeat.")
+		}, "An error occurred while calling biz.ReceiveAgentHeartbeat.")
 	}
 
 	return nil
 }
 
 // ReceiveAgentMetric 接收客户端上报的Metric
-func (cfcSrv *OwlCfcService) ReceiveAgentMetric(_ context.Context, metric *commonpb.Metric, _ *emptypb.Empty) error {
+func (cfcSrv *OwlCfcService) ReceiveAgentMetric(ctx context.Context, metric *commonpb.Metric, _ *emptypb.Empty) error {
 	cfcSrv.logger.Debug("cfcSrv.ReceiveAgentMetric called.")
 	defer cfcSrv.logger.Debug("cfcSrv.ReceiveAgentMetric end.")
 
 	// 使用业务层分离处理客户端注册
 	cfcSrv.biz.ReceiveAgentMetric(
+		ctx,
 		metric.HostId,
 		metric.Metric,
 		metric.DataType,
@@ -133,13 +136,16 @@ func (cfcSrv *OwlCfcService) ReceiveAgentMetric(_ context.Context, metric *commo
 }
 
 // ReceiveAgentMetric 接收客户端上报的批量Metric
-func (cfcSrv *OwlCfcService) ReceiveAgentMetrics(_ context.Context, metrics *commonpb.Metrics, _ *emptypb.Empty) error {
+func (cfcSrv *OwlCfcService) ReceiveAgentMetrics(
+	ctx context.Context, metrics *commonpb.Metrics, _ *emptypb.Empty,
+) error {
 	cfcSrv.logger.Debug("cfcSrv.ReceiveAgentMetrics called.")
 	defer cfcSrv.logger.Debug("cfcSrv.ReceiveAgentMetrics end.")
 
 	for _, metric := range metrics.Metrics {
 		// 使用业务层分离处理客户端注册
 		cfcSrv.biz.ReceiveAgentMetric(
+			ctx,
 			metric.HostId,
 			metric.Metric,
 			metric.DataType,

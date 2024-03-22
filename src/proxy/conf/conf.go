@@ -9,6 +9,7 @@ type Conf struct {
 	Const *constConf
 
 	Listen              string
+	MetricListen        string
 	CallCfcRetries      int
 	CallRepeaterRetries int
 	PluginDir           string
@@ -33,6 +34,7 @@ func NewConfig(options ...Option) *Conf {
 		Const: newConstConf(),
 
 		Listen:              cfg.MustValue("main", "listen", defaultListen),
+		MetricListen:        cfg.MustValue("main", "metric_listen", defaultMetricListen),
 		CallCfcRetries:      cfg.MustInt("main", "call_cfc_retries", defaultCallCfcRetries),
 		CallRepeaterRetries: cfg.MustInt("main", "call_repeater_retries", defaultCallRepeaterRetries),
 		PluginDir:           cfg.MustValue("main", "plugin_dir", defaultPluginDir),

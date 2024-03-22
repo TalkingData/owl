@@ -1,18 +1,30 @@
 package builtin
 
 import (
+	"github.com/prometheus/client_golang/prometheus"
 	"sync"
 )
 
 type PluginList struct {
 	plugins map[string]*Plugin
 
-	mu sync.RWMutex
+	promMetric prometheus.Gauge
+	mu         sync.RWMutex
 }
 
 // NewPluginList 新建插件列表
 func NewPluginList() *PluginList {
-	return &PluginList{plugins: make(map[string]*Plugin)}
+	pm := prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "plugin_list_length",
+		Help: "The length of plugin list.",
+	})
+	prometheus.MustRegister(pm)
+	pm.Set(0)
+
+	return &PluginList{
+		plugins:    make(map[string]*Plugin),
+		promMetric: pm,
+	}
 }
 
 func (pl *PluginList) StartAllPluginTask() {
@@ -33,10 +45,11 @@ func (pl *PluginList) Put(pk string, p *Plugin) {
 	defer pl.mu.Unlock()
 
 	pl.plugins[pk] = p
+	pl.promMetric.Set(float64(pl.Len()))
 }
 
-// StopTaskAndRemove 停止任务并移除
-func (pl *PluginList) StopTaskAndRemove(pk string) {
+// StopAndRemoveTask 停止任务并移除
+func (pl *PluginList) StopAndRemoveTask(pk string) {
 	if p, ok := pl.plugins[pk]; ok {
 		pl.mu.Lock()
 		defer pl.mu.Unlock()
@@ -44,6 +57,7 @@ func (pl *PluginList) StopTaskAndRemove(pk string) {
 		p.StopTask()
 		delete(pl.plugins, pk)
 	}
+	pl.promMetric.Set(float64(pl.Len()))
 }
 
 // List 获取全部数据

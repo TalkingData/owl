@@ -1,8 +1,8 @@
 package model
 
 type HostGroupHost struct {
-	Id          uint   `json:"id"`
-	HostGroupId uint   `json:"host_group_id"`
+	Id          uint32 `json:"id"`
+	HostGroupId uint32 `json:"host_group_id"`
 	HostId      string `json:"host_id"`
 }
 

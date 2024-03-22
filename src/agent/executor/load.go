@@ -4,10 +4,9 @@ import (
 	"github.com/shirou/gopsutil/v3/load"
 	"owl/common/logger"
 	"owl/dto"
-	"time"
 )
 
-func (e *Executor) ExecCollectLoad(cycle int32) dto.TsDataArray {
+func (e *Executor) ExecCollectLoad(ts int64, cycle int32) dto.TsDataArray {
 	e.logger.Info("Executor.ExecCollectLoad called.")
 	defer e.logger.Info("Executor.ExecCollectLoad end.")
 
@@ -16,31 +15,30 @@ func (e *Executor) ExecCollectLoad(cycle int32) dto.TsDataArray {
 		e.logger.ErrorWithFields(logger.Fields{
 			"cycle": cycle,
 			"error": err,
-		}, "An error occurred while Executor.ExecCollectLoad.")
+		}, "An error occurred while calling Executor.ExecCollectLoad.")
 		return nil
 	}
 
-	currTs := time.Now().Unix()
 	return dto.TsDataArray{
 		{
 			Metric:    "system.load.1min",
 			DataType:  dto.TsDataTypeGauge,
 			Value:     loadAvgStat.Load1,
-			Timestamp: currTs,
+			Timestamp: ts,
 			Cycle:     cycle,
 		},
 		{
 			Metric:    "system.load.5min",
 			DataType:  dto.TsDataTypeGauge,
 			Value:     loadAvgStat.Load5,
-			Timestamp: currTs,
+			Timestamp: ts,
 			Cycle:     cycle,
 		},
 		{
 			Metric:    "system.load.15min",
 			DataType:  dto.TsDataTypeGauge,
 			Value:     loadAvgStat.Load15,
-			Timestamp: currTs,
+			Timestamp: ts,
 			Cycle:     cycle,
 		},
 	}

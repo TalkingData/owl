@@ -1,6 +1,7 @@
 package biz
 
 import (
+	"context"
 	"errors"
 	"owl/common/logger"
 	"owl/common/orm"
@@ -9,6 +10,7 @@ import (
 )
 
 func (b *Biz) RegisterAgent(
+	ctx context.Context,
 	hostId, ip, hostname, version string,
 	uptime, idlePct float64,
 	metadata map[string]string,
@@ -22,15 +24,15 @@ func (b *Biz) RegisterAgent(
 		"agent_uptime":   uptime,
 		"agent_idle_pct": idlePct,
 		"agent_metadata": metadata,
-	}, "Biz.RegisterAgent prepare execute dao.SetOrNewHost.")
-	hostObj, err := b.dao.SetOrNewHost(hostId, ip, hostname, version, uptime, idlePct)
+	}, "Biz.RegisterAgent prepare execute dao.SetOrNewHostById.")
+	hostObj, err := b.dao.SetOrNewHostById(ctx, hostId, ip, hostname, version, uptime, idlePct)
 	if err != nil {
 		b.logger.ErrorWithFields(logger.Fields{
 			"agent_host_id":  hostId,
 			"agent_ip":       ip,
 			"agent_hostname": hostname,
 			"error":          err,
-		}, "An error occurred while Biz.RegisterAgent on dao.SetOrNewHost.")
+		}, "An error occurred while calling dao.SetOrNewHostById.")
 		return err
 	}
 
@@ -41,13 +43,13 @@ func (b *Biz) RegisterAgent(
 			"agent_ip":       ip,
 			"agent_hostname": hostname,
 			"error":          err,
-		}, "Biz.RegisterAgent Got an nil host object from dao.SetOrNewHost.")
+		}, "Biz.RegisterAgent Got an nil host object from dao.SetOrNewHostById.")
 		return err
 	}
 
 	// 产品线相关处理
 	agentMetadataProductName := metadata["product"]
-	productObj, err := b.productProcess(hostObj.Id, agentMetadataProductName)
+	productObj, err := b.productProcess(ctx, hostObj.Id, agentMetadataProductName)
 	if err != nil {
 		return err
 	}
@@ -58,14 +60,14 @@ func (b *Biz) RegisterAgent(
 
 	// 主机组相关处理
 	agentMetadataGroupName := metadata["group"]
-	if err = b.hostGroupProcess(hostObj.Id, agentMetadataGroupName, productObj.Id); err != nil {
+	if err = b.hostGroupProcess(ctx, hostObj.Id, agentMetadataGroupName, productObj.Id); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (b *Biz) productProcess(hostId, productName string) (*model.Product, error) {
+func (b *Biz) productProcess(ctx context.Context, hostId, productName string) (*model.Product, error) {
 	// 如果没有产品线，那么需要的操作已经完成，可以直接返回
 	if productName == "" {
 		b.logger.WarnWithFields(logger.Fields{
@@ -90,14 +92,14 @@ func (b *Biz) productProcess(hostId, productName string) (*model.Product, error)
 			"allow_create_product_auto": b.conf.AllowCreateProductAuto,
 		}, "Biz.RegisterAgent prepare execute dao.GetOrNewProduct.")
 		productObj, err = b.dao.GetOrNewProduct(
-			trimmedProductName, "it's auto created by cfc service v6", "cfc_v6",
+			ctx, trimmedProductName, "it's auto created by cfc service v6", "cfc_v6",
 		)
 		if err != nil {
 			b.logger.ErrorWithFields(logger.Fields{
 				"host_id":              hostId,
 				"trimmed_product_name": trimmedProductName,
 				"error":                err,
-			}, "An error occurred while Biz.productProcess on dao.GetOrNewProduct.")
+			}, "An error occurred while calling dao.GetOrNewProduct.")
 			return nil, err
 		}
 	} else {
@@ -107,13 +109,13 @@ func (b *Biz) productProcess(hostId, productName string) (*model.Product, error)
 			"trimmed_product_name":      trimmedProductName,
 			"allow_create_product_auto": b.conf.AllowCreateProductAuto,
 		}, "Biz.RegisterAgent prepare execute dao.GetProduct.")
-		productObj, err = b.dao.GetProduct(orm.Query{"name": trimmedProductName})
+		productObj, err = b.dao.GetProduct(ctx, orm.Query{"name": trimmedProductName})
 		if err != nil {
 			b.logger.ErrorWithFields(logger.Fields{
 				"host_id":              hostId,
 				"trimmed_product_name": trimmedProductName,
 				"error":                err,
-			}, "An error occurred while Biz.productProcess on dao.GetProduct.")
+			}, "An error occurred while calling dao.GetProduct.")
 			return nil, err
 		}
 	}
@@ -133,14 +135,14 @@ func (b *Biz) productProcess(hostId, productName string) (*model.Product, error)
 		"product_id":           productObj.Id,
 		"trimmed_product_name": trimmedProductName,
 	}, "Biz.RegisterAgent prepare execute dao.IsHostInProduct.")
-	isHostInProd, err := b.dao.IsHostInProduct(productObj.Id, hostId)
+	isHostInProd, err := b.dao.IsHostInProduct(ctx, productObj.Id, hostId)
 	if err != nil {
 		b.logger.ErrorWithFields(logger.Fields{
 			"host_id":              hostId,
 			"product_id":           productObj.Id,
 			"trimmed_product_name": trimmedProductName,
 			"error":                err,
-		}, "An error occurred while Biz.productProcess on dao.IsHostInProduct.")
+		}, "An error occurred while calling dao.IsHostInProduct.")
 	}
 	if isHostInProd {
 		return productObj, nil
@@ -151,20 +153,20 @@ func (b *Biz) productProcess(hostId, productName string) (*model.Product, error)
 		"product_id":           productObj.Id,
 		"trimmed_product_name": trimmedProductName,
 	}, "Biz.RegisterAgent host not in product, prepare execute dao.NewProductHost.")
-	if _, err = b.dao.NewProductHost(productObj.Id, hostId); err != nil {
+	if _, err = b.dao.NewProductHost(ctx, productObj.Id, hostId); err != nil {
 		b.logger.ErrorWithFields(logger.Fields{
 			"host_id":              hostId,
 			"product_id":           productObj.Id,
 			"trimmed_product_name": trimmedProductName,
 			"error":                err,
-		}, "An error occurred while dao.NewProductHost.")
+		}, "An error occurred while calling dao.NewProductHost.")
 		return nil, err
 	}
 
 	return productObj, nil
 }
 
-func (b *Biz) hostGroupProcess(hostId, groupName string, productId uint) error {
+func (b *Biz) hostGroupProcess(ctx context.Context, hostId, groupName string, productId uint32) error {
 	// 如果没有主机组，那么需要的操作已经完成，可以直接返回
 	if groupName == "" {
 		b.logger.WarnWithFields(logger.Fields{
@@ -185,7 +187,7 @@ func (b *Biz) hostGroupProcess(hostId, groupName string, productId uint) error {
 	}, "Biz.RegisterAgent prepare execute dao.GetOrNewHostGroup.")
 
 	groupObj, err := b.dao.GetOrNewHostGroup(
-		productId, groupName, "it's auto created by cfc service v6", "cfc_v6",
+		ctx, productId, groupName, "it's auto created by cfc service v6", "cfc_v6",
 	)
 	if err != nil {
 		b.logger.ErrorWithFields(logger.Fields{
@@ -193,7 +195,7 @@ func (b *Biz) hostGroupProcess(hostId, groupName string, productId uint) error {
 			"product_id":         productId,
 			"trimmed_group_name": trimmedGroupName,
 			"error":              err,
-		}, "An error occurred while dao.GetOrNewHostGroup.")
+		}, "An error occurred while calling dao.GetOrNewHostGroup.")
 		return err
 	}
 
@@ -213,14 +215,14 @@ func (b *Biz) hostGroupProcess(hostId, groupName string, productId uint) error {
 		"product_id":         productId,
 		"trimmed_group_name": trimmedGroupName,
 	}, "Biz.RegisterAgent prepare execute dao.IsHostInHostGroup.")
-	isHostInGroup, err := b.dao.IsHostInHostGroup(groupObj.Id, hostId)
+	isHostInGroup, err := b.dao.IsHostInHostGroup(ctx, groupObj.Id, hostId)
 	if err != nil {
 		b.logger.ErrorWithFields(logger.Fields{
 			"host_id":            hostId,
 			"product_id":         productId,
 			"trimmed_group_name": trimmedGroupName,
 			"error":              err,
-		}, "An error occurred while dao.IsHostInHostGroup.")
+		}, "An error occurred while calling dao.IsHostInHostGroup.")
 	}
 	if isHostInGroup {
 		return nil
@@ -231,13 +233,13 @@ func (b *Biz) hostGroupProcess(hostId, groupName string, productId uint) error {
 		"product_id":         productId,
 		"trimmed_group_name": trimmedGroupName,
 	}, "Biz.RegisterAgent host not in host group, prepare execute dao.NewHostGroupHost.")
-	if _, err = b.dao.NewHostGroupHost(groupObj.Id, hostId); err != nil {
+	if _, err = b.dao.NewHostGroupHost(ctx, groupObj.Id, hostId); err != nil {
 		b.logger.ErrorWithFields(logger.Fields{
 			"host_id":            hostId,
 			"product_id":         productId,
 			"trimmed_group_name": trimmedGroupName,
 			"error":              err,
-		}, "An error occurred while dao.NewHostGroupHost.")
+		}, "An error occurred while calling dao.NewHostGroupHost.")
 		return err
 	}
 

@@ -1,12 +1,13 @@
 package dao
 
 import (
+	"context"
 	"owl/common/orm"
 	"owl/model"
 )
 
-func (d *Dao) GetOrNewProduct(name, description, creator string) (obj *model.Product, err error) {
-	res := d.db.Where(map[string]interface{}{"name": name}).
+func (d *Dao) GetOrNewProduct(ctx context.Context, name, description, creator string) (obj *model.Product, err error) {
+	res := d.getDbWithCtx(ctx).Where(map[string]interface{}{"name": name}).
 		Attrs(&model.Product{
 			Name:        name,
 			Description: description,
@@ -17,7 +18,7 @@ func (d *Dao) GetOrNewProduct(name, description, creator string) (obj *model.Pro
 	return obj, res.Error
 }
 
-func (d *Dao) NewProduct(name, description, creator string) (*model.Product, error) {
+func (d *Dao) NewProduct(ctx context.Context, name, description, creator string) (*model.Product, error) {
 	p := model.Product{
 		Name:        name,
 		Description: description,
@@ -25,12 +26,12 @@ func (d *Dao) NewProduct(name, description, creator string) (*model.Product, err
 		IsDelete:    false,
 	}
 
-	res := d.db.Create(&p)
+	res := d.getDbWithCtx(ctx).Create(&p)
 	return &p, res.Error
 }
 
-func (d *Dao) SetProduct(id uint, name, description string) (p *model.Product, err error) {
-	res := d.db.Model(&model.Host{}).
+func (d *Dao) SetProduct(ctx context.Context, id uint32, name, description string) (p *model.Product, err error) {
+	res := d.getDbWithCtx(ctx).Model(&model.Host{}).
 		Where("id=?", id).
 		Updates(map[string]interface{}{
 			"name":        name,
@@ -39,17 +40,17 @@ func (d *Dao) SetProduct(id uint, name, description string) (p *model.Product, e
 	return p, res.Error
 }
 
-func (d *Dao) GetProduct(query orm.Query) (p *model.Product, err error) {
-	res := query.Where(d.db).Limit(1).Find(&p)
+func (d *Dao) GetProduct(ctx context.Context, q orm.Query) (p *model.Product, err error) {
+	res := q.Where(d.getDbWithCtx(ctx)).Limit(1).Find(&p)
 	return p, res.Error
 }
 
-func (d *Dao) GetProductCount(query orm.Query) (count int64, err error) {
-	res := query.Where(d.db.Model(&model.Product{})).Count(&count)
+func (d *Dao) GetProductCount(ctx context.Context, q orm.Query) (count int64, err error) {
+	res := q.Where(d.getDbWithCtx(ctx).Model(&model.Product{})).Count(&count)
 	return count, res.Error
 }
 
-func (d *Dao) IsProductExist(query orm.Query) (exist bool, err error) {
-	count, err := d.GetProductCount(query)
+func (d *Dao) IsProductExist(ctx context.Context, q orm.Query) (exist bool, err error) {
+	count, err := d.GetProductCount(ctx, q)
 	return count > 0, err
 }

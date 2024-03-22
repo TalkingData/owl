@@ -2,6 +2,7 @@ package backend
 
 import (
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/silenceper/pool"
 	"net"
 	"owl/dto"
@@ -10,6 +11,8 @@ import (
 // kairos struct
 type kairos struct {
 	connPool pool.Pool
+
+	promMetric prometheus.Counter
 }
 
 func newKairos(addr string, maxIdleConns, maxOpenConns int) (Backend, error) {
@@ -26,12 +29,21 @@ func newKairos(addr string, maxIdleConns, maxOpenConns int) (Backend, error) {
 		return nil, err
 	}
 
+	pm := prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "write_kairosdb_count",
+	})
+	prometheus.MustRegister(pm)
+	pm.Add(0)
+
 	return &kairos{
-		connPool: p,
+		connPool:   p,
+		promMetric: pm,
 	}, nil
 }
 
 func (kdb *kairos) Write(data *dto.TsData) error {
+	kdb.promMetric.Inc()
+
 	v, err := kdb.connPool.Get()
 	if err != nil {
 		return err

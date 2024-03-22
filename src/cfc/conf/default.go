@@ -2,12 +2,13 @@ package conf
 
 const (
 	defaultListen                              = "127.0.0.1:0"
+	defaultMetricListen                        = "127.0.0.1:19671"
 	defaultMicroRegisterTtl                    = 10
 	defaultMicroRegisterInterval               = 3
 	defaultRefreshHostStatusIntervalSecs       = 90
 	defaultHostDownStatusThresholdSecs         = 90
 	defaultCleanExpiredMetricIntervalSecs      = 300
-	defaultCleanExpiredMetricCycleExpiredRatio = 5
+	defaultCleanExpiredMetricCycleExpiredRatio = 60
 	defaultAllowCreateProductAuto              = true
 
 	defaultLogLevel = "debug"
