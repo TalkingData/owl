@@ -22,7 +22,8 @@ func main() {
 		return
 	}
 	if err = initPublicKeyAndPrivateKey(); err != nil {
-		panic(err)
+		fmt.Println("[WARNING] Init public&private key failed:", err)
+		//panic(err)
 	}
 	go func() {
 		fmt.Printf("start metric interface %s\n", config.MetricBind)

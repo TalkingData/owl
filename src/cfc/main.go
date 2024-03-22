@@ -38,7 +38,7 @@ func main() {
 			if err != nil {
 				cfcLg.ErrorWithFields(logger.Fields{
 					"error": err,
-				}, "An error occurred while cfcSrv.Start.")
+				}, "An error occurred while calling cfcSrv.Start.")
 			}
 			closeAll()
 			return
@@ -78,7 +78,7 @@ func init() {
 		logger.Filename(cfcConf.Const.ServiceName),
 	)
 	if err != nil {
-		fmt.Println("An error occurred while logger.NewLogger, error:", err.Error())
+		fmt.Println("An error occurred while calling logger.NewLogger, error:", err.Error())
 		panic(err)
 	}
 	cfcLg = lg

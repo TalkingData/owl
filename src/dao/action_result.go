@@ -1,14 +1,18 @@
 package dao
 
-import "owl/model"
+import (
+	"context"
+	"owl/model"
+)
 
 func (d *Dao) NewActionResult(
+	ctx context.Context,
 	strategyEventID, actionId uint64,
 	actionType, actionKind, success bool,
-	scriptId, userId uint,
+	scriptId, userId uint32,
 	username, phone, email, wechat string,
 	subject, content, response string,
-	count int,
+	count int32,
 ) (*model.ActionResult, error) {
 	ar := model.ActionResult{
 		StrategyEventId: strategyEventID,
@@ -33,6 +37,6 @@ func (d *Dao) NewActionResult(
 		Count: count,
 	}
 
-	res := d.db.Create(&ar)
+	res := d.getDbWithCtx(ctx).Create(&ar)
 	return &ar, res.Error
 }

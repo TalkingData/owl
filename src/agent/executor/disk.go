@@ -4,18 +4,17 @@ import (
 	"github.com/shirou/gopsutil/v3/disk"
 	"owl/common/logger"
 	"owl/dto"
-	"time"
 )
 
-func (e *Executor) ExecCollectDisk(cycle int32) (res dto.TsDataArray) {
+func (e *Executor) ExecCollectDisk(ts int64, cycle int32) (res dto.TsDataArray) {
 	e.logger.Info("Executor.ExecCollectDisk called.")
 	defer e.logger.Info("Executor.ExecCollectDisk end.")
 
-	res = append(res, e.getAllDiskPartition(cycle)...)
-	return append(res, e.getAllDiskIo(cycle)...)
+	res = append(res, e.getAllDiskPartition(ts, cycle)...)
+	return append(res, e.getAllDiskIo(ts, cycle)...)
 }
 
-func (e *Executor) getAllDiskIo(cycle int32) (res dto.TsDataArray) {
+func (e *Executor) getAllDiskIo(ts int64, cycle int32) (res dto.TsDataArray) {
 	e.logger.Info("Executor.getAllDiskIo called.")
 	defer e.logger.Info("Executor.getAllDiskIo end.")
 
@@ -24,18 +23,17 @@ func (e *Executor) getAllDiskIo(cycle int32) (res dto.TsDataArray) {
 		e.logger.ErrorWithFields(logger.Fields{
 			"cycle": cycle,
 			"error": err,
-		}, "An error occurred while Executor.getAllDiskIo.")
+		}, "An error occurred while calling Executor.getAllDiskIo.")
 		return
 	}
 
-	currTs := time.Now().Unix()
 	for _, v := range ioCounters {
 		res = append(res,
 			&dto.TsData{
 				Metric:    "system.disk.bytes",
 				DataType:  dto.TsDataTypeCounter,
 				Value:     float64(v.ReadBytes),
-				Timestamp: currTs,
+				Timestamp: ts,
 				Cycle:     cycle,
 				Tags:      map[string]string{"device": v.Name, "direction": "in"},
 			},
@@ -43,7 +41,7 @@ func (e *Executor) getAllDiskIo(cycle int32) (res dto.TsDataArray) {
 				Metric:    "system.disk.count",
 				DataType:  dto.TsDataTypeCounter,
 				Value:     float64(v.ReadCount),
-				Timestamp: currTs,
+				Timestamp: ts,
 				Cycle:     cycle,
 				Tags:      map[string]string{"device": v.Name, "direction": "in"},
 			},
@@ -51,7 +49,7 @@ func (e *Executor) getAllDiskIo(cycle int32) (res dto.TsDataArray) {
 				Metric:    "system.disk.time",
 				DataType:  dto.TsDataTypeCounter,
 				Value:     float64(v.ReadTime),
-				Timestamp: currTs,
+				Timestamp: ts,
 				Cycle:     cycle,
 				Tags:      map[string]string{"device": v.Name, "direction": "in"},
 			},
@@ -59,7 +57,7 @@ func (e *Executor) getAllDiskIo(cycle int32) (res dto.TsDataArray) {
 				Metric:    "system.disk.bytes",
 				DataType:  dto.TsDataTypeCounter,
 				Value:     float64(v.WriteBytes),
-				Timestamp: currTs,
+				Timestamp: ts,
 				Cycle:     cycle,
 				Tags:      map[string]string{"device": v.Name, "direction": "out"},
 			},
@@ -67,7 +65,7 @@ func (e *Executor) getAllDiskIo(cycle int32) (res dto.TsDataArray) {
 				Metric:    "system.disk.count",
 				DataType:  dto.TsDataTypeCounter,
 				Value:     float64(v.WriteCount),
-				Timestamp: currTs,
+				Timestamp: ts,
 				Cycle:     cycle,
 				Tags:      map[string]string{"device": v.Name, "direction": "out"},
 			},
@@ -75,7 +73,7 @@ func (e *Executor) getAllDiskIo(cycle int32) (res dto.TsDataArray) {
 				Metric:    "system.disk.time",
 				DataType:  dto.TsDataTypeCounter,
 				Value:     float64(v.WriteTime),
-				Timestamp: currTs,
+				Timestamp: ts,
 				Cycle:     cycle,
 				Tags:      map[string]string{"device": v.Name, "direction": "out"},
 			},
@@ -84,7 +82,7 @@ func (e *Executor) getAllDiskIo(cycle int32) (res dto.TsDataArray) {
 	return
 }
 
-func (e *Executor) getAllDiskPartition(cycle int32) (res dto.TsDataArray) {
+func (e *Executor) getAllDiskPartition(ts int64, cycle int32) (res dto.TsDataArray) {
 	e.logger.Info("Executor.getAllDiskPartition called.")
 	defer e.logger.Info("Executor.getAllDiskPartition end.")
 
@@ -93,8 +91,6 @@ func (e *Executor) getAllDiskPartition(cycle int32) (res dto.TsDataArray) {
 		return
 	}
 
-	currTd := time.Now().Unix()
-	currTd = currTd - (currTd % int64(cycle))
 	for _, p := range pts {
 		usageStat, err := disk.Usage(p.Mountpoint)
 		if err != nil {
@@ -104,7 +100,7 @@ func (e *Executor) getAllDiskPartition(cycle int32) (res dto.TsDataArray) {
 				"fs_type":     p.Fstype,
 				"cycle":       cycle,
 				"error":       err,
-			}, "An error occurred while Executor.getAllDiskPartition, Skipped this one.")
+			}, "An error occurred while calling Executor.getAllDiskPartition, Skipped this one.")
 			continue
 		}
 		res = append(res,
@@ -112,7 +108,7 @@ func (e *Executor) getAllDiskPartition(cycle int32) (res dto.TsDataArray) {
 				Metric:    "system.disk.free",
 				DataType:  dto.TsDataTypeGauge,
 				Value:     float64(usageStat.Free),
-				Timestamp: currTd,
+				Timestamp: ts,
 				Cycle:     cycle,
 				Tags:      map[string]string{"path": usageStat.Path, "fstype": usageStat.Fstype},
 			},
@@ -120,7 +116,7 @@ func (e *Executor) getAllDiskPartition(cycle int32) (res dto.TsDataArray) {
 				Metric:    "system.disk.total",
 				DataType:  dto.TsDataTypeGauge,
 				Value:     float64(usageStat.Total),
-				Timestamp: currTd,
+				Timestamp: ts,
 				Cycle:     cycle,
 				Tags:      map[string]string{"path": usageStat.Path, "fstype": usageStat.Fstype},
 			},
@@ -128,7 +124,7 @@ func (e *Executor) getAllDiskPartition(cycle int32) (res dto.TsDataArray) {
 				Metric:    "system.disk.used",
 				DataType:  dto.TsDataTypeGauge,
 				Value:     float64(usageStat.Used),
-				Timestamp: currTd,
+				Timestamp: ts,
 				Cycle:     cycle,
 				Tags:      map[string]string{"path": usageStat.Path, "fstype": usageStat.Fstype},
 			},
@@ -136,7 +132,7 @@ func (e *Executor) getAllDiskPartition(cycle int32) (res dto.TsDataArray) {
 				Metric:    "system.disk.used_pct",
 				DataType:  dto.TsDataTypeGauge,
 				Value:     usageStat.UsedPercent,
-				Timestamp: currTd,
+				Timestamp: ts,
 				Cycle:     cycle,
 				Tags:      map[string]string{"path": usageStat.Path, "fstype": usageStat.Fstype},
 			},
@@ -144,7 +140,7 @@ func (e *Executor) getAllDiskPartition(cycle int32) (res dto.TsDataArray) {
 				Metric:    "system.disk.inodes.free",
 				DataType:  dto.TsDataTypeGauge,
 				Value:     float64(usageStat.InodesFree),
-				Timestamp: currTd,
+				Timestamp: ts,
 				Cycle:     cycle,
 				Tags:      map[string]string{"path": usageStat.Path, "fstype": usageStat.Fstype},
 			},
@@ -152,7 +148,7 @@ func (e *Executor) getAllDiskPartition(cycle int32) (res dto.TsDataArray) {
 				Metric:    "system.disk.inodes.total",
 				DataType:  dto.TsDataTypeGauge,
 				Value:     float64(usageStat.InodesTotal),
-				Timestamp: currTd,
+				Timestamp: ts,
 				Cycle:     cycle,
 				Tags:      map[string]string{"path": usageStat.Path, "fstype": usageStat.Fstype},
 			},
@@ -160,7 +156,7 @@ func (e *Executor) getAllDiskPartition(cycle int32) (res dto.TsDataArray) {
 				Metric:    "system.disk.inodes.used",
 				DataType:  dto.TsDataTypeGauge,
 				Value:     float64(usageStat.InodesUsed),
-				Timestamp: currTd,
+				Timestamp: ts,
 				Cycle:     cycle,
 				Tags:      map[string]string{"path": usageStat.Path, "fstype": usageStat.Fstype},
 			},
@@ -168,7 +164,7 @@ func (e *Executor) getAllDiskPartition(cycle int32) (res dto.TsDataArray) {
 				Metric:    "system.disk.inodes.used_pct",
 				DataType:  dto.TsDataTypeGauge,
 				Value:     float64(usageStat.InodesUsedPercent),
-				Timestamp: currTd,
+				Timestamp: ts,
 				Cycle:     cycle,
 				Tags:      map[string]string{"path": usageStat.Path, "fstype": usageStat.Fstype},
 			},

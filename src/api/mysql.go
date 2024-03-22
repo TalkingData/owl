@@ -1318,12 +1318,23 @@ func (d *db) getHostAppNames(hostID string) []string {
 		return nil
 	}
 	for _, metric := range metrics {
-		appName := strings.Split(metric, ".")[0]
-		if _, ok := appMap[appName]; ok {
+		metricSplit := strings.Split(metric, ".")
+		// 如果是三层级的指标，再取一级指标
+		if len(metricSplit) > 2 {
+			sysAppNames := fmt.Sprintf("%s.%s", metricSplit[0], metricSplit[1])
+			if _, exist := appMap[sysAppNames]; exist {
+				continue
+			}
+			appMap[sysAppNames] = struct{}{}
+			appNames = append(appNames, sysAppNames)
 			continue
 		}
-		appMap[appName] = struct{}{}
-		appNames = append(appNames, appName)
+
+		if _, exist := appMap[metricSplit[0]]; exist {
+			continue
+		}
+		appMap[metricSplit[0]] = struct{}{}
+		appNames = append(appNames, metricSplit[0])
 	}
 	sort.Strings(appNames)
 	return appNames

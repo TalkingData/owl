@@ -3,34 +3,37 @@ package main
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
+	httpHandler "owl/common/http_handler"
 	"owl/common/logger"
 	"owl/dto"
 	"time"
 )
 
-func (agent *agent) newHttpHandler() http.Handler {
+// newHttpHandler 创建http handler
+func (a *agent) newHttpHandler() http.Handler {
 	h := gin.New()
-	h.Use(gin.Recovery(), agent.ginAccessLogMiddleware())
+	h.Use(gin.Recovery(), httpHandler.GinAccessLogMiddleware(a.logger))
 
-	h.POST("/ts_data", agent.tsDataHandler(true))
-	h.POST("/ts_data/raw", agent.tsDataHandler(false))
+	h.POST("/ts_data", a.tsDataHandler(true))
+	h.POST("/ts_data/raw", a.tsDataHandler(false))
 
-	h.NoRoute(pageNotFoundHandler)
+	h.NoRoute(httpHandler.PageNotFoundHandler)
 
 	return h
 }
 
-func (agent *agent) tsDataHandler(fillAgentInfo bool) gin.HandlerFunc {
+func (a *agent) tsDataHandler(fillAgentInfo bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tsdArr := dto.TsDataArray{}
 
 		// 序列化request body
 		if err := c.ShouldBindJSON(&tsdArr); err != nil {
-			agent.logger.WarnWithFields(logger.Fields{
+			a.logger.WarnWithFields(logger.Fields{
 				"error": err,
-			}, "An error occurred while c.ShouldBindJSON in agent.tsDataHandler")
-			writeResponse(c, http.StatusBadRequest, err.Error())
+			}, "An error occurred while calling c.ShouldBindJSON.")
+			httpHandler.WriteResponse(c, http.StatusBadRequest, err.Error())
 			return
 		}
 
@@ -44,8 +47,8 @@ func (agent *agent) tsDataHandler(fillAgentInfo bool) gin.HandlerFunc {
 					tsd.Metric,
 					err.Error(),
 				)
-				writeResponse(c, http.StatusBadRequest, msg)
-				agent.logger.WarnWithFields(logger.Fields{
+				httpHandler.WriteResponse(c, http.StatusBadRequest, msg)
+				a.logger.WarnWithFields(logger.Fields{
 					"index":             idx,
 					"ts_data_metric":    tsd.Metric,
 					"ts_data_data_type": tsd.DataType,
@@ -54,7 +57,7 @@ func (agent *agent) tsDataHandler(fillAgentInfo bool) gin.HandlerFunc {
 					"ts_data_cycle":     tsd.Cycle,
 					"ts_data_tags":      tsd.Tags,
 					"error":             err,
-				}, "An error occurred while c.ShouldBindJSON in agent.tsDataHandler")
+				}, "An error occurred while calling c.ShouldBindJSON")
 				return
 			}
 
@@ -65,29 +68,19 @@ func (agent *agent) tsDataHandler(fillAgentInfo bool) gin.HandlerFunc {
 		}
 
 		// 预处理数据
-		agent.preprocessTsData(tsdArr, fillAgentInfo)
-		writeResponse(c, 0, "success")
+		a.preprocessTsData(tsdArr, fillAgentInfo)
+		httpHandler.WriteResponse(c, 0, "success")
 	}
 }
 
-func (agent *agent) ginAccessLogMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		agent.logger.InfoWithFields(logger.Fields{
-			"request_uri":    c.Request.RequestURI,
-			"request_method": c.Request.Method,
-			"user_agent":     c.Request.UserAgent(),
-		}, "Got agent http server request.")
-		c.Next()
-	}
-}
+// newMetricHttpHandler 创建metric http handler
+func (a *agent) newMetricHttpHandler() http.Handler {
+	h := gin.New()
+	h.Use(gin.Recovery())
 
-func pageNotFoundHandler(c *gin.Context) {
-	writeResponse(c, http.StatusNotFound, "Page not found.")
-}
+	h.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
-func writeResponse(c *gin.Context, code int, message string) {
-	c.JSON(http.StatusOK, gin.H{
-		"code":    code,
-		"message": message,
-	})
+	h.NoRoute(httpHandler.PageNotFoundHandler)
+
+	return h
 }

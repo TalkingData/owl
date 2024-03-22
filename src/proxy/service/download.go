@@ -22,7 +22,7 @@ func (proxySrv *OwlProxyService) DownloadPluginFile(
 			"plugin_dir": proxySrv.conf.PluginDir,
 			"rel_path":   req.RelPath,
 			"error":      err,
-		}, "An error occurred while filepath.Abs in proxySrv.DownloadPluginFile.")
+		}, "An error occurred while calling filepath.Abs.")
 	}
 
 	proxySrv.logger.InfoWithFields(logger.Fields{

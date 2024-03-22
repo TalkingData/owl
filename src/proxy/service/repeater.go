@@ -17,7 +17,7 @@ func (proxySrv *OwlProxyService) ReceiveTimeSeriesData(
 	if err != nil {
 		proxySrv.logger.WarnWithFields(logger.Fields{
 			"error": err,
-		}, "An error occurred while proxySrv.repCli.ReceiveTimeSeriesData, Skipped.")
+		}, "An error occurred while calling proxySrv.repCli.ReceiveTimeSeriesData, Skipped.")
 		return ret, err
 	}
 
@@ -34,7 +34,7 @@ func (proxySrv *OwlProxyService) ReceiveTimeSeriesDataArray(
 	if err != nil {
 		proxySrv.logger.WarnWithFields(logger.Fields{
 			"error": err,
-		}, "An error occurred while proxySrv.repCli.ReceiveTimeSeriesDataArray, Skipped.")
+		}, "An error occurred while calling proxySrv.repCli.ReceiveTimeSeriesDataArray, Skipped.")
 		return ret, err
 	}
 

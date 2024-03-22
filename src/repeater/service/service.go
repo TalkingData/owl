@@ -22,7 +22,7 @@ func NewOwlRepeaterService(conf *conf.Conf, lg *logger.Logger) *OwlRepeaterServi
 	if err != nil {
 		lg.ErrorWithFields(logger.Fields{
 			"error": err,
-		}, "An error occurred while NewOwlRepeaterService.")
+		}, "An error occurred while calling NewOwlRepeaterService.")
 		panic(err)
 	}
 
@@ -44,7 +44,7 @@ func (repSrv *OwlRepeaterService) ReceiveTimeSeriesData(
 		repSrv.logger.ErrorWithFields(logger.Fields{
 			"time_series_data": tsData,
 			"error":            err,
-		}, "An error occurred while repSrv.backend.Write in repSrv.ReceiveTimeSeriesData.")
+		}, "An error occurred while calling repSrv.backend.Write.")
 	}
 
 	return nil
@@ -64,7 +64,7 @@ func (repSrv *OwlRepeaterService) ReceiveTimeSeriesDataArray(
 				repSrv.logger.ErrorWithFields(logger.Fields{
 					"time_series_data": tsData,
 					"error":            err,
-				}, "An error occurred while repSrv.backend.Write in repSrv.ReceiveTimeSeriesDataArray.")
+				}, "An error occurred while calling repSrv.backend.Write.")
 			}
 		}
 	}()
