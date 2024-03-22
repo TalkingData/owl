@@ -8,12 +8,12 @@ import (
 )
 
 type Plugin struct {
-	Id       uint             `json:"id"`
+	Id       uint32           `json:"id"`
 	Name     string           `json:"name"`
 	Path     string           `json:"path"`
 	Args     string           `json:"args"`
-	Interval int              `json:"interval"`
-	Timeout  int              `json:"timeout"`
+	Interval int32            `json:"interval"`
+	Timeout  int32            `json:"timeout"`
 	Checksum string           `json:"checksum"`
 	CreateAt *utils.LocalTime `json:"create_at" gorm:"autoCreateTime"`
 	UpdateAt *utils.LocalTime `json:"update_at" gorm:"autoUpdateTime"`

@@ -1,13 +1,14 @@
 package dao
 
 import (
+	"context"
 	"owl/model"
 )
 
 // ListHostGroupsPluginsByHostId 根据HostId列出主机组的所有插件
-func (d *Dao) ListHostGroupsPluginsByHostId(hostId string) (plugins []*model.Plugin, err error) {
-	subQuery := d.db.Raw("SELECT host_group_id FROM host_group_host AS hgh WHERE hgh.host_id=?", hostId)
-	res := d.db.Model(model.HostGroupPlugin{}).
+func (d *Dao) ListHostGroupsPluginsByHostId(ctx context.Context, hostId string) (plugins []*model.Plugin, err error) {
+	subQ := d.getDbWithCtx(ctx).Raw("SELECT host_group_id FROM host_group_host AS hgh WHERE hgh.host_id=?", hostId)
+	res := d.getDbWithCtx(ctx).Model(model.HostGroupPlugin{}).
 		Select("host_group_plugin.plugin_id AS id, "+
 			"p.name AS name, "+
 			"p.path AS path, "+
@@ -16,7 +17,7 @@ func (d *Dao) ListHostGroupsPluginsByHostId(hostId string) (plugins []*model.Plu
 			"host_group_plugin.interval AS `interval`, "+
 			"host_group_plugin.timeout AS timeout").
 		Joins("LEFT JOIN plugin AS p ON p.id=host_group_plugin.plugin_id").
-		Where("host_group_plugin.group_id IN (?)", subQuery).
+		Where("host_group_plugin.group_id IN (?)", subQ).
 		Find(&plugins)
 	return plugins, res.Error
 }

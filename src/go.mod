@@ -11,11 +11,12 @@ require (
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/golang/protobuf v1.5.2
-	github.com/itsjamie/gin-cors v0.0.0-20220228161158-ef28d3d2a0a8
 	github.com/jmoiron/sqlx v1.3.4
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/micro/go-micro/v2 v2.9.1
 	github.com/micro/go-plugins/registry/etcdv3/v2 v2.9.1
+	github.com/opentracing/opentracing-go v1.1.0
+	github.com/prometheus/client_golang v1.7.0
 	github.com/shirou/gopsutil/v3 v3.22.6
 	github.com/shopspring/decimal v1.3.1
 	github.com/silenceper/pool v1.0.0

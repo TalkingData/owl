@@ -8,7 +8,7 @@ type Metric struct {
 	Metric   string           `json:"metric"`
 	Tags     string           `json:"tags"`
 	Dt       string           `json:"dt"`
-	Cycle    int              `json:"cycle"`
+	Cycle    int32            `json:"cycle"`
 	CreateAt *utils.LocalTime `json:"create_at" gorm:"autoCreateTime"`
 	UpdateAt *utils.LocalTime `json:"update_at" gorm:"autoUpdateTime"`
 }

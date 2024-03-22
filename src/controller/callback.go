@@ -38,7 +38,7 @@ func (cb *callback) OnMessage(conn *tcp.TCPConn, p tcp.Packet) {
 			lg.Error(err.Error())
 			return
 		}
-		controller.receiveHearbeat(heartbeat)
+		controller.receiveHeartbeat(heartbeat)
 	//TODO: optimized task allocate algorithm
 	case types.ALAR_MESS_INSPECTOR_TASK_REQUEST:
 		lg.Debug("receive get task request inspector %s", conn.GetRemoteAddr())
@@ -50,12 +50,10 @@ func (cb *callback) OnMessage(conn *tcp.TCPConn, p tcp.Packet) {
 			return
 		}
 		lg.Info("sent %d task to inspector %s", len(tasks.Tasks), conn.GetRemoteAddr())
-		conn.AsyncWritePacket(
-			tcp.NewDefaultPacket(
-				types.ALAR_MESS_INSPECTOR_TASKS,
-				tasks.Encode(),
-			),
-		)
+		_ = conn.AsyncWritePacket(tcp.NewDefaultPacket(
+			types.ALAR_MESS_INSPECTOR_TASKS,
+			tasks.Encode(),
+		))
 		// sess.Send(types.AlarmPack(types.ALAR_MESS_INSPECTOR_TASKS, tasks))
 	case types.ALAR_MESS_INSPECTOR_RESULT:
 		lg.Info("receive %v %v", types.AlarmMessageTypeText[pkt.Type], string(pkt.Body))

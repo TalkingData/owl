@@ -3,7 +3,7 @@ package model
 import "owl/common/utils"
 
 type Product struct {
-	Id          uint             `json:"id"`
+	Id          uint32           `json:"id"`
 	Name        string           `json:"name"`
 	Description string           `json:"description"`
 	Creator     string           `json:"creator"`

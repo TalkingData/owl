@@ -1,15 +1,20 @@
 package conf
 
-import "owl/common/global"
+import (
+	"owl/common/global"
+	"time"
+)
 
 type constConf struct {
 	ServiceName    string
 	RpcRegisterKey string
 
-	CleanExpiredMetricBatchLimit      int
-	CleanExpiredMetricBatchIntervalMs int
-	SetHostAliveBatchLimit            int
-	SetHostAliveBatchIntervalMs       int
+	MasterRpcRegisterKey string
+
+	ExecSqlBatchLimit      int
+	ExecSqlBatchIntervalMs int
+
+	MetricServerShutdownTimeoutSecs time.Duration
 }
 
 func newConstConf() *constConf {
@@ -17,9 +22,11 @@ func newConstConf() *constConf {
 		ServiceName:    global.OwlCfcServiceName,
 		RpcRegisterKey: global.OwlCfcRpcRegisterKey,
 
-		CleanExpiredMetricBatchLimit:      500,
-		CleanExpiredMetricBatchIntervalMs: 100,
-		SetHostAliveBatchLimit:            500,
-		SetHostAliveBatchIntervalMs:       100,
+		MasterRpcRegisterKey: global.OwlCfcMasterRegisterKey,
+
+		ExecSqlBatchLimit:      500,
+		ExecSqlBatchIntervalMs: 100,
+
+		MetricServerShutdownTimeoutSecs: 5 * time.Second,
 	}
 }

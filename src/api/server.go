@@ -1,10 +1,9 @@
 package main
 
 import (
-	"time"
-
 	"github.com/gin-gonic/gin"
-	"github.com/itsjamie/gin-cors"
+	"owl/common/cors"
+	"time"
 )
 
 var Engine *gin.Engine
@@ -13,8 +12,8 @@ func InitServer() error {
 	Engine = gin.Default()
 	Engine.Use(cors.Middleware(cors.Config{
 		Origins:         "*",
-		Methods:         "GET, PUT, POST, DELETE",
-		RequestHeaders:  "Origin, Authorization, Content-Type",
+		Methods:         "GET, PUT, PATCH, POST, DELETE, OPTIONS",
+		RequestHeaders:  "Origin, Authorization, Content-Type, Cookie, Token",
 		ExposedHeaders:  "",
 		MaxAge:          50 * time.Second,
 		Credentials:     true,

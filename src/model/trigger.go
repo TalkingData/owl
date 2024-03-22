@@ -5,7 +5,7 @@ type Trigger struct {
 	StrategyId  uint64  `json:"strategy_id"`
 	Metric      string  `json:"metric"`
 	Tags        string  `json:"tags"`
-	Number      uint    `json:"number"`
+	Number      uint32  `json:"number"`
 	Index       string  `json:"index"`
 	Method      string  `json:"method"`
 	Symbol      string  `json:"symbol"`

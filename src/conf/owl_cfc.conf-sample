@@ -1,5 +1,6 @@
 [main]
 listen = 0.0.0.0:0
+metric_listen = 0.0.0.0:19671
 micro_register_ttl = 10
 micro_register_interval = 3
 
@@ -11,7 +12,7 @@ host_down_status_threshold_secs = 180
 # clean_expired_metric_interval_secs = 0 for disable it
 clean_expired_metric_interval_secs = 300
 
-clean_expired_metric_cycle_expired_ratio = 5
+clean_expired_metric_cycle_expired_ratio = 60
 allow_create_product_auto = true
 
 [log]

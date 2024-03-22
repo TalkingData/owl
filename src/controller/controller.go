@@ -64,8 +64,8 @@ func (c *Controller) checkNodesForever() {
 	}
 }
 
-//receiveHearbeat 接收心跳包，并更新节点状态
-func (c *Controller) receiveHearbeat(heartbeat *types.HeartBeat) {
+//receiveHeartbeat 接收心跳包，并更新节点状态
+func (c *Controller) receiveHeartbeat(heartbeat *types.HeartBeat) {
 	controller.nodePool.Lock.Lock()
 	defer controller.nodePool.Lock.Unlock()
 
