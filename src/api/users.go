@@ -329,7 +329,7 @@ func Logout(c *gin.Context) {
 		}
 	}
 	c.SetCookie("token", "", -1, "/", "", false, true)
-	c.JSON(http.StatusOK, gin.H{"code": http.StatusUnauthorized, "link": "/", "message": "logout sucessfully"})
+	c.JSON(http.StatusOK, gin.H{"code": http.StatusUnauthorized, "link": "/", "message": "logout successfully"})
 }
 
 func iamLogout(token *jwt.Token) error {
